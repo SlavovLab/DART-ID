@@ -1,2 +1,9 @@
 # OSX files
 .DS_Store
+
+# data files
+dat/*
+
+# notes
+notes.txt
+.Rproj.user
