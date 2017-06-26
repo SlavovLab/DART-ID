@@ -41,9 +41,14 @@ fix.evidence.v2 <- function(path.in, path.out){
   # Consolidate Peptides ----------------------------------------------------
   
   # loop thru experiments
+  counter <- 0
   for (i in exps) {
     # get current experiment
     exp <- subset(ev, ev$Raw.file==i)
+    
+    counter <- counter + 1
+    cat('\r', 'Processing ', counter, '/', length(exps), ' ', i,  '                                          ')
+    flush.console()
     
     # count # of "scans"/IDs for each peptide
     # some of these will come from consolidated PSMs, and will not be further consolidated because
