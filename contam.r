@@ -2,6 +2,8 @@
 
 # init -------
 library('readr')
+library('ggplot2')
+library('reshape2')
 
 # load msms.txt -----
 path.data <- '/Volumes/salamanca/GoogleDrive/SingleCell_Data/'
@@ -48,7 +50,7 @@ with(uncontam.freq, hist(Freq[Freq < 50],
 
 exps <- unique(ev$Raw.file)
 pep.thresh <- c(0.005, 0.01, 0.05, 0.1, 1)
-contam.frac <- matrix(data=NA, nrow=length(exps), ncol=length(pep.thresh))
+contam.frac <- as.data.frame(matrix(data=NA, nrow=length(exps), ncol=length(pep.thresh)))
 counter <- 0
 for (i in exps) {
   counter <- counter + 1
@@ -65,5 +67,10 @@ for (i in exps) {
       length((grep('CON_', new.exp.pep$Proteins))) / nrow(new.exp.pep)
   }
 }
+colnames(contam.frac) <- paste('PEP <', as.character(pep.thresh))
 
+ggplot(melt(contam.frac), aes(x=value, fill=variable)) + 
+  geom_histogram(binwidth=0.05) +
+  facet_grid(variable~.) + 
+  labs(x='Contaminated PSM Fraction', title='Contaminated PSM Fractions')
 
