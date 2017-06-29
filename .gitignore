@@ -1,5 +1,6 @@
 # OSX files
 .DS_Store
+Icon\r
 
 # data files
 dat/*
