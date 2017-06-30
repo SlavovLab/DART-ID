@@ -2,6 +2,9 @@
 .DS_Store
 Icon\r
 
+# Windows files
+desktop.ini
+
 # data files
 dat/*
 

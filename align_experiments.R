@@ -97,7 +97,9 @@ checkExperiment <- function(experiments) {
         
         mus <- pars[sprintf("mu[%i]", unique(peptide_id[experiment_id == exp]))]
         plot(meanRT, beta_0[1] + ifelse(mus < split_point,
-                                        beta_1*mus, beta_1*split_point + beta_2*(mus - split_point)), main=sprintf("2 piece linear (%i)", exp), ylab="predicted")
+                beta_1*mus, beta_1*split_point + beta_2*(mus - split_point)), 
+                main=sprintf("2 piece linear (%i)", exp), 
+                ylab="predicted")
         abline(a=0, b=1, col="red")
         count <- count + 1
         

@@ -65,6 +65,9 @@ make.lib <- function(path.in, path.out.lib, path.out.coeffs, ref.exp){
   for (i in exps) {
     counter <- counter+1
     
+    cat('\r', 'Processing ', counter, '/', length(exps), ' ', i,  '                                          ')
+    flush.console()
+    
     # grab the experiment
     new.exp <- subset(ev.ed, ev.ed$Raw.file==i)
     row.names(new.exp) <- NULL

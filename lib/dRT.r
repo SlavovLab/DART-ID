@@ -71,7 +71,13 @@ dRT <- function(path.in.lib, path.in.coeffs, path.in.evidence, path.out.PEP.upda
                        Leading.razor.protein=character(), RT.lib=numeric(), RT.corrected=numeric(), dRT.med=numeric(),
                        dRT=numeric())
   exps <- unique(ev.tot$Raw.file)
+  counter <- 0
   for (i in exps) {
+    counter <- counter + 1
+    
+    cat('\r', 'Processing ', counter, '/', length(exps), ' ', i,  '                                          ')
+    flush.console()
+    
     ex <- subset(ev.tot, ev.tot$Raw.file==i & ev.tot$PEP<=1)
     row.names(ex) <- NULL
     
