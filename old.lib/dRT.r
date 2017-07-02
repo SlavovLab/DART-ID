@@ -41,7 +41,17 @@ dRT <- function(path.in.lib, path.in.coeffs, path.in.evidence, path.out.PEP.upda
   ev.for$RT.corrected <- ev.for$intercept + (ev.for$coeff * ev.for$Retention.time)
   ev.for$dRT.med <- abs(ev.for$RT.corrected-ev.for$RT.lib)
   for (i in 1:nrow(ev.for)){
-    ev.for$dRT[i] <- min(abs(ev.for$RT.corrected[i]-na.omit(t(rt.lib[rt.lib$peptides==ev.for$Sequence[i], 2:(ncol(rt.lib)-4)]))))
+    # smallest difference between corrected RT and any one of the RT entries in the
+    # RT library
+    ev.for$dRT[i] <- min(
+      abs(ev.for$RT.corrected[i] -
+            na.omit(t(rt.lib[rt.lib$peptides==ev.for$Sequence[i], 
+                     2:(ncol(rt.lib)-4)]))
+      )
+    )
+    # this takes a while
+    flush.console()
+    cat('\r', i, '/', nrow(ev.for), '              ')
   }
   ev.for <- ev.for[,-(20:21)]
   
