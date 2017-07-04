@@ -7,7 +7,12 @@ desktop.ini
 
 # data files
 dat/*
+~*.pptx
 
 # notes
 notes.txt
 .Rproj.user
+
+# misc R files
+*.Rhistory
+*.RData

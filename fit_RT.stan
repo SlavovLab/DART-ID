@@ -63,7 +63,7 @@ model {
     sigma[p] ~ lognormal(log(sigma_global), 0.2);
   }
   
-  for (i  in 1:num_total_observations) {
-      retention_times[i] ~ normal(muij[muij_map[i]], sigma[peptide_id[i]]);
+  for (i in 1:num_total_observations) {
+    retention_times[i] ~ normal(muij[muij_map[i]], sigma[peptide_id[i]]);
   }
 }
