@@ -16,3 +16,6 @@ notes.txt
 # misc R files
 *.Rhistory
 *.RData
+
+# compiled files
+*.rds
