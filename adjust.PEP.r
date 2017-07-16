@@ -11,9 +11,9 @@ ev <- read_tsv('dat/evidence.txt')
 ev.f <- ev[, c('Sequence',
                             'Proteins', 'Leading razor protein',
                             'Raw file', 'Retention time', 'PEP',
-                            'Peptide ID')]
+                            'Peptide ID', 'Best MS/MS')]
 colnames(ev.f) <- c('Sequence','Proteins','Razor.protein',
-                    'Raw.file','Retention.time','PEP', 'Peptide.ID')
+                    'Raw.file','Retention.time','PEP', 'Peptide.ID', 'Obs.ID')
 
 # get experiment ids
 experiment_factors <- as.factor(ev.f$Raw.file)
@@ -22,6 +22,8 @@ num_exps = max(experiment_id)
 # get peptide ids
 true_peptide_id <- ev.f$Peptide.ID
 peptide_id <- as.numeric(as.factor(true_peptide_id))
+# observation IDs
+obs_id <- as.numeric(ev.f$Obs.ID)
 
 retention_times <- ev.f$Retention.time
 
@@ -36,9 +38,11 @@ muij_to_exp <- as.numeric(sapply(splt, function(x) x[2]))
 
 # output table
 ev.new <- data.frame(
+  Obs.ID=numeric(),
   rt.minus=numeric(),
   rt.plus=numeric(),
   muijs=numeric(),
+  sigmas=numeric(),
   PEP.new=numeric()
 )
 
@@ -112,9 +116,11 @@ for (i in 1:num_exps) {
   
   # output table for this experiment
   exp.new <- data.frame(
+    Obs.ID=as.numeric(exp$Obs.ID),
     rt.minus=as.numeric(exp.rt.minus),
     rt.plus=as.numeric(exp.rt.plus),
     muijs=as.numeric(muijs[match(exp.peptide.map, as.numeric(names(muijs)))]),
+    sigmas=as.numeric(sigmas[match(exp.peptide.map, as.numeric(names(sigmas)))]),
     PEP.new=as.numeric(PEP.new)
   )
   # append to master output table
@@ -125,5 +131,25 @@ for (i in 1:num_exps) {
 # (7/4/17 quick fix until STAN can be run again with better params)
 ev <- ev[-which(experiment_id==61),]
 
+# reorder ev.new in the same fashion as the original ev
+ev.new.f <- ev.new[order(ev.new$Obs.ID),]
+rownames(ev.new.f) <- NULL
+
 # combine ev and ev.new
-ev.adjusted <- cbind(ev, ev.new)
+ev.adjusted <- cbind(ev, ev.new.f)
+# remove some columns we dont need
+ev.adjusted <- ev.adjusted[,!(names(ev.adjusted) %in% 
+                                c('Obs.ID'))]
+
+write.table(ev.adjusted, 'dat/ev.adjusted.txt', sep='\t', row.names=FALSE, quote=FALSE)
+
+ev.ff <- ev.adjusted[, c('Sequence', 'Proteins', 'Leading razor protein', 'Raw file', 
+                'Retention time', 'Retention length', 'PIF', 'PEP', 'Intensity',
+                'Reporter intensity corrected 0', 'Reporter intensity corrected 1', 
+                'Reporter intensity corrected 2', 'Reporter intensity corrected 3', 
+                'Reporter intensity corrected 4', 'Reporter intensity corrected 5', 
+                'Reporter intensity corrected 6', 'Reporter intensity corrected 7', 
+                'Reporter intensity corrected 8', 'Reporter intensity corrected 9',
+                'Reverse', 'Peptide ID', 
+                'rt.minus', 'rt.plus', 'muijs', 'sigmas', 'PEP.new')]
+write.table(ev.ff, 'dat/ev.adj.txt', sep='\t', row.names=FALSE, quote=FALSE)
