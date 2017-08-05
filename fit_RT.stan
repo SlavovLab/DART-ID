@@ -39,7 +39,7 @@ transformed parameters {
 
   ## muij is the mean retention time for peptide i in experiment j 
   real muij[num_pep_exp_pairs];
-  for (i  in 1:num_pep_exp_pairs) {
+  for (i in 1:num_pep_exp_pairs) {
     if(mu[muij_to_pep[i]] < split_point[muij_to_exp[i]]) {
       muij[i] = beta_0[muij_to_exp[i]] + beta_1[muij_to_exp[i]] * mu[muij_to_pep[i]];
     } else if( mu[muij_to_pep[i]] >=  split_point[muij_to_exp[i]] ) {

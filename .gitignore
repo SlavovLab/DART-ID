@@ -19,3 +19,6 @@ notes.txt
 
 # compiled files
 *.rds
+
+# figures
+figures/*
