@@ -13,7 +13,7 @@
 #|                                                                                                                     |
 #+---------------------------------------------------------------------------------------------------------------------+
 
-fix.evidence.v2 <- function(path.in, path.out){
+fix.evidence.elite <- function(path.in, path.out){
   # load data ---------------------------------------------------------------
   
   # load tab-delimited files, with only the columns specified below
@@ -33,17 +33,25 @@ fix.evidence.v2 <- function(path.in, path.out){
   exps <- unique(ev$Raw.file)
   
   # exclude some experiments here??
+  exps <- exps[grep('[0-9]{6}?A', exps)]
   
   # create output table
-  all.exps <- data.frame(Raw.file=character(), Sequence=character(), PEP=numeric(), Retention.time=numeric())
-  
+  all.exps <- data.frame(Raw.file=character(), 
+                         Sequence=character(), 
+                         PEP=numeric(), 
+                         Retention.time=numeric())
   
   # Consolidate Peptides ----------------------------------------------------
   
   # loop thru experiments
+  counter <- 0
   for (i in exps) {
     # get current experiment
     exp <- subset(ev, ev$Raw.file==i)
+    
+    counter <- counter + 1
+    cat('\r', 'Processing ', counter, '/', length(exps), ' ', i,  '                                          ')
+    flush.console()
     
     # count # of "scans"/IDs for each peptide
     # some of these will come from consolidated PSMs, and will not be further consolidated because

@@ -38,8 +38,13 @@ find.ref.exp <- function(path.in, path.out){
   
   # loop thru candidates
   exps.all <- unique(ev.ed$Raw.file)
+  counter <- 0
   for (ii in exps.all) {
     C10 <- 0 
+    counter <- counter + 1
+    
+    cat('\r', 'Processing ', counter, '/', length(exps.all), ' ', i,  '                                          ')
+    flush.console()
     
     # load reference experiment
     reference.exp.l <- subset(ev.ed, ev.ed$PEP<5e-4 & ev.ed$Raw.file==ii)

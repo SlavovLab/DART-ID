@@ -1,9 +1,24 @@
 # OSX files
 .DS_Store
+Icon\r
+
+# Windows files
+desktop.ini
 
 # data files
 dat/*
+~*.pptx
 
 # notes
 notes.txt
 .Rproj.user
+
+# misc R files
+*.Rhistory
+*.RData
+
+# compiled files
+*.rds
+
+# figures
+figures/*
