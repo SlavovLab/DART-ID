@@ -35,9 +35,9 @@ parameters {
 }
 transformed parameters {
 
-  ## alignment is based on a segemented linear regression
+  // alignment is based on a segemented linear regression
 
-  ## muij is the mean retention time for peptide i in experiment j 
+  // muij is the mean retention time for peptide i in experiment j 
   real muij[num_pep_exp_pairs];
   for (i in 1:num_pep_exp_pairs) {
     if(mu[muij_to_pep[i]] < split_point[muij_to_exp[i]]) {
