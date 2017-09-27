@@ -65,5 +65,6 @@ model {
   
   for (i in 1:num_total_observations) {
     retention_times[i] ~ normal(muij[muij_map[i]], sigma[peptide_id[i]]);
+
   }
 }
