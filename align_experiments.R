@@ -6,7 +6,17 @@ library(rstan)
 library(scales)
 library(readr)
 
-evidence <- read_tsv("~/Google Drive/Ali_RT_bayesian/dat/evidence.txt")
+#evidence <- read_tsv("~/Google Drive/Ali_RT_bayesian/dat/evidence.txt")
+evidence <- read_tsv("dat/evidence.txt")
+
+# only use Elite chromatography experiments
+evidence <- evidence[grep('[0-9]{6}A', evidence$`Raw file`),]
+# remove abnormal LC experiments
+# load experiments from correlation testing in similar.lc.R
+exps.lc <- unlist(read_csv('dat/exps.corr.txt')[,2])
+names(exps.lc) <- NULL
+evidence <- evidence[evidence$`Raw file` %in% exps.lc,]
+
 subEvidence <- evidence[evidence$PEP < 0.05, c("Peptide ID", "Raw file", "Retention time")]
 
 experimentFactors <- as.factor(subEvidence[["Raw file"]])
@@ -58,7 +68,7 @@ initList <- list(mu=muInit,
 
 ## Optimze and save params
 pars <- optimizing(sm, data=data, init=initList, iter=20000, verbose=TRUE)$par
-save(pars, file="params.RData")
+save(pars, file="params.corr.RData")
 
 ## take a protein id and return the predicted mean retention time for all experiments
 getPredicted <- function(pid) {

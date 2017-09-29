@@ -69,8 +69,14 @@ fix.evidence.elite <- function(path.in, path.out){
     if(length(red.peps.list) > 0) {
       for (j in 1:length(red.peps.list)) {
         red.peps$Sequence[j] <- red.peps.list[j]
-        red.peps$PEP[j] <- min(unlist(exp[exp$Sequence==red.peps.list[j], 'PEP']))
-        red.peps$Retention.time[j] <- median(unlist(exp[exp$Sequence==red.peps.list[j], 'Retention.time']))
+        # smallest PEP
+        red.peps$PEP[j] <- min(unlist(
+          exp[exp$Sequence==red.peps.list[j], 'PEP']
+        ))
+        # median retention time
+        red.peps$Retention.time[j] <- median(unlist(
+          exp[exp$Sequence==red.peps.list[j], 'Retention.time']
+        ))
       }
     }
     

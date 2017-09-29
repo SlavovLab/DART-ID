@@ -9,6 +9,12 @@ load('dat/params_elite.RData')
 ev <- read_tsv('dat/evidence.txt')
 # only keep experiments done on Elite system
 ev <- ev[grep('[0-9]{6}A', ev$`Raw file`),]
+# remove abnormal LC experiments
+# load experiments from correlation testing in similar.lc.R
+exps.lc <- unlist(read_csv('dat/exps.corr.txt')[,2])
+names(exps.lc) <- NULL
+ev <- ev[ev$`Raw file` %in% exps.lc,]
+
 
 ev.f <- ev[ev$PEP < 0.05, c('Sequence', 
                             'Proteins', 'Leading razor protein',
@@ -85,7 +91,7 @@ for (i in 1:num_exps) {
   exp.mus <- mus[exp.peptides]
   exp.mus <- sapply(exp.mus, function(mu) {
     if(mu < split.point[exp_id]) {
-      return(beta0[exp_id] + beta1[exp_id] * mu)
+      return(beta0[exp_id] + (beta1[exp_id] * mu))
     } else {
       return(beta0[exp_id] + (beta1[exp_id] * split.point[exp_id]) + 
                (beta2[exp_id] * (mu - split.point[exp_id])))
@@ -110,7 +116,6 @@ for (i in 1:num_exps) {
   # P(RT|+) = probability that given the correct ID, the RT falls in the
   #           lognormal distribution of RTs for that peptide, for that experiment
   exp.rt.plus <- unlist(sapply(exp.peptides, function(id) {
-
     rts <- exp.f$`Retention time`[exp.peptide.map==id]
     muij <- exp.mus[exp.peptides==id]
     sigma <- sigmas[id]
@@ -178,4 +183,5 @@ ev.ff <- ev.adjusted[, c('Sequence', 'Proteins', 'Leading razor protein', 'Raw f
                 'Reporter intensity corrected 8', 'Reporter intensity corrected 9',
                 'Reverse', 'Peptide ID', 
                 'rt.minus', 'rt.plus', 'muijs', 'sigmas', 'PEP.new')]
-write.table(ev.ff, 'dat/ev.adj.elite.txt', sep='\t', row.names=FALSE, quote=FALSE)
+write.table(ev.ff, 'dat/ev.adj.corr.txt', sep='\t', row.names=FALSE, quote=FALSE)
+#write.table(ev.ff, 'dat/ev.adj.elite_sigmas10.txt', sep='\t', row.names=FALSE, quote=FALSE)
