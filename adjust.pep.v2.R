@@ -2,8 +2,9 @@
 library(readr)
 
 ## load STAN params
-load('dat/params_elite.RData')
+#load('dat/params_elite.RData')
 #load('dat/params_all.RData')
+load('dat/params.corr.RData')
 
 ## load evidence
 ev <- read_tsv('dat/evidence.txt')

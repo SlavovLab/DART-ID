@@ -52,5 +52,13 @@ ggplot(cor.mat.f, aes(x=Col, y=Row, fill=Cor)) +
 hc.cor.mat <- hclust(dist(cor.mat))
 exps.f <- exps[cutree(hc.cor.mat, k=2)==1]
 
+image(cor.mat[hc.cor.mat$order, hc.cor.mat$order], col=heat.colors(12))
+
+##
+
+cor.mat <- as.matrix(read_csv('dat/cor.mat.csv'))
+cor.mat <- cor.mat[,-1]
+rownames(cor.mat) <- NULL
+colnames(cor.mat) <- NULL
 
 

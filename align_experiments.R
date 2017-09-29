@@ -17,7 +17,7 @@ exps.lc <- unlist(read_csv('dat/exps.corr.txt')[,2])
 names(exps.lc) <- NULL
 evidence <- evidence[evidence$`Raw file` %in% exps.lc,]
 
-subEvidence <- evidence[evidence$PEP < 0.05, c("Peptide ID", "Raw file", "Retention time")]
+subEvidence <- evidence[evidence$PEP < 0.05, c("Peptide ID", "Raw file", "Retention time", "PEP")]
 
 experimentFactors <- as.factor(subEvidence[["Raw file"]])
 experiment_id <- as.numeric(experimentFactors)
@@ -68,9 +68,10 @@ initList <- list(mu=muInit,
 
 ## Optimze and save params
 pars <- optimizing(sm, data=data, init=initList, iter=20000, verbose=TRUE)$par
-save(pars, file="params.corr.RData")
+save(pars, file="params.RData")
 
 ## take a protein id and return the predicted mean retention time for all experiments
+
 getPredicted <- function(pid) {
     exps <- experiment_id[peptide_id == pid]
 
@@ -81,6 +82,7 @@ getPredicted <- function(pid) {
         
     mu <- pars[sprintf("mu[%s]", pid)]
 
+    ## predicted mean
     beta_0 + ifelse(mu < split_point,
                     beta_1*mu,
                     beta_1*split_point + beta_2*(mu - split_point))
@@ -129,7 +131,7 @@ checkExperiment(c(80, 6, 62, 55))
 ## Check means and variances for some experiments
 peptideCounts <- sort(table(peptide_id), decreasing=TRUE)
 par(mfrow=c(2, 4))
-for(pid in names(peptideCounts)[101:108]) {
+for(pid in names(peptideCounts)[15001:15008]) {
     rts <- retention_times[peptide_id == pid]
     diff <- rts - getPredicted(pid)
     hist(diff, breaks=50, freq=FALSE, main=pid)
@@ -140,7 +142,41 @@ for(pid in names(peptideCounts)[101:108]) {
      print(sd(diff))
 
 }
+par(mfrow=c(1,1))
+hist(pars[grep("sigma", names(pars))], breaks=50, col="green")
+sigs <- pars[grep("sigma", names(pars))]
+hist(sigs[sigs < 5], breaks=50, col="green")
+
+##########################################################
+
+## Gather all data required by the stan model into a list
+data <- list(num_experiments=num_experiments, num_peptides=num_peptides,
+             num_pep_exp_pairs=num_pep_exp_pairs, muij_map=muij_map,
+             muij_to_exp=muij_to_exp, muij_to_pep=muij_to_pep,
+             num_total_observations=num_total_observations,
+             experiment_id=experiment_id, peptide_id=peptide_id,
+             retention_times=retention_times,
+             prior_peps=subEvidence$PEP)
 
 
+## Compile the stan code
+sm <- stan_model(file="fit_RT_weighted.stan")
 
+## Initialize the parameters to something sensible
+muInit <- sapply(unique(peptide_id), function(pid) {
+    print(pid)
+    mean(retention_times[peptide_id==pid])
+})
+muInit <- rep(mean(retention_times), num_peptides)
+    
+splitInit <- rep(mean(muInit), num_experiments)
+initList <- list(mu=muInit,
+                 beta_0=rep(0, num_experiments),
+                 beta_1=rep(1, num_experiments),
+                 beta_2=rep(1, num_experiments),
+                 split_point=splitInit,
+                 sigma_global=1, sigma=rep(1, num_peptides))
 
+## Optimze and save params
+pars <- optimizing(sm, data=data, init=initList, iter=20000, verbose=TRUE, refresh=1)##$par
+save(pars, file="params.RData")

@@ -145,11 +145,12 @@ ev.pep <- parse.ev.adj('dat/ev.adj.elite.txt')
 #ev.exp <- parse.ev.adj('dat/ev+dRT.elite.txt', type='Ali')
 ev.exp <- adjust.pep.ali(path.out=NULL)
 #ev.exp.05 <- adjust.pep.ali(path.out=NULL)
+ev.corr <- parse.ev.adj('dat/ev.adj.corr.txt')
 
 acc <- 100
 t <- logseq(1e-3, 1e-1, n=acc)
 #id.frac <- c(length=acc*2)
-id.frac <- c(length=acc*3)
+id.frac <- c(length=acc*4)
 counter <- 0
 for(i in t) {
   counter <- counter + 1
@@ -159,17 +160,21 @@ for(i in t) {
   id.frac[counter] <- sum(ev$PEP.new < i, na.rm=T) / sum(ev$PEP < i & !is.na(ev$PEP.new))
   id.frac[acc+counter] <- sum(ev.pep$PEP.new < i, na.rm=T) / sum(ev.pep$PEP < i & !is.na(ev.pep$PEP.new))
   id.frac[(2*acc)+counter] <- sum(ev.exp$PEP.new < i, na.rm=T) / sum(ev.exp$PEP < i & !is.na(ev.exp$PEP.new))
+  id.frac[(3*acc)+counter] <- sum(ev.corr$PEP.new < i, na.rm=T) / sum(ev.corr$PEP < i & !is.na(ev.corr$PEP.new))
   cat(counter, '/', acc, '\r')
   flush.console()
 }
 
 df <- data.frame(
   PEP=as.numeric(id.frac),
-  Method=as.factor(rep(c('Experiment-Centric (Ali)', 'Peptide-Centric (STAN)',
-                         'Experiment-Centric (STAN)'), each=acc))
+  Method=as.factor(rep(c('Experiment-Centric (Ali)', 
+                         'Peptide-Centric (STAN)',
+                         'Experiment-Centric (STAN)', 
+                         'Peptide-Centric (STAN w/ Corr)'), 
+                       each=acc))
 )
 
-ggplot(df, aes(x=rep(t,3), y=PEP, color=Method, fill=Method)) +
+ggplot(df, aes(x=rep(t,4), y=PEP, color=Method, fill=Method)) +
   geom_point(size=1) + 
   geom_path() +#geom_smooth(method='loess') +
   scale_x_log10() +
