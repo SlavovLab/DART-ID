@@ -1,54 +1,71 @@
-## init
+# init
 library(readr)
+library(tidyverse)
+library(rmutil)
 
-## load STAN params
-#load('dat/params_elite.RData')
-#load('dat/params_all.RData')
-#load('dat/params.corr.RData')
 load('dat/params.Fit2.RData')
 
 ## load evidence
 ev <- read_tsv('dat/evidence.txt')
-# only keep experiments done on Elite system
-ev <- ev[grep('[0-9]{6}A', ev$`Raw file`),]
+
 # remove abnormal LC experiments
 # load experiments from correlation testing in similar.lc.R
 exps.lc <- unlist(read_csv('dat/exps.corr.txt')[,2])
 names(exps.lc) <- NULL
-ev <- ev[ev$`Raw file` %in% exps.lc,]
 
+ev <- ev %>%
+  filter(grepl('[0-9]{6}A', `Raw file`)) %>% # Only use Elite experiments
+  filter(`Raw file` %in% exps.lc) # Remove abnormal LC experiments
 
-ev.f <- ev[ev$PEP < 0.05, c('Sequence', 
-                            'Proteins', 'Leading razor protein',
-                            'Raw file', 'Retention time', 'PEP',
-                            'Peptide ID', 'Best MS/MS')]
-colnames(ev.f) <- c('Sequence','Proteins','Razor.protein',
-                    'Raw.file','Retention.time','PEP', 'Peptide.ID', 'Obs.ID')
+## Filter of PEP < .05
+ev.f <- ev %>% filter(PEP < 0.05) %>%
+  filter(grepl('[0-9]{6}A', `Raw file`)) %>% # Only use Elite experiments
+  filter(!grepl('REV*', `Leading razor protein`)) %>% # Remove Reverse matches
+  filter(!grepl('CON*',`Leading razor protein`))  %>% # Remove Contaminants
+  filter(`Raw file` %in% exps.lc) %>% # Remove abnormal LC experiments
+  select("Peptide ID", "Raw file", "Retention time", "PEP")
 
-# if we don't have regression data for some experiments that have ALL PEPs > the
-# threshold of 0.05, then remove them
-ev <- ev[(ev$`Raw file` %in% ev.f$Raw.file),]
+## Add factor indices
+ev.f <- ev.f %>% 
+  mutate(exp_id=`Raw file`) %>%  # new column - exp_id = numeric version of experiment file
+  mutate_at("exp_id", funs(as.numeric(as.factor(.))))
 
-# get experiment ids
-experiment_factors <- as.factor(ev$`Raw file`)
-experiment_id <- as.numeric(experiment_factors)
-num_exps = max(experiment_id)
-# get peptide ids
-true_peptide_id <- ev.f$Peptide.ID
-pep.id.list <- unique(true_peptide_id)
-peptide_id <- as.numeric(as.factor(true_peptide_id))
-# get observation IDs - for mapping back to original data format
-obs_id <- as.numeric(ev.f$Obs.ID)
+experiment_factors <- as.factor(ev.f$`Raw file`)
+experiment_ids <- ev.f[["exp_id"]]
+num_exps <- length(unique(ev.f[["exp_id"]]))
+
+## "true peptide id" matches peptide id in evidence file
+## "peptide id" is index in 1:num_peptides for stan
+raw_peptide_id <- ev.f[["Peptide ID"]]
+pep.id.list <- unique(raw_peptide_id)
+stan_peptide_id <- as.numeric(as.factor(ev.f[["Peptide ID"]]))
+ev.f[["Stan ID"]] <- stan_peptide_id
+
+num_total_observations <- nrow(ev.f)
+num_peptides <- length(unique(stan_peptide_id))
+
+retention_times <- ev.f[["Retention time"]]
+
+pep_exp_all <- paste(stan_peptide_id, experiment_ids, sep=" - ")
+pep_exp_pairs <- unique(pep_exp_all)
+num_pep_exp_pairs <- length(pep_exp_pairs)
+muij_map <- match(paste(stan_peptide_id, experiment_ids, sep=" - "), pep_exp_pairs)
+splt <- strsplit(pep_exp_pairs, " - ")
+muij_to_pep <- as.numeric(sapply(splt, function(x) x[1]))
+muij_to_exp <- as.numeric(sapply(splt, function(x) x[2]))
 
 # parse linear regression params from STAN output
 beta0 <- pars[sprintf('beta_0[%i]', seq(1, num_exps))]
 beta1 <- pars[sprintf('beta_1[%i]', seq(1, num_exps))]
 beta2 <- pars[sprintf('beta_2[%i]', seq(1, num_exps))]
 split.point = pars[sprintf('split_point[%i]', seq(1, num_exps))]
-# parse canonical retention times from STAN output
+sigma.slope = pars[sprintf('sigma_slope[%i]', seq(1, num_exps))]
+sigma.intercept = pars[sprintf('sigma_intercept[%i]', seq(1, num_exps))]
+sigma.slope.global = pars['sigma_slope_global']
 mus <- pars[grep('mu\\[', names(pars))]
-# parse RT standard deviations from STAN output
-sigmas <- pars[grep('sigma\\[', names(pars))]
+
+muij_fit <- pars[grep("muij", names(pars))]
+sigma_ijs <- pars[grep('sigma_ij', names(pars))]
 
 # build global false positive density function
 ev.rt.edf <- density(ev$`Retention time`)
@@ -65,7 +82,7 @@ ev.new <- data.frame(
 )
 
 print('Processing...')
-for (i in 1:num_exps) {
+for(i in 1:num_exps) {
   # counter also doubles as experiment_id
   exp_id <- i
   exp_name <- levels(experiment_factors)[exp_id]
@@ -73,19 +90,16 @@ for (i in 1:num_exps) {
   exp <- subset(ev, ev$`Raw file`==exp_name, 
                 c('Raw file', 'Sequence', 'PEP', 'Retention time', 
                   'Best MS/MS', 'Peptide ID'))
-
+  
   cat('\r', i, '/', num_exps, exp_name, nrow(exp), '                           ')
   flush.console()
-  
-  # some experiments have very few rows??? skip these
-  #if(dim(exp)[1] < 10) next
   
   # not all peptides in this experiment have data from the model
   # we can only update those that have that data. others will not be touched
   exp.matches <- exp$`Peptide ID` %in% pep.id.list
   exp.f <- subset(exp, exp.matches)
   
-  # convert true_peptide_id to peptide_id
+  # convert true_peptide_id to stan_peptide_id
   exp.peptide.map <- match(exp.f$`Peptide ID`, pep.id.list)
   exp.peptides <- unique(exp.peptide.map)
   
@@ -100,7 +114,8 @@ for (i in 1:num_exps) {
     }
   })
   # get sigmas (standard deviations) for peptides
-  exp.sigmas <- sigmas[exp.peptides]
+  exp.sigmas <- sigma.intercept[exp_id] + 
+    sigma.slope[exp_id] / 100 * mus[exp.peptides]
   
   # PEP.new = P(-|RT) = P(RT|-)*P(-) / (P(RT|-)*P(-) + P(RT|+)*P(+)
   # + <- PSM=Correct
@@ -120,12 +135,13 @@ for (i in 1:num_exps) {
   exp.rt.plus <- unlist(sapply(exp.peptides, function(id) {
     rts <- exp.f$`Retention time`[exp.peptide.map==id]
     muij <- exp.mus[exp.peptides==id]
-    sigma <- sigmas[id]
-    dnorm(rts, mean=muij, sd=sigma)
+    sigma <- exp.sigmas[exp.peptides==id]
+    #dnorm(rts, mean=muij, sd=sigma)
+    dlaplace(rts, m=muij, s=sigma)
   }))
   # sometimes rt.plus will go so low that it will round to 0
-  # just round this back up to 1e-100
-  exp.rt.plus[exp.rt.plus == 0] = 1e-100
+  # just round this back up to the smallest number R will handle
+  exp.rt.plus[exp.rt.plus == 0] = .Machine$double.xmin
   
   exp.PEP <- exp.f$PEP
   # sometimes MQ will output PEP > 1, which makes no sense, and will
@@ -139,8 +155,6 @@ for (i in 1:num_exps) {
   # - <- PSM=Incorrect
   PEP.new <- (exp.rt.minus*exp.PEP) / 
     ((exp.rt.minus*exp.PEP) + (exp.rt.plus*(1-exp.PEP)))
-  
-  #hist(PEP.new[PEP.new<0.1], breaks=seq(0, 0.1, by=0.001), main=i)
   
   # output table for this experiment, for updated data
   exp.new <- data.frame(
@@ -177,16 +191,42 @@ ev.adjusted <- cbind(ev, ev.new.f)
 ev.adjusted <- ev.adjusted[,!(names(ev.adjusted) %in% 
                                 c('Obs.ID', 'Raw.file'))]
 
-write.table(ev.adjusted, 'dat/ev.adjusted.elite.txt', sep='\t', row.names=FALSE, quote=FALSE)
+#write.table(ev.adjusted, 'dat/ev.adjusted.elite.txt', sep='\t', row.names=FALSE, quote=FALSE)
 
 ev.ff <- ev.adjusted[, c('Sequence', 'Proteins', 'Leading razor protein', 'Raw file', 
-                'Retention time', 'Retention length', 'PIF', 'PEP', 'Intensity',
-                'Reporter intensity corrected 0', 'Reporter intensity corrected 1', 
-                'Reporter intensity corrected 2', 'Reporter intensity corrected 3', 
-                'Reporter intensity corrected 4', 'Reporter intensity corrected 5', 
-                'Reporter intensity corrected 6', 'Reporter intensity corrected 7', 
-                'Reporter intensity corrected 8', 'Reporter intensity corrected 9',
-                'Reverse', 'Peptide ID', 
-                'rt.minus', 'rt.plus', 'muijs', 'sigmas', 'PEP.new')]
-write.table(ev.ff, 'dat/ev.adj.corr.txt', sep='\t', row.names=FALSE, quote=FALSE)
-#write.table(ev.ff, 'dat/ev.adj.elite_sigmas10.txt', sep='\t', row.names=FALSE, quote=FALSE)
+                         'Retention time', 'Retention length', 'PIF', 'PEP', 'Intensity',
+                         'Reporter intensity corrected 0', 'Reporter intensity corrected 1', 
+                         'Reporter intensity corrected 2', 'Reporter intensity corrected 3', 
+                         'Reporter intensity corrected 4', 'Reporter intensity corrected 5', 
+                         'Reporter intensity corrected 6', 'Reporter intensity corrected 7', 
+                         'Reporter intensity corrected 8', 'Reporter intensity corrected 9',
+                         'Reverse', 'Peptide ID', 
+                         'rt.minus', 'rt.plus', 'muijs', 'sigmas', 'PEP.new', 'id')]
+write.table(ev.ff, 'dat/ev.adj.Fit2.txt', sep='\t', row.names=FALSE, quote=FALSE)
+
+
+
+# analyze the results
+
+ev.fit2 <- parse.ev.adj('dat/ev.adj.Fit2.txt')
+ev.fit2 <- read_tsv('dat/ev.adj.Fit2.txt')
+
+#ev.a <- ev.fit2 %>%
+ev.a <- ev.ff %>%
+  mutate(exp_id=`Raw file`) %>%  # new column - exp_id = numeric version of experiment file
+  mutate_at("exp_id", funs(as.numeric(as.factor(.)))) %>%
+  group_by(`Peptide ID`, `exp_id`) %>%
+  select('Peptide ID', 'exp_id', 'rt.minus', 'rt.plus', 'Retention time', 
+         'muijs', 'sigmas', 'PEP', 'PEP.new', 'id')
+
+i <- sample.int(n=nrow(ev.a), size=1e5)
+
+ev.a[i,] %>%
+  filter(!is.na(PEP.new)) %>%
+  #filter(`exp_id`==1) %>%
+  ggplot(aes(x=PEP, y=PEP.new)) +
+    #geom_point(alpha=0.1)+
+    stat_density2d(aes(fill=..level..), geom='polygon', n=50) +
+    geom_abline(intercept=0, slope=1, color='red') +
+    scale_x_log10(limits=c(1e-8, 1)) + scale_y_log10(limits=c(1e-8, 1)) +
+    labs(title='RTLib: Fit2 (updated sigmas)')

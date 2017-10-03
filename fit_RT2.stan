@@ -14,9 +14,6 @@ data {
   int<lower=1, upper=num_experiments> experiment_id[num_total_observations];
   int<lower=1, upper=num_peptides> peptide_id[num_total_observations];
   real<lower=0> retention_times[num_total_observations];
-
-  
-  
 }
 parameters {
 
@@ -43,17 +40,21 @@ transformed parameters {
   real<lower=0> muij[num_pep_exp_pairs];
   for (i  in 1:num_pep_exp_pairs) {
     if(mu[muij_to_pep[i]] < split_point[muij_to_exp[i]]) {
-      muij[i] = beta_0[muij_to_exp[i]] + beta_1[muij_to_exp[i]] * mu[muij_to_pep[i]];
+      muij[i] = beta_0[muij_to_exp[i]] + 
+        beta_1[muij_to_exp[i]] * mu[muij_to_pep[i]];
     } else if( mu[muij_to_pep[i]] >=  split_point[muij_to_exp[i]] ) {
-      muij[i] = beta_0[muij_to_exp[i]] + beta_1[muij_to_exp[i]] * split_point[muij_to_exp[i]] + beta_2[muij_to_exp[i]] * (mu[muij_to_pep[i]] - split_point[muij_to_exp[i]]);
+      muij[i] = beta_0[muij_to_exp[i]] + 
+        beta_1[muij_to_exp[i]] * split_point[muij_to_exp[i]] + 
+        beta_2[muij_to_exp[i]] * (mu[muij_to_pep[i]] - split_point[muij_to_exp[i]]);
       //muij[i] = beta_0[muij_to_exp[i]] + beta_1[muij_to_exp[i]] * mu[muij_to_pep[i]];
     
     }
   }
 
   // standard deviation grows linearly with abundance
-  for(i  in 1:num_pep_exp_pairs) { 
-    sigma_ij[i] = sigma_intercept[muij_to_exp[i]] + sigma_slope[muij_to_exp[i]]/100*mu[muij_to_pep[i]];
+  for(i in 1:num_pep_exp_pairs) { 
+    sigma_ij[i] = sigma_intercept[muij_to_exp[i]] + 
+      sigma_slope[muij_to_exp[i]] / 100 * mu[muij_to_pep[i]];
   }
 
 }
@@ -73,8 +74,8 @@ model {
     split_point ~ uniform(min(muij), max(muij));
   }
   
-  for (i  in 1:num_total_observations) {
-      retention_times[i] ~ double_exponential(muij[muij_map[i]], sigma_ij[peptide_id[i]]);
+  for (i in 1:num_total_observations) {
+    retention_times[i] ~ double_exponential(muij[muij_map[i]], sigma_ij[peptide_id[i]]);
   }
 
 }

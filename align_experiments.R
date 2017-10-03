@@ -54,6 +54,7 @@ data <- list(num_experiments=num_experiments, num_peptides=num_peptides,
 
 ## Compile the stan code
 sm <- stan_model(file="fit_RT.stan")
+sm2 <- stan_model(file='fit_RT2.stan')
 
 ## Initialize the parameters to something sensible
 muInit <- aggregate(`Retention time` ~ `Peptide ID`, 
@@ -67,8 +68,9 @@ initList <- list(mu=muInit,
                  sigma_global=1, sigma=rep(1, num_peptides))
 
 ## Optimze and save params
-pars <- optimizing(sm, data=data, init=initList, iter=20000, verbose=TRUE)$par
-save(pars, file="params.RData")
+#pars <- optimizing(sm, data=data, init=initList, iter=20000, verbose=TRUE)$par
+pars <- optimizing(sm2, data=data, init=initList, iter=20000, verbose=TRUE)$par
+save(pars, file="params.Fit2.RData")
 
 ## take a protein id and return the predicted mean retention time for all experiments
 

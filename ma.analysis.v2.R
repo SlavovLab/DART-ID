@@ -139,14 +139,18 @@ ggplot(ev.f[x,], aes(x=index, y=PEP.sort, color=sigma.mod)) +
 ## fold change between methods -----
 source('parse.ev.adj.R')
 source('adjust.pep.ali.R')
-ev <- parse.ev.adj('dat/evidence+dRT.elite.txt', type='Ali')
-#ev.ali <- parse.ev.adj('dat/evidence+dRT.elite.txt', type='Ali')
+#ev <- parse.ev.adj('dat/evidence+dRT.elite.txt', type='Ali')
+ev.ali <- parse.ev.adj('dat/evidence+dRT.elite.txt', type='Ali')
 ev.pep <- parse.ev.adj('dat/ev.adj.elite.txt')
 #ev.exp <- parse.ev.adj('dat/ev+dRT.elite.txt', type='Ali')
-ev.exp <- adjust.pep.ali(path.out=NULL)
+#ev.exp <- adjust.pep.ali(path.out=NULL)
+ev.exp <- read_tsv('dat/ev+dRT.elite.txt')
 #ev.exp.05 <- adjust.pep.ali(path.out=NULL)
-ev.corr <- parse.ev.adj('dat/ev.adj.corr.txt')
+#ev.corr <- parse.ev.adj('dat/ev.adj.corr.txt')
+ev.fit2 <- parse.ev.adj('dat/ev.adj.Fit2.txt')
 
+library(pracma)
+library(ggplot2)
 acc <- 100
 t <- logseq(1e-3, 1e-1, n=acc)
 #id.frac <- c(length=acc*2)
@@ -157,11 +161,15 @@ for(i in t) {
   #id.frac[counter] <- sum(ev$PEP.updated < i) / sum(ev$PEP < i)
   #id.frac[acc+counter] <- sum(ev.pep$PEP.updated < i) / sum(ev.pep$PEP < i)
   #id.frac[(2*acc)+counter] <- sum(ev.exp.05$PEP.updated < i) / sum(ev.exp.05$PEP < i)
-  id.frac[counter] <- sum(ev$PEP.new < i, na.rm=T) / sum(ev$PEP < i & !is.na(ev$PEP.new))
-  id.frac[acc+counter] <- sum(ev.pep$PEP.new < i, na.rm=T) / sum(ev.pep$PEP < i & !is.na(ev.pep$PEP.new))
-  id.frac[(2*acc)+counter] <- sum(ev.exp$PEP.new < i, na.rm=T) / sum(ev.exp$PEP < i & !is.na(ev.exp$PEP.new))
-  id.frac[(3*acc)+counter] <- sum(ev.corr$PEP.new < i, na.rm=T) / sum(ev.corr$PEP < i & !is.na(ev.corr$PEP.new))
-  cat(counter, '/', acc, '\r')
+  id.frac[counter] <- sum(ev.ali$PEP.new < i, na.rm=T) / 
+    sum(ev.ali$PEP < i & !is.na(ev.ali$PEP.new))
+  id.frac[acc+counter] <- sum(ev.pep$PEP.new < i, na.rm=T) / 
+    sum(ev.pep$PEP < i & !is.na(ev.pep$PEP.new))
+  id.frac[(2*acc)+counter] <- sum(ev.exp$PEP.new < i, na.rm=T) / 
+    sum(ev.exp$PEP < i & !is.na(ev.exp$PEP.new))
+  id.frac[(3*acc)+counter] <- sum(ev.fit2$PEP.new < i, na.rm=T) / 
+    sum(ev.fit2$PEP < i & !is.na(ev.fit2$PEP.new))
+  cat(counter, '/', acc, '                         \r')
   flush.console()
 }
 
@@ -170,7 +178,7 @@ df <- data.frame(
   Method=as.factor(rep(c('Experiment-Centric (Ali)', 
                          'Peptide-Centric (STAN)',
                          'Experiment-Centric (STAN)', 
-                         'Peptide-Centric (STAN w/ Corr)'), 
+                         'Fit 2 (STAN w/ updated sigmas)'), 
                        each=acc))
 )
 

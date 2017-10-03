@@ -5,36 +5,60 @@ library("splines")
 library(rstan)
 
 evidence <- read_tsv("~/Google\ Drive/Ali_RT_bayesian/dat/ev.adj.txt")
+evidence <- read_tsv('dat/evidence.txt')
 
-## Filter of PEP  < .05 and remove REV and CONT and experiments on wrong LC column
+# remove abnormal LC experiments
+# load experiments from correlation testing in similar.lc.R
+exps.lc <- unlist(read_csv('dat/exps.corr.txt')[,2])
+names(exps.lc) <- NULL
+
+## Filter of PEP < .05
 subEvidence <- evidence %>% filter(PEP < 0.05) %>%
-    filter(grepl('[0-9]{6}A', `Raw file`)) %>%
-    filter(!grepl('REV*', `Leading razor protein`)) %>%
-    filter(!grepl('CON*',`Leading razor protein`))  %>%
+    filter(grepl('[0-9]{6}A', `Raw file`)) %>% # Only use Elite experiments
+    filter(!grepl('REV*', `Leading razor protein`)) %>% # Remove Reverse matches
+    filter(!grepl('CON*',`Leading razor protein`))  %>% # Remove Contaminants
+    filter(`Raw file` %in% exps.lc) %>% # Remove abnormal LC experiments
     select("Peptide ID", "Raw file", "Retention time", "PEP")
 
+
 ## Add factor indices
-subEvidence <- subEvidence %>% mutate(exp_id=`Raw file`) %>% mutate_at("exp_id", funs(as.numeric(as.factor(.))))
+subEvidence <- subEvidence %>% 
+  mutate(exp_id=`Raw file`) %>%  # new column - exp_id = numeric version of experiment file
+  mutate_at("exp_id", funs(as.numeric(as.factor(.))))
 
 ## Look at mean retention times to get a sense of alignment
-rt_means <- subEvidence %>% group_by(`Peptide ID`, `exp_id`) %>% summarise(avg=median(`Retention time`)) ##, pep_avg=mean(`PEP`))
+rt_means <- subEvidence %>% 
+  group_by(`Peptide ID`, `exp_id`) %>% 
+  summarise(avg=median(`Retention time`)) ##, pep_avg=mean(`PEP`))
 rt_means <- rt_means %>% spread(key=`exp_id`, value=avg)
 
 
-rank_means <- subEvidence %>% group_by(`exp_id`) %>% mutate_at(vars(`Retention time`), funs(rank(., na.last="keep")/(n()+1))) %>% ungroup() %>% group_by(`exp_id`, `Peptide ID`) %>% summarise(avg=median(`Retention time`)) %>% spread(key=`exp_id`, value=avg)
+rank_means <- subEvidence %>% 
+  group_by(`exp_id`) %>% 
+  mutate_at(vars(`Retention time`), 
+            funs(rank(., na.last="keep")/(n()+1))) %>% # fractional rank
+  ungroup() %>% 
+  group_by(`exp_id`, `Peptide ID`) %>% 
+  summarise(avg=median(`Retention time`)) 
+rank_means <- rank_means %>% spread(key=`exp_id`, value=avg)
 
 num_experiments <- length(unique(subEvidence[["exp_id"]]))
 
-rt_means %>%  arrange(`33`) %>% ggplot(aes(x=`33`, y=`43`)) + geom_point() + geom_abline(a=0, b=1)
-rt_means %>%  ggplot(aes(x=`38`, y=`33`)) + geom_line() + geom_abline(a=0, b=1)
-rt_means  %>% ggplot(aes(x=`99`, y=`68`)) + geom_point() + geom_abline(a=0, b=1)
-rt_means  %>% ggplot(aes(x=`13`, y=`44`)) + geom_point() + geom_abline(a=0, b=1)
+rt_means %>% 
+  arrange(`33`) %>% 
+  ggplot(aes(x=`33`, y=`43`)) + geom_point() + geom_abline(a=0, b=1) 
+rt_means %>% 
+  ggplot(aes(x=`38`, y=`33`)) + geom_line() + geom_abline(a=0, b=1)
+rt_means %>% 
+  ggplot(aes(x=`99`, y=`68`)) + geom_point() + geom_abline(a=0, b=1)
+rt_means %>% 
+  ggplot(aes(x=`13`, y=`44`)) + geom_point() + geom_abline(a=0, b=1)
 
 
-rank_means %>%  ggplot(aes(x=`38`, y=`33`)) + geom_point() + geom_abline(a=0, b=1)
-rank_means  %>% ggplot(aes(x=`99`, y=`68`)) + geom_point() + geom_abline(a=0, b=1)
-rank_means  %>% ggplot(aes(x=`13`, y=`44`)) + geom_point() + geom_abline(a=0, b=1)
-rank_means  %>% ggplot(aes(x=`50`, y=`60`)) + geom_point() + geom_abline(a=0, b=1)
+rank_means %>% ggplot(aes(x=`38`, y=`33`)) + geom_point() + geom_abline(a=0, b=1)
+rank_means %>% ggplot(aes(x=`99`, y=`68`)) + geom_point() + geom_abline(a=0, b=1)
+rank_means %>% ggplot(aes(x=`13`, y=`44`)) + geom_point() + geom_abline(a=0, b=1)
+rank_means %>% ggplot(aes(x=`50`, y=`60`)) + geom_point() + geom_abline(a=0, b=1)
 
 num_experiments <- max(subEvidence[["exp_id"]])
 
