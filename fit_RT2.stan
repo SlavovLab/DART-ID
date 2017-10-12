@@ -51,7 +51,7 @@ transformed parameters {
     }
   }
 
-  // standard deviation grows linearly with abundance
+  // standard deviation grows linearly with time
   for(i in 1:num_pep_exp_pairs) { 
     sigma_ij[i] = sigma_intercept[muij_to_exp[i]] + 
       sigma_slope[muij_to_exp[i]] / 100 * mu[muij_to_pep[i]];
