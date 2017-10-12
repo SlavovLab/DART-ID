@@ -62,3 +62,57 @@ rownames(cor.mat) <- NULL
 colnames(cor.mat) <- NULL
 
 
+## cluster by LC parameters
+
+load('dat/params.Fit2.RData')
+
+## load evidence
+ev <- read_tsv('dat/evidence.txt')
+
+# remove abnormal LC experiments
+# load experiments from correlation testing in similar.lc.R
+exps.lc <- unlist(read_csv('dat/exps.corr.txt')[,2])
+names(exps.lc) <- NULL
+
+ev <- ev %>%
+  filter(grepl('[0-9]{6}A', `Raw file`)) %>% # Only use Elite experiments
+  filter(`Raw file` %in% exps.lc) # Remove abnormal LC experiments
+
+## Filter of PEP < .05
+ev.f <- ev %>% filter(PEP < 0.05) %>%
+  filter(grepl('[0-9]{6}A', `Raw file`)) %>% # Only use Elite experiments
+  filter(!grepl('REV*', `Leading razor protein`)) %>% # Remove Reverse matches
+  filter(!grepl('CON*',`Leading razor protein`))  %>% # Remove Contaminants
+  filter(`Raw file` %in% exps.lc) %>% # Remove abnormal LC experiments
+  select("Peptide ID", "Raw file", "Retention time", "PEP")
+
+## Add factor indices
+ev.f <- ev.f %>% 
+  mutate(exp_id=`Raw file`) %>%  # new column - exp_id = numeric version of experiment file
+  mutate_at("exp_id", funs(as.numeric(as.factor(.))))
+
+experiment_factors <- as.factor(ev.f$`Raw file`)
+experiment_ids <- ev.f[["exp_id"]]
+num_exps <- length(unique(ev.f[["exp_id"]]))
+exps <- unique(ev.f$exp_id)
+
+beta0 <- pars[sprintf('beta_0[%i]', seq(1, num_exps))]
+beta1 <- pars[sprintf('beta_1[%i]', seq(1, num_exps))]
+beta2 <- pars[sprintf('beta_2[%i]', seq(1, num_exps))]
+split.point = pars[sprintf('split_point[%i]', seq(1, num_exps))]
+sigma.slope = pars[sprintf('sigma_slope[%i]', seq(1, num_exps))]
+sigma.intercept = pars[sprintf('sigma_intercept[%i]', seq(1, num_exps))]
+sigma.slope.global = pars['sigma_slope_global']
+
+#df <- as.matrix(cbind(beta0, beta1, beta2, split.point, sigma.slope, sigma.intercept))
+df <- as.matrix(cbind(beta0, beta1, beta2, split.point))
+rownames(df) <- NULL
+
+dfd <- dist(scale(df))
+dfh <- hclust(dfd)
+
+image(as.matrix(dfd))
+image(as.matrix(dfd)[dfh$order, dfh$order])
+
+plot(dfh)
+heatmap(scale(df), Colv=NA, scale='none')
