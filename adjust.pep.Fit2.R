@@ -1,5 +1,4 @@
 # init
-library(readr)
 library(tidyverse)
 library(rmutil)
 
@@ -19,14 +18,10 @@ ev <- ev %>%
 
 ## Filter of PEP < .05
 ev.f <- ev %>% filter(PEP < 0.05) %>%
-  filter(grepl('[0-9]{6}A', `Raw file`)) %>% # Only use Elite experiments
   filter(!grepl('REV*', `Leading razor protein`)) %>% # Remove Reverse matches
   filter(!grepl('CON*',`Leading razor protein`))  %>% # Remove Contaminants
   filter(`Raw file` %in% exps.lc) %>% # Remove abnormal LC experiments
-  select("Peptide ID", "Raw file", "Retention time", "PEP")
-
-## Add factor indices
-ev.f <- ev.f %>% 
+  select("Peptide ID", "Raw file", "Retention time", "PEP") %>%
   mutate(exp_id=`Raw file`) %>%  # new column - exp_id = numeric version of experiment file
   mutate_at("exp_id", funs(as.numeric(as.factor(.))))
 

@@ -48,6 +48,8 @@ ggplot(cor.mat.f, aes(x=Col, y=Row, fill=Cor)) +
   geom_tile() +
   scale_y_continuous(trans='reverse')
 
+# rank sort, correlation matrix, scatterplot
+
 
 hc.cor.mat <- hclust(dist(cor.mat))
 exps.f <- exps[cutree(hc.cor.mat, k=10)==1]

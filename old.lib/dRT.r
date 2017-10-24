@@ -17,7 +17,10 @@
 #| libraries made by make.lib v.2. Cleaner output.                                                                     |
 #+---------------------------------------------------------------------------------------------------------------------+
 
-dRT <- function(path.in.lib, path.in.coeffs, path.in.evidence, path.out.PEP.updated){
+dRT <- function(path.in.lib='dat/RT.lib.elite.txt', 
+                path.in.coeffs='dat/shift.coeffs.elite.txt', 
+                path.in.evidence='dat/evidence.txt', 
+                path.out.PEP.updated='dat/evidence+dRT.elite.txt'){
   
   rt.lib <- read.delim(path.in.lib, header = TRUE, stringsAsFactors = FALSE)
   shift.coeffs <- read.delim(path.in.coeffs, header = TRUE, stringsAsFactors = FALSE)
@@ -40,19 +43,19 @@ dRT <- function(path.in.lib, path.in.coeffs, path.in.evidence, path.out.PEP.upda
   ev.for$coeff <- shift.coeffs$coeff[match(ev.for$Raw.file, shift.coeffs$experiment)]
   ev.for$RT.corrected <- ev.for$intercept + (ev.for$coeff * ev.for$Retention.time)
   ev.for$dRT.med <- abs(ev.for$RT.corrected-ev.for$RT.lib)
-  for (i in 1:nrow(ev.for)){
+  #for (i in 1:nrow(ev.for)){
     # smallest difference between corrected RT and any one of the RT entries in the
     # RT library
-    ev.for$dRT[i] <- min(
-      abs(ev.for$RT.corrected[i] -
-            na.omit(t(rt.lib[rt.lib$peptides==ev.for$Sequence[i], 
-                     2:(ncol(rt.lib)-4)]))
-      )
-    )
+  #  ev.for$dRT[i] <- min(
+  #    abs(ev.for$RT.corrected[i] -
+  #          na.omit(t(rt.lib[rt.lib$peptides==ev.for$Sequence[i], 
+  #                   2:(ncol(rt.lib)-4)]))
+  #    )
+  #  )
     # this takes a while
-    flush.console()
-    cat('\r', i, '/', nrow(ev.for), '              ')
-  }
+  #  flush.console()
+  #  cat('\r', i, '/', nrow(ev.for), '              ')
+  #}
   ev.for <- ev.for[,-(20:21)]
   
   # REVERSE:
@@ -63,7 +66,7 @@ dRT <- function(path.in.lib, path.in.coeffs, path.in.evidence, path.out.PEP.upda
   ev.rev$coeff <- shift.coeffs$coeff[match(ev.rev$Raw.file, shift.coeffs$experiment)]
   ev.rev$RT.corrected <- ev.rev$intercept + (ev.rev$coeff * ev.rev$Retention.time)
   ev.rev$dRT.med <- abs(ev.rev$RT.corrected - ev.rev$RT.lib)
-  ev.rev$dRT <- ev.rev$dRT.med
+  #ev.rev$dRT <- ev.rev$dRT.med
   ev.rev <- ev.rev[,-(20:21)]
   
   ev.tot <- rbind(ev.rev, ev.for)
@@ -80,8 +83,13 @@ dRT <- function(path.in.lib, path.in.coeffs, path.in.evidence, path.out.PEP.upda
                        Reporter.intensity.corrected.8=numeric(), Reporter.intensity.corrected.9=numeric(), id=numeric(),
                        Leading.razor.protein=character(), RT.lib=numeric(), RT.corrected=numeric(), dRT.med=numeric(),
                        dRT=numeric())
+  
+  dens.forw <- list()
+  dens.rev <- list()
+  
   exps <- unique(ev.tot$Raw.file)
   counter <- 0
+  
   for (i in exps) {
     counter <- counter + 1
     
@@ -96,6 +104,9 @@ dRT <- function(path.in.lib, path.in.coeffs, path.in.evidence, path.out.PEP.upda
     
     den.for <- density(forw$dRT.med)
     den.rev <- density(rev$dRT.med)
+    
+    dens.forw[[counter]] <- den.for
+    dens.rev[[counter]] <- den.rev
     
     ex$Tr <- approx(den.for$x, den.for$y, xout=ex$dRT)$y
     ex$Fa <- approx(den.rev$x, den.rev$y, xout=ex$dRT)$y
@@ -113,5 +124,10 @@ dRT <- function(path.in.lib, path.in.coeffs, path.in.evidence, path.out.PEP.upda
   write.table(ev.PEP, path.out.PEP.updated, sep = '\t', row.names = FALSE, quote = FALSE)
 }
 
-
+#par(mfrow=c(2,2))
+#for(i in sample.int(length(exps), size=4)) {
+#  plot(dens.forw[[i]], col='blue', xlab='dRT (min)', 
+#       main=paste0('Correct (blue) vs. Incorrect (red)\n', 'Exp: ', i))
+#  lines(dens.rev[[i]], col='red')
+#}
 

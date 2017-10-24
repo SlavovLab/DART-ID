@@ -108,7 +108,7 @@ for (i in exps) {
   # FALSE - belongs to distribution of incorrect IDs
   ex$Fa <- approx(den.rev$x, den.rev$y, xout=ex$dRT)$y
   # fix missing data - TRUE distribution can be very sparse sometimes
-  ex[is.na(ex$Tr) & !is.na(ex$dRT), "Tr"] <- 1e-100
+  ex[is.na(ex$Tr) & !is.na(ex$dRT), "Tr"] <- .Machine$double.xmin
   # Bayes Theorem
   ex$PEP.new <- (ex$PEP*ex$Fa)/((ex$PEP*ex$Fa)+((1-ex$PEP)*ex$Tr))
   
@@ -136,4 +136,22 @@ if(is.null(path.out)) {
 
 write.table(ex.out, path.out, sep = '\t', row.names = FALSE, quote = FALSE)
 
+}
+
+
+par(mfrow=c(2,2))
+for(i in sample.int(num_exps, size=4)) {
+  ex <- subset(ev, ev$`Raw file`==exps[i] & ev$PEP <= 1)
+  
+  # incorrect IDs
+  rev <- subset(ex, ex$prot.label=='REV')
+  # correct IDs
+  forw <- subset(ex, ex$prot.label=='sp|' & ex$PEP < 0.02)
+  
+  # build density functions. ignore missing data
+  den.for <- density(forw$dRT, na.rm=TRUE)
+  den.rev <- density(rev$dRT, na.rm=TRUE)
+  
+  plot(den.for, col='blue', main='Correct (blue) V Incorrect (red)', xlab='dRT (min)')
+  lines(den.rev, col='red')
 }

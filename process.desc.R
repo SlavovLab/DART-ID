@@ -10,7 +10,7 @@ process.desc <- function() {
   rownames(desc) <- NULL
   desc <- melt(desc, id.vars=c('Exp'), variable.name='Channel', value.name='Sample',
                factorsAsStrings=F)
-  desc$Exps <- as.character(desc$Exps)
+  desc$Exps <- as.character(desc$Exp)
   # channel ID
   desc$ch <- as.numeric(desc$Channel)
   
