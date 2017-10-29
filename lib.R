@@ -2,6 +2,7 @@ source('process.desc.R')
 source('parse.ev.adj.R')
 #source('adjust.pep.ali.R')
 source('adjust.pep.expcentric.R')
+source('validate.R')
 
 load.ev <- function(ev, par.file='dat/params.Fit2.RData', include.REV=FALSE, include.CON=FALSE) {
   load(par.file)
@@ -61,4 +62,13 @@ load.ev <- function(ev, par.file='dat/params.Fit2.RData', include.REV=FALSE, inc
   sigmas <<- pars[grep('sigma\\[', names(pars))]
   
   mus <<- pars[grep('mu\\[', names(pars))]
+}
+
+clean.file.name <- function(name) {
+  name <- gsub('#', '', name)
+  name <- gsub('.*_NC_', '', name)
+  name <- gsub('.raw', '', name)
+  name <- gsub('set', '', name)
+  name <- gsub('[-|+|=]', '_', name)
+  return(name)
 }

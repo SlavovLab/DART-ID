@@ -1,3 +1,5 @@
+## Clean up the corrected evidence file
+## remove columns we don't need, and add some that will help later
 parse.ev.adj <- function(file.path, type='STAN') {
   library(readr)
   
@@ -8,7 +10,7 @@ parse.ev.adj <- function(file.path, type='STAN') {
   }
   
   if(type == 'STAN') {
-    ev <- ev[, c('Sequence', 'Proteins', 'Raw file', 
+    ev <- ev[, c('Sequence', 'Proteins', 'Leading razor protein', 'Raw file', 
                  'Retention time','PEP', 'rt.minus', 'rt.plus',
                  'muijs', 'sigmas', 'PEP.new', 
                  "Reporter intensity corrected 0", "Reporter intensity corrected 1", 

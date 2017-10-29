@@ -4,7 +4,7 @@
 
 adjust.pep.expcentric <- function(ev, par.file='dat/params.Fit2.RData', path.out=NULL) {
   library(tidyverse)
-  #source('lib.R')
+  source('lib.R')
   
   ## load evidence
   #ev <- read_tsv('dat/evidence.txt')
@@ -26,6 +26,8 @@ adjust.pep.expcentric <- function(ev, par.file='dat/params.Fit2.RData', path.out
   
   dens.forw <- list()
   dens.rev <- list()
+  dRT.forw <- list()
+  dRT.rev <- list()
   
   # Updating PEPs
   ev.new <- data.frame()
@@ -76,17 +78,32 @@ adjust.pep.expcentric <- function(ev, par.file='dat/params.Fit2.RData', path.out
     den.forw <- density(forw, na.rm=TRUE)
     den.rev <- density(rev, na.rm=TRUE)
     
-    # P(RT|+) = probability that given the correct ID
+    dens.forw[[i]] <- den.forw
+    dens.rev[[i]] <- den.rev
+    #dRT.forw[[i]] <- forw
+    #dRT.rev[[i]] <- rev
+    
+    # P(dRT | Correct) = probability that given the correct ID
     #           dRT belongs to distribution of correct IDs
     exp.f$rt.plus <- approx(den.forw$x, den.forw$y, xout=abs(exp.dRT))$y
     
-    # P(RT|-) = probability of peptides dRT, given that PSM is incorrect
+    # P(dRT|-) = probability of peptides dRT, given that PSM is incorrect
     #           belongs to distribution of incorrect IDs
-    exp.f$rt.minus <- approx(den.rev$x, den.rev$y, xout=abs(exp.dRT))$y
+    # P(dRT | Incorrect) = 1/(N-1) sum_{j not equal to i} P(dRT for j | j is correct)
+    sum.coef <- 1 / (nrow(exp.f) - 1)
+    exp.f$rt.minus <- rep(NA, nrow(exp.f))
+    for(j in 1:nrow(exp.f)) {
+      exp.f$rt.minus[j] <- sum(exp.f$rt.plus[-j], na.rm=TRUE) 
+    }
+    exp.f$rt.minus <- sum.coef * exp.f$rt.minus
+    #exp.f$rt.minus <- approx(den.rev$x, den.rev$y, xout=abs(exp.dRT))$y
     
     # fix missing data - distributions can be very sparse sometimes
     exp.f$rt.plus[exp.f$rt.plus == 0 | is.na(exp.f$rt.plus)] = .Machine$double.xmin
     exp.f$rt.minus[exp.f$rt.minus == 0 | is.na(exp.f$rt.minus)] = .Machine$double.xmin
+    
+    #plot(density(exp.f$rt.plus, na.rm=TRUE), col='blue')
+    #lines(density(exp.f$rt.minus, na.rm=TRUE), col='red')
     
     # Bayes Theorem
     # PEP.new = P(-|RT) = P(RT|-)*P(-) / (P(RT|-)*P(-) + P(RT|+)*P(+)
@@ -118,9 +135,6 @@ adjust.pep.expcentric <- function(ev, par.file='dat/params.Fit2.RData', path.out
     
     # append to master output table
     ev.new <- rbind(ev.new, exp.new)
-    
-    dens.forw[[i]] <- den.forw
-    dens.rev[[i]] <- den.rev
   }
   
   # reorder ev.new in the same fashion as the original ev
