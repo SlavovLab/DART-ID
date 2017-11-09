@@ -12,7 +12,9 @@ dat/*
 
 # notes
 notes.txt
-.Rproj.user
+
+# R project cache
+.Rproj.user/*
 
 # misc R files
 *.Rhistory
@@ -35,3 +37,6 @@ figures/*
 
 # old figures
 old_figures/*
+
+# no shiny
+ShinyRT/*
