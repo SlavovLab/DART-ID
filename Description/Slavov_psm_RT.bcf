@@ -2119,7 +2119,16 @@
   <!-- CITATION DATA -->
   <!-- SECTION 0 -->
   <bcf:bibdata section="0">
+    <bcf:datasource type="file" datatype="bibtex">refs.bib</bcf:datasource>
   </bcf:bibdata>
   <bcf:section number="0">
+    <bcf:citekey order="1">kall2007percolator</bcf:citekey>
   </bcf:section>
+  <bcf:sortlist section="0" name="none/global/" type="entry" sortscheme="none" sortnamekeyscheme="global" labelprefix="">
+  <bcf:sorting>
+    <bcf:sort order="1">
+      <bcf:sortitem order="1">citeorder</bcf:sortitem>
+    </bcf:sort>
+  </bcf:sorting>
+  </bcf:sortlist>
 </bcf:controlfile>

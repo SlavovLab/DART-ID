@@ -1,0 +1,133 @@
+---
+title: "Experiment Centric Analysis"
+output: exp_centric
+---
+
+# Initialization, Loading Data
+
+```{r, message=FALSE, warning=FALSE}
+library(tidyverse)
+source('lib.R')
+
+## load evidence
+ev <- read_tsv('dat/evidence.txt')
+
+adjust.pep.expcentric(ev, path.out='dat/ev.adj.Fit2.expcentric.txt')
+
+```
+
+```{r Fold Change B/n Methods, warning=FALSE}
+library(pracma)
+#ev <- parse.ev.adj('dat/evidence+dRT.elite.txt', type='Ali')
+ev.ali <- parse.ev.adj('dat/evidence+dRT.elite.txt', type='Ali')
+ev.pep <- parse.ev.adj('dat/ev.adj.Fit2.txt')
+ev.exp <- parse.ev.adj('dat/ev.adj.Fit2.expcentric.txt')
+ev.exp2 <- parse.ev.adj('dat/ev.adj.Fit2.expcentric.v2.txt');
+
+# only use the same raw files between all evidence files
+common.exps <- Reduce(intersect, list(ev.ali$Raw.file, ev.pep$`Raw file`, ev.exp$`Raw file`))
+ev.ali <- ev.ali[ev.ali$Raw.file %in% common.exps,]
+ev.pep <- ev.pep[ev.pep$`Raw file` %in% common.exps,]
+ev.exp <- ev.exp[ev.exp$`Raw file` %in% common.exps,]
+ev.exp2 <- ev.exp2[ev.exp$`Raw file` %in% common.exps,]
+
+acc <- 100
+t <- logseq(1e-3, 1e-1, n=acc)
+id.frac <- c(length=acc*4)
+counter <- 0
+for(i in t) {
+  counter <- counter + 1
+  id.frac[counter] <- sum(ev.ali$PEP.new < i, na.rm=TRUE) / 
+    sum(ev.ali$PEP < i & !is.na(ev.ali$PEP.new))
+  id.frac[acc+counter] <- sum(ev.pep$PEP.new < i, na.rm=TRUE) / 
+    sum(ev.pep$PEP < i & !is.na(ev.pep$PEP.new))
+  id.frac[(2*acc)+counter] <- sum(ev.exp$PEP.new < i, na.rm=TRUE) / 
+    sum(ev.exp$PEP < i & !is.na(ev.exp$PEP.new))
+  id.frac[(3*acc)+counter] <- sum(ev.exp2$PEP.new < i, na.rm=TRUE) / 
+    sum(ev.exp2$PEP < i & !is.na(ev.exp2$PEP.new))
+  cat(counter, '/', acc, '                         \r')
+  flush.console()
+}
+
+df <- data.frame(
+  PEP=as.numeric(id.frac),
+  Method=as.factor(rep(c('Experiment-Centric (Ali)', 
+                         'Peptide-Centric (STAN)',
+                         'Experiment-Centric (STAN)',
+                         'Experiment-Centric V2 (STAN)'), 
+                       each=acc))
+)
+
+ggplot(df, aes(x=rep(t,4), y=PEP, color=Method, fill=Method)) +
+  #geom_point(size=1) + 
+  geom_path() +#geom_smooth(method='loess') +
+  scale_x_log10() +
+  annotation_logticks(sides='b') +
+  #scale_y_continuous(limits=c(0.95,2.25), breaks=c(1, 1.25, 1.5, 1.75, 2, 2.25)) +
+  labs(x='PEP Threshold', y='Fold Change Increase in IDs',
+       title=paste0('Fold Change Increase of PSM IDs\n',
+                    '= #Adjusted PEPs / #Original PEPs above PEP Threshold'))
+
+```
+
+```{r}
+
+load('dat/exps.ali.RData');
+load('dat/expcentric_v_ali_densities.RData')
+load('dat/expcentric_v_ali_dRT.RData')
+
+map.exp.ali.stan <- match(exps_ali, levels(experiment_factors))
+#exp.inds <- c(1,2,3,4)
+exp.inds <- sample.int(length(exps_ali), size=4)
+
+par(mfrow=c(2,2))
+for(i in exp.inds) {
+  stan.exp.ind <- map.exp.ali.stan[i]
+  plot(dens.forw1[[stan.exp.ind]], col='blue', xlab='dRT (min)', 
+       main=paste0('Blue=Correct STAN, Red=Incorrect STAN\n',
+                   'Green=Correct Pwise, Pink=Incorrect Pwise'),
+       sub=paste0('Exp: ', i))
+  lines(dens.rev1[[stan.exp.ind]], col='red')
+  lines(dens.forw2[[i]], col='green')
+  lines(dens.rev2[[i]], col='pink')
+}
+
+j <- 0
+dens.info <- data.frame()
+for(i in map.exp.ali.stan) {
+  j <- j + 1
+  dens.info <- rbind(dens.info, data.frame(
+    mean=c(
+      mean(dRT.forw1[[i]]),
+      mean(dRT.rev1[[i]]),
+      mean(dRT.forw2[[j]]),
+      mean(dRT.rev2[[j]])
+    ),
+    sd=c(
+      sd(dRT.forw1[[i]]),
+      sd(dRT.rev1[[i]]),
+      sd(dRT.forw2[[j]]),
+      sd(dRT.rev2[[j]])
+    ),
+    dist=c('Correct', 'Incorrect', 'Correct', 'Incorrect'),
+    exp=c('STAN', 'STAN', 'Ali', 'Ali')
+  ))
+}
+
+#hist(dens.info$sd[dens.info$dist=='Correct' & dens.info$exp=='STAN'], breaks=10,
+#     main='STAN Correct Density Function Standard Deviation')
+par(mfrow=c(1,1))
+plot(density(dens.info$sd[dens.info$dist=='Correct' & dens.info$exp=='Ali']), col='red',
+     main='Standard Deviations of Correct Density Functions\nRed=Pwise, Blue=STAN')
+lines(density(dens.info$sd[dens.info$dist=='Correct' & dens.info$exp=='STAN']), col='blue')
+
+dens.info %>%
+ggplot(aes(x=mean, y=sd, 
+           #color=dist)) +
+           color=exp)) +
+  geom_point(alpha=0.5) +
+  facet_grid(~dist, scales='free') +
+  labs(title=paste0('RTLib: Experiment-Centric Correct + Incorrect Distributions\n',
+                    'Pairwise Method vs. STAN Method'))
+
+```

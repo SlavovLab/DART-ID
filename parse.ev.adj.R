@@ -19,14 +19,20 @@ parse.ev.adj <- function(file.path, type='STAN') {
                  "Reporter intensity corrected 6", "Reporter intensity corrected 7", 
                  "Reporter intensity corrected 8", "Reporter intensity corrected 9")]
   } else if(type == 'Ali') {
-    ev <- ev[, c('Sequence', 'Leading.razor.protein', 'Raw.file',
-                 'Retention.time', 'PEP', 'RT.lib', 'RT.corrected', 
-                 'dRT', 'PEP.new',
+    ev <- ev[, c('Sequence', 'Leading.razor.protein', 'Proteins', 'Raw.file',
+                 'Retention.time', 'PEP', 'RT.lib', 'RT.corrected', 'PEP.new',
                  "Reporter.intensity.corrected.0", "Reporter.intensity.corrected.1", 
                  "Reporter.intensity.corrected.2", "Reporter.intensity.corrected.3",
                  "Reporter.intensity.corrected.4", "Reporter.intensity.corrected.5", 
                  "Reporter.intensity.corrected.6", "Reporter.intensity.corrected.7", 
                  "Reporter.intensity.corrected.8", "Reporter.intensity.corrected.9")]
+    names(ev) <- c('Sequence', 'Leading razor protein', 'Proteins', 'Raw file',
+                   'Retention time', 'PEP', 'RT.lib', 'RT.corrected', 'PEP.new',
+                   "Reporter intensity corrected 0", "Reporter intensity corrected 1", 
+                   "Reporter intensity corrected 2", "Reporter intensity corrected 3",
+                   "Reporter intensity corrected 4", "Reporter intensity corrected 5", 
+                   "Reporter intensity corrected 6", "Reporter intensity corrected 7", 
+                   "Reporter intensity corrected 8", "Reporter intensity corrected 9")
   }
   
   # PEP > 1 defaults to PEP = 1
@@ -38,14 +44,16 @@ parse.ev.adj <- function(file.path, type='STAN') {
   # PEP == 0 defaults to PEP = min(PEP)
   ev$PEP.updated[ev$PEP.updated <= 0] <- min(ev$PEP.updated)
   
-  # updated RT
-  ev$RT.new <- ev$muijs
-  ev$RT.new[is.na(ev$RT.new)] <- ev$`Retention time`[is.na(ev$RT.new)]
-  
-  # delta PEP and RT
-  ev$dPEP <- ev$PEP.new - ev$PEP
   if(type=='STAN') {
-    ev$dRT <- ev$muijs - ev$`Retention time`
+    # updated RT
+    ev$RT.new <- ev$muijs
+    ev$RT.new[is.na(ev$RT.new)] <- ev$`Retention time`[is.na(ev$RT.new)]
+    
+    # delta PEP and RT
+    ev$dPEP <- ev$PEP.new - ev$PEP
+    if(type=='STAN') {
+      ev$dRT <- ev$muijs - ev$`Retention time`
+    }
   }
   
   # calculate q values

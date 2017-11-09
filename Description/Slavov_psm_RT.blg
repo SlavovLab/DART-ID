@@ -1,0 +1,15 @@
+[0] Config.pm:354> INFO - This is Biber 2.7
+[0] Config.pm:357> INFO - Logfile is 'Slavov_psm_RT.blg'
+[46] biber-darwin:303> INFO - === Sat Nov  4, 2017, 19:09:06
+[79] Biber.pm:359> INFO - Reading 'Slavov_psm_RT.bcf'
+[182] Biber.pm:835> INFO - Found 1 citekeys in bib section 0
+[201] Biber.pm:3670> INFO - Processing section 0
+[227] Biber.pm:3840> INFO - Looking for bibtex format file 'refs.bib' for section 0
+[229] bibtex.pm:1435> INFO - Decoding LaTeX character macros into UTF-8
+[238] bibtex.pm:1292> INFO - Found BibTeX data source 'refs.bib'
+[262] UCollate.pm:68> INFO - Overriding locale 'en-US' defaults 'variable = shifted' with 'variable = non-ignorable'
+[262] UCollate.pm:68> INFO - Overriding locale 'en-US' defaults 'normalization = NFD' with 'normalization = prenormalized'
+[262] Biber.pm:3499> INFO - Sorting list 'none/global/' of type 'entry' with scheme 'none' and locale 'en-US'
+[263] Biber.pm:3505> INFO - No sort tailoring available for locale 'en-US'
+[265] bbl.pm:608> INFO - Writing 'Slavov_psm_RT.bbl' with encoding 'ascii'
+[266] bbl.pm:712> INFO - Output to Slavov_psm_RT.bbl

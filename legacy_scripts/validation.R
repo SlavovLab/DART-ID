@@ -11,7 +11,7 @@ ev <- parse.ev.adj('dat/ev.adj.Fit2.txt')
 ev$Protein_ID <- as.numeric(as.factor(ev$Proteins))
 
 ev$file <- clean.file.name(ev$`Raw file`)
-ev$exp <- str_extract(ev$file, '[1-9][0-9][A-Z](\\d)?')
+ev$exp <- str_extract(ev$file, '[1-9][0-9][A-Z]')
 
 # load excel description
 desc <- process.desc()
@@ -19,12 +19,10 @@ desc.types <- dcast(desc, Exp~Type, value.var='Type')
 desc.types$Exp <- as.character(desc.types$Exp)
 
 # choose experiments with at least one J and one H channel
-exps <- desc.types[desc.types$J > 1 & desc.types$H > 1,'Exp']
-ev <- ev[ev$exp %in% exps,]
+#exps <- desc.types[desc.types$J > 1 & desc.types$H > 1,'Exp']
+#ev <- ev[ev$exp %in% exps,]
 
 data.cols <- grep('intensity', colnames(ev))
-# ignore empty and carrier channels - we won't use them
-#data.cols <- data.cols[-c(8, 10)]
 
 # remove peptides w/o a protein
 ev <- ev[!is.na(ev$Proteins),]
@@ -40,6 +38,7 @@ ev <- ev[!grepl('CON*',ev$Proteins),]
 
 # take subset of experiments
 #ev <- ev[grepl('30[A-J]|29[A-C]|26[A-E]|25[A-C]|24[A-C]', ev$exp),]
+#ev <- ev[grepl('30[A-J]', ev$exp),]
 ev <- ev[grepl('19A', ev$exp),]
 
 # set 0 to NA
@@ -52,7 +51,7 @@ ev <- ev[!(apply(ev[,data.cols], MARGIN=1, FUN=sum, na.rm=TRUE)==0),]
 ## remove carrier and empty channels
 ## these channels vary between experiments, so we're gonna have to
 ## loop thru these
-for(i in exps) {
+for(i in unique(ev$exp)) {
   if(sum(ev$exp==i) <= 0) next
   inds.remove <- desc[desc$Exp==i & (desc$Type=='MIXED' | is.na(desc$Type)),'ch']
   # make relative to the ev data frame
@@ -67,11 +66,17 @@ for(i in exps) {
 # this assumes the same amount of protein per channel
 # (not by cell, but in aggregate - this erases any ionization or 
 # collision cell or any other quantitative biases)
-ev[,data.cols] <- ev[,data.cols] / apply(ev[,data.cols], MARGIN=2, FUN=median, na.rm=TRUE)
+ev[,data.cols] <- sweep(ev[,data.cols], MARGIN=2, FUN='/',
+                        STATS=apply(ev[,data.cols], MARGIN=2, FUN=median, na.rm=TRUE))
 
 # now normalize across rows, to get the difference between the channels
 # AKA the difference between different cells/conditions
-ev[,data.cols] <- ev[,data.cols] / t(apply(ev[,data.cols], MARGIN=1, FUN=median, na.rm=TRUE))
+#ev[,data.cols] <- sweep(ev[,data.cols], MARGIN=1, FUN='/',
+#                        STATS=as.vector(apply(ev[,data.cols], MARGIN=1, FUN=median, na.rm=TRUE)))
+
+# remove rows with sparse data
+# in this case, we'll define sparse as having >= 50% of columns as NA
+ev <- ev[!apply(is.na(ev[,data.cols]), 1, sum) >= (length(data.cols) / 2),]
 
 # take median of J cells and median of H cells
 for(i in exps) {
@@ -99,7 +104,12 @@ prot.map <- prot.map[order(prot.map$Freq, decreasing=TRUE),]
 # only use proteins with more than 10 peptides attached to it
 prots <- as.character(prot.map$Var1[prot.map$Freq >= 20])
 
-cors <- as.data.frame(t(sapply(prots, FUN=function(prot) {
+cors <- vector(mode='numeric')
+cors.new <- vector(mode='numeric')
+cors.tot <- vector(mode='numeric')
+
+for(i in 1:length(prots)) {
+  prot <- prots[i]
   cat('\r', match(prot, prots), '/', length(prots), '                           ')
   flush.console()
   
@@ -153,35 +163,39 @@ cors <- as.data.frame(t(sapply(prots, FUN=function(prot) {
     diag(prot.cor.tot) <- NA
   }
   
-  # sometimes either prot.data, new, or tot will have no rows
-  # in that case just output NA and have the density() function
-  # or whatever is evaluating this later exclude it from calculations
-  c(ifelse(nrow(prot.data) > cor.size.thresh, median(prot.cor, na.rm=TRUE), NA),
-    ifelse(nrow(prot.data.new) > cor.size.thresh, median(prot.cor.new, na.rm=TRUE), NA),
-    ifelse(nrow(prot.data.tot) > cor.size.thresh, median(prot.cor.tot, na.rm=TRUE), NA))
-})))
-# clean up the resultant data frame
-cors$Protein <- rownames(cors)
-rownames(cors) <- NULL
-colnames(cors) <- c('Original', 'New', 'Total', 'Protein')
-cors <- cors[,c(4, 1, 2, 3)]
+  cors <- c(cors, as.vector(prot.cor))
+  cors.new <- c(cors.new, as.vector(prot.cor.new))
+  cors.tot <- c(cors.tot, as.vector(prot.cor.tot))
+}
+
 
 # get null distribution for correlation
 # pairwise correlation between peptides from random proteins
-cors$Null <- NA
+cors.null <- vector(mode='numeric')
 set.seed(1)
 # take n at a time
 # n = median # of observations for this set of proteins
 n = median(prot.map$Freq[prot.map$Var1 %in% prots])
-for(i in 1:nrow(cors)) {
+for(i in 1:length(prots)) {
   #prot.inds <- which(ev$Proteins %in% prots)
   #prot.data <- ev[sample(prot.inds, size=n), data.cols]
-  prot.data <- ev[sample(1:nrow(prot.data), size=n), data.cols]
+  prot.data <- ev[sample(1:nrow(ev), size=n), data.cols]
   prot.cor <- cor(t(prot.data), use='pairwise.complete.obs', method='pearson')
   # set diagonal to NA
   diag(prot.cor) <- NA
-  cors$Null[i] <- median(prot.cor, na.rm=TRUE)
+  cors.null <- c(cors.null, as.vector(prot.cor))
 }
+
+plot(density(cors, na.rm=TRUE), col='blue')
+lines(density(cors.new, na.rm=TRUE), col='green')
+lines(density(cors.null, na.rm=TRUE), col='red')
+
+cors.all <- rbind(
+  cbind(cors, 'Original'),
+  cbind(cors.new, 'New'),
+  cbind(cors.tot, 'Total'),
+  cbind(cors.null, 'Null')
+)
 
 cors.m <- melt(cors, id.var='Protein', variable.name='type', value.name='Correlation')
 cors.m %>%

@@ -26,11 +26,13 @@ dRT <- function(path.in.lib='dat/RT.lib.elite.txt',
   shift.coeffs <- read.delim(path.in.coeffs, header = TRUE, stringsAsFactors = FALSE)
   ev <- read.delim(path.in.evidence, header = TRUE, stringsAsFactors = FALSE)
   
-  ev <- ev[, c('Raw.file', 'Sequence', 'PEP', 'Retention.time', "PIF", "Reporter.intensity.corrected.0",
-               "Reporter.intensity.corrected.1", "Reporter.intensity.corrected.2", "Reporter.intensity.corrected.3",
-               "Reporter.intensity.corrected.4", "Reporter.intensity.corrected.5", "Reporter.intensity.corrected.6",
-               "Reporter.intensity.corrected.7", "Reporter.intensity.corrected.8", "Reporter.intensity.corrected.9",
-               "id", "Leading.razor.protein")]
+  ev <- ev[, c('Raw.file', 'Sequence', 'PEP', 'Retention.time', "PIF", 
+               "Reporter.intensity.corrected.0", "Reporter.intensity.corrected.1", 
+               "Reporter.intensity.corrected.2", "Reporter.intensity.corrected.3",
+               "Reporter.intensity.corrected.4", "Reporter.intensity.corrected.5", 
+               "Reporter.intensity.corrected.6", "Reporter.intensity.corrected.7", 
+               "Reporter.intensity.corrected.8", "Reporter.intensity.corrected.9",
+               "id", "Leading.razor.protein", "Proteins")]
   ev <- ev[ev$Raw.file %in% shift.coeffs[!is.na(shift.coeffs$coeff), "experiment"], ]
   ev$protLabel <- substr(ev$Leading.razor.protein, 1, 3)
   
@@ -56,7 +58,7 @@ dRT <- function(path.in.lib='dat/RT.lib.elite.txt',
   #  flush.console()
   #  cat('\r', i, '/', nrow(ev.for), '              ')
   #}
-  ev.for <- ev.for[,-(20:21)]
+  ev.for <- ev.for[,-c(21,22)]
   
   # REVERSE:
   ev.rev <- ev[ev$protLabel=="REV", ]
@@ -67,7 +69,7 @@ dRT <- function(path.in.lib='dat/RT.lib.elite.txt',
   ev.rev$RT.corrected <- ev.rev$intercept + (ev.rev$coeff * ev.rev$Retention.time)
   ev.rev$dRT.med <- abs(ev.rev$RT.corrected - ev.rev$RT.lib)
   #ev.rev$dRT <- ev.rev$dRT.med
-  ev.rev <- ev.rev[,-(20:21)]
+  ev.rev <- ev.rev[,-c(21,22)]
   
   ev.tot <- rbind(ev.rev, ev.for)
   row.names(ev.tot) <- NULL
@@ -81,11 +83,13 @@ dRT <- function(path.in.lib='dat/RT.lib.elite.txt',
                        Reporter.intensity.corrected.4=numeric(), Reporter.intensity.corrected.5=numeric(),
                        Reporter.intensity.corrected.6=numeric(), Reporter.intensity.corrected.7=numeric(),
                        Reporter.intensity.corrected.8=numeric(), Reporter.intensity.corrected.9=numeric(), id=numeric(),
-                       Leading.razor.protein=character(), RT.lib=numeric(), RT.corrected=numeric(), dRT.med=numeric(),
+                       Leading.razor.protein=character(), Proteins=character(), RT.lib=numeric(), RT.corrected=numeric(), dRT.med=numeric(),
                        dRT=numeric())
   
   dens.forw <- list()
   dens.rev <- list()
+  dRT.forw <- list()
+  dRT.rev <- list()
   
   exps <- unique(ev.tot$Raw.file)
   counter <- 0
@@ -107,6 +111,8 @@ dRT <- function(path.in.lib='dat/RT.lib.elite.txt',
     
     dens.forw[[counter]] <- den.for
     dens.rev[[counter]] <- den.rev
+    #dRT.forw[[counter]] <- forw$dRT.med
+    #dRT.rev[[counter]] <- rev$dRT.med
     
     ex$Tr <- approx(den.for$x, den.for$y, xout=ex$dRT)$y
     ex$Fa <- approx(den.rev$x, den.rev$y, xout=ex$dRT)$y

@@ -1,8 +1,7 @@
 source('process.desc.R')
 source('parse.ev.adj.R')
-#source('adjust.pep.ali.R')
 source('adjust.pep.expcentric.R')
-source('validate.R')
+source('validate.lib.R')
 
 load.ev <- function(ev, par.file='dat/params.Fit2.RData', include.REV=FALSE, include.CON=FALSE) {
   load(par.file)

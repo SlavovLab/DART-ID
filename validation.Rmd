@@ -1,0 +1,65 @@
+---
+title: "RTLib Validation"
+output: rtlib_validation
+---
+
+```{r}
+library(tidyverse)
+source('lib.R')
+```
+
+```{r}
+
+ev.pep <- read_tsv('dat/ev.adj.Fit2.txt')
+ev.exp <- read_tsv('dat/ev.adj.Fit2.expcentric.txt')
+ev.pwise <- read_tsv('dat/evidence+dRT.elite.txt')
+
+cors.exp <- validate.lib(ev.exp, exps=c('19A'))
+cors.pep <- validate.lib(ev.pep, exps=c('19A'))
+cors.pwise <- validate.lib(ev.pwise, ev.type='Ali', exps=c('19A'))
+
+cors.exp$Method <- 'STAN - Experiment-Centric'
+cors.pep$Method <- 'STAN - Peptide-Centric'
+cors.pwise$Method <- 'Pairwise'
+cors.exp$Experiment <- '19A'
+cors.pep$Experiment <- '19A'
+cors.pwise$Experiment <- '19A'
+
+cors <- rbind(cors.exp, cors.pep, cors.pwise)
+
+
+#cors.pwise %>%
+cors %>%
+  filter(!Type %in% c('Total')) %>%
+ggplot(aes(x=data, color=Type)) +
+  geom_line(stat='density', position='identity') +
+  facet_grid(~Method) +
+  scale_color_manual(labels=c('New: PEP.new < 0.05', 'Null', 'Original: PEP < 0.05'), 
+                     values=c('green', 'red', 'blue')) +
+  labs(title='RTLib Validation: 19A', x='Correlation')
+```
+
+
+```{r}
+cors.exp.a <- validate.lib(ev.exp, exps=c('30'))
+cors.pep.a <- validate.lib(ev.pep, exps=c('30'))
+cors.pwise.a <- validate.lib(ev.pwise, ev.type='Ali', exps=c('30'))
+
+cors.exp.a$Method <- 'STAN - Experiment-Centric'
+cors.pep.a$Method <- 'STAN - Peptide-Centric'
+cors.pwise.a$Method <- 'Pairwise'
+cors.exp.a$Experiment <- '30'
+cors.pep.a$Experiment <- '30'
+cors.pwise.a$Experiment <- '30'
+
+cors <- rbind(cors, cors.exp.a, cors.pep.a, cors.pwise.a)
+
+cors %>%
+  filter(!Type %in% c('Total')) %>%
+ggplot(aes(x=data, color=Type)) +
+  geom_line(stat='density', position='identity') +
+  facet_grid(Experiment~Method) +
+  scale_color_manual(labels=c('New: PEP.new < 0.05', 'Null', 'Original: PEP < 0.05'), 
+                     values=c('green', 'red', 'blue')) +
+  labs(title='RTLib Validation: 19A', x='Correlation')
+```

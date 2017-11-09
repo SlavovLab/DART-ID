@@ -68,6 +68,13 @@ adjust.pep.expcentric <- function(ev, par.file='dat/params.Fit2.RData', path.out
     
     exp.dRT <- exp.mus[match(exp.peptide.map, exp.peptides)] - exp.f$`Retention time`
     
+    n <- floor(nrow(exp) / 20)
+    a <- split(exp$`Retention time`, cut(exp$`Retention time`, n))
+    a <- unlist(lapply(a, length))
+    a <- density(a)
+    a$x <- a$x * (abs(max(exp$`Retention time`) - min(exp$`Retention time`)) / abs(max(a$x) - min(a$x)))
+    a$x <- a$x + (min(exp$`Retention time` - min(a$x)))
+    
     set.seed(1)
     rev <- exp.mus[match(exp.peptide.map, exp.peptides)] - sample(exp.f$`Retention time`)
     forw <- exp.dRT[exp.f$PEP < 0.02]
@@ -87,8 +94,7 @@ adjust.pep.expcentric <- function(ev, par.file='dat/params.Fit2.RData', path.out
     #           dRT belongs to distribution of correct IDs
     exp.f$rt.plus <- approx(den.forw$x, den.forw$y, xout=abs(exp.dRT))$y
     
-    # P(dRT|-) = probability of peptides dRT, given that PSM is incorrect
-    #           belongs to distribution of incorrect IDs
+    
     # P(dRT | Incorrect) = 1/(N-1) sum_{j not equal to i} P(dRT for j | j is correct)
     sum.coef <- 1 / (nrow(exp.f) - 1)
     exp.f$rt.minus <- rep(NA, nrow(exp.f))
@@ -96,6 +102,9 @@ adjust.pep.expcentric <- function(ev, par.file='dat/params.Fit2.RData', path.out
       exp.f$rt.minus[j] <- sum(exp.f$rt.plus[-j], na.rm=TRUE) 
     }
     exp.f$rt.minus <- sum.coef * exp.f$rt.minus
+    
+    # OR... P(dRT | Incorrect) = probability of peptides dRT, given that PSM is incorrect
+    #           belongs to distribution of incorrect IDs
     #exp.f$rt.minus <- approx(den.rev$x, den.rev$y, xout=abs(exp.dRT))$y
     
     # fix missing data - distributions can be very sparse sometimes

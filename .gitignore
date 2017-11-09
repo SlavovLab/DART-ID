@@ -1,6 +1,7 @@
 # OSX files
 .DS_Store
 Icon\r
+\**\Icon\r
 
 # Windows files
 desktop.ini
@@ -24,3 +25,13 @@ notes.txt
 figures/*
 *.pdf
 *.png
+
+# notes
+*.doc
+*.docx
+
+# SCoPE example files
+2017_SCoPE-MS_manuscript/*
+
+# old figures
+old_figures/*

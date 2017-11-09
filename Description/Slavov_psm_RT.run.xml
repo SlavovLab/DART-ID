@@ -81,5 +81,8 @@
     <requires type="dynamic">
       <file>Slavov_psm_RT.bcf</file>
     </requires>
+    <requires type="editable">
+      <file>refs.bib</file>
+    </requires>
   </external>
 </requests>
