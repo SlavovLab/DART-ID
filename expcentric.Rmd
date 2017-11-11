@@ -20,16 +20,16 @@ adjust.pep.expcentric(ev, path.out='dat/ev.adj.Fit2.expcentric.txt')
 library(pracma)
 #ev <- parse.ev.adj('dat/evidence+dRT.elite.txt', type='Ali')
 ev.ali <- parse.ev.adj('dat/evidence+dRT.elite.txt', type='Ali')
+ev.pep.old <- parse.ev.adj('dat/ev.adj.Fit2.txt_OLD')
 ev.pep <- parse.ev.adj('dat/ev.adj.Fit2.txt')
 ev.exp <- parse.ev.adj('dat/ev.adj.Fit2.expcentric.txt')
-ev.exp2 <- parse.ev.adj('dat/ev.adj.Fit2.expcentric.v2.txt');
 
 # only use the same raw files between all evidence files
-common.exps <- Reduce(intersect, list(ev.ali$Raw.file, ev.pep$`Raw file`, ev.exp$`Raw file`))
-ev.ali <- ev.ali[ev.ali$Raw.file %in% common.exps,]
+common.exps <- Reduce(intersect, list(ev.ali$`Raw file`, ev.pep$`Raw file`, ev.pep.old$`Raw file`, ev.exp$`Raw file`))
+ev.ali <- ev.ali[ev.ali$`Raw file` %in% common.exps,]
+ev.pep.old <- ev.pep.old[ev.pep.old$`Raw file` %in% common.exps,]
 ev.pep <- ev.pep[ev.pep$`Raw file` %in% common.exps,]
 ev.exp <- ev.exp[ev.exp$`Raw file` %in% common.exps,]
-ev.exp2 <- ev.exp2[ev.exp$`Raw file` %in% common.exps,]
 
 acc <- 100
 t <- logseq(1e-3, 1e-1, n=acc)
@@ -39,22 +39,22 @@ for(i in t) {
   counter <- counter + 1
   id.frac[counter] <- sum(ev.ali$PEP.new < i, na.rm=TRUE) / 
     sum(ev.ali$PEP < i & !is.na(ev.ali$PEP.new))
-  id.frac[acc+counter] <- sum(ev.pep$PEP.new < i, na.rm=TRUE) / 
+  id.frac[acc+counter] <- sum(ev.pep.old$PEP.new < i, na.rm=TRUE) / 
+    sum(ev.pep.old$PEP < i & !is.na(ev.pep.old$PEP.new))
+  id.frac[2*acc+counter] <- sum(ev.pep$PEP.new < i, na.rm=TRUE) / 
     sum(ev.pep$PEP < i & !is.na(ev.pep$PEP.new))
-  id.frac[(2*acc)+counter] <- sum(ev.exp$PEP.new < i, na.rm=TRUE) / 
+  id.frac[(3*acc)+counter] <- sum(ev.exp$PEP.new < i, na.rm=TRUE) / 
     sum(ev.exp$PEP < i & !is.na(ev.exp$PEP.new))
-  id.frac[(3*acc)+counter] <- sum(ev.exp2$PEP.new < i, na.rm=TRUE) / 
-    sum(ev.exp2$PEP < i & !is.na(ev.exp2$PEP.new))
   cat(counter, '/', acc, '                         \r')
   flush.console()
 }
 
 df <- data.frame(
   PEP=as.numeric(id.frac),
-  Method=as.factor(rep(c('Experiment-Centric (Ali)', 
-                         'Peptide-Centric (STAN)',
-                         'Experiment-Centric (STAN)',
-                         'Experiment-Centric V2 (STAN)'), 
+  Method=as.factor(rep(c('Pairwise', 
+                         'Peptide-Centric',
+                         'Peptide-Centric/Mod Sequence',
+                         'Experiment-Centric'), 
                        each=acc))
 )
 

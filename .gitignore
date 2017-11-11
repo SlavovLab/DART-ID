@@ -40,3 +40,4 @@ old_figures/*
 
 # no shiny
 ShinyRT/*
+.Rproj.user

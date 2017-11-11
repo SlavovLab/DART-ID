@@ -4,7 +4,7 @@ library(tidyverse)
 library("splines")
 library(rstan)
 
-evidence <- read_tsv("~/Google\ Drive/Ali_RT_bayesian/dat/ev.adj.txt")
+#evidence <- read_tsv("~/Google\ Drive/Ali_RT_bayesian/dat/ev.adj.txt")
 evidence <- read_tsv('dat/evidence.txt')
 
 # remove abnormal LC experiments
@@ -12,17 +12,24 @@ evidence <- read_tsv('dat/evidence.txt')
 exps.lc <- unlist(read_csv('dat/exps.corr.txt')[,2])
 names(exps.lc) <- NULL
 
+# Only use elite experiments
+evidence <- evidence %>%
+  filter(grepl('[0-9]{6}A', `Raw file`)) %>% # Only use Elite experiments
+  filter(`Raw file` %in% exps.lc) # Remove abnormal LC experiments
+
+write.table(evidence, file='dat/evidence_elite.txt', quote=FALSE, sep='\t', row.names=FALSE)
+
+evidence <- read_tsv('dat/evidence_elite.txt')
+
 ## Filter of PEP < .05
-subEvidence <- evidence %>% filter(PEP < 0.05) %>%
-    filter(grepl('[0-9]{6}A', `Raw file`)) %>% # Only use Elite experiments
-    filter(!grepl('REV*', `Leading razor protein`)) %>% # Remove Reverse matches
-    filter(!grepl('CON*',`Leading razor protein`))  %>% # Remove Contaminants
-    filter(`Raw file` %in% exps.lc) %>% # Remove abnormal LC experiments
-    select("Peptide ID", "Raw file", "Retention time", "PEP")
-
-
-## Add factor indices
-subEvidence <- subEvidence %>% 
+subEvidence <- evidence %>% 
+  filter(PEP < 0.05) %>% # take only confidently identified PSMs
+  filter(grepl('[0-9]{6}A', `Raw file`)) %>% # Only use Elite experiments
+  filter(!grepl('REV*', `Leading razor protein`)) %>% # Remove Reverse matches
+  filter(!grepl('CON*',`Leading razor protein`))  %>% # Remove Contaminants
+  filter(`Raw file` %in% exps.lc) %>% # Remove abnormal LC experiments
+  select("Mod. peptide ID", "Raw file", "Retention time", "PEP") %>%
+  rename(`Peptide ID`=`Mod. peptide ID`) %>% # alias the modified peptide ID as the peptide ID
   mutate(exp_id=`Raw file`) %>%  # new column - exp_id = numeric version of experiment file
   mutate_at("exp_id", funs(as.numeric(as.factor(.))))
 
@@ -105,7 +112,7 @@ initList <- list(mu=muInit,
 pars <- optimizing(sm, data=data, init=initList, iter=10000, verbose=TRUE)$par
 
 ## pars <- sampling(sm, data=data, init=list(initList), chains=1, verbose=TRUE)$par
-save(pars, file="params_rt2.RData")
+save(pars, file="params.Fit2.RData")
 
 sm2 <- stan_model(file="fit_RT_mu_fixed.stan")
 data2 <- data

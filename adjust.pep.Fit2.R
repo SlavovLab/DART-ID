@@ -5,22 +5,28 @@ library(rmutil)
 load('dat/params.Fit2.RData')
 
 ## load evidence
-ev <- read_tsv('dat/evidence.txt')
+#ev <- read_tsv('dat/evidence.txt')
 
 # remove abnormal LC experiments
 # load experiments from correlation testing in similar.lc.R
-exps.lc <- unlist(read_csv('dat/exps.corr.txt')[,2])
-names(exps.lc) <- NULL
+#exps.lc <- unlist(read_csv('dat/exps.corr.txt')[,2])
+#names(exps.lc) <- NULL
+
+#ev <- ev %>%
+#  filter(grepl('[0-9]{6}A', `Raw file`)) %>% # Only use Elite experiments
+#  filter(`Raw file` %in% exps.lc) # Remove abnormal LC experiments
+
+ev <- read_tsv('dat/evidence_elite.txt')
 
 ev <- ev %>%
-  filter(grepl('[0-9]{6}A', `Raw file`)) %>% # Only use Elite experiments
-  filter(`Raw file` %in% exps.lc) # Remove abnormal LC experiments
+  rename(`Sequence ID`=`Peptide ID`) %>%
+  rename(`Peptide ID`=`Mod. peptide ID`) # alias the modified peptide ID as the peptide ID
 
 ## Filter of PEP < .05
-ev.f <- ev %>% filter(PEP < 0.05) %>%
+ev.f <- ev %>% 
+  filter(PEP < 0.05) %>%
   filter(!grepl('REV*', `Leading razor protein`)) %>% # Remove Reverse matches
   filter(!grepl('CON*',`Leading razor protein`))  %>% # Remove Contaminants
-  filter(`Raw file` %in% exps.lc) %>% # Remove abnormal LC experiments
   select("Peptide ID", "Raw file", "Retention time", "PEP") %>%
   mutate(exp_id=`Raw file`) %>%  # new column - exp_id = numeric version of experiment file
   mutate_at("exp_id", funs(as.numeric(as.factor(.))))
@@ -41,14 +47,6 @@ num_peptides <- length(unique(stan_peptide_id))
 
 retention_times <- ev.f[["Retention time"]]
 
-pep_exp_all <- paste(stan_peptide_id, experiment_ids, sep=" - ")
-pep_exp_pairs <- unique(pep_exp_all)
-num_pep_exp_pairs <- length(pep_exp_pairs)
-muij_map <- match(paste(stan_peptide_id, experiment_ids, sep=" - "), pep_exp_pairs)
-splt <- strsplit(pep_exp_pairs, " - ")
-muij_to_pep <- as.numeric(sapply(splt, function(x) x[1]))
-muij_to_exp <- as.numeric(sapply(splt, function(x) x[2]))
-
 # parse linear regression params from STAN output
 beta0 <- pars[sprintf('beta_0[%i]', seq(1, num_exps))]
 beta1 <- pars[sprintf('beta_1[%i]', seq(1, num_exps))]
@@ -61,9 +59,6 @@ mus <- pars[grep('mu\\[', names(pars))]
 
 muij_fit <- pars[grep("muij", names(pars))]
 sigma_ijs <- pars[grep('sigma_ij', names(pars))]
-
-# build global false positive density function
-ev.rt.edf <- density(ev$`Retention time`)
 
 # output table
 ev.new <- data.frame(
@@ -118,8 +113,8 @@ for(i in 1:num_exps) {
   
   # P(RT|-) = probability of peptides RT, given that PSM is incorrect
   #           calculated from the empirical distribution of all RTs in this experiment
-  #exp.rt.edf <- density(exp$`Retention time`)
-  exp.rt.minus <- approx(ev.rt.edf$x, ev.rt.edf$y, 
+  exp.rt.edf <- density(exp$`Retention time`, adjust=2) # smooth it out a bit
+  exp.rt.minus <- approx(exp.rt.edf$x, exp.rt.edf$y, 
                          xout=exp.f$`Retention time`)$y
   
   # P(-) = probability that PSM is incorrect (PEP)
@@ -195,7 +190,7 @@ ev.ff <- ev.adjusted[, c('Sequence', 'Proteins', 'Leading razor protein', 'Raw f
                          'Reporter intensity corrected 4', 'Reporter intensity corrected 5', 
                          'Reporter intensity corrected 6', 'Reporter intensity corrected 7', 
                          'Reporter intensity corrected 8', 'Reporter intensity corrected 9',
-                         'Reverse', 'Peptide ID', 
+                         'Reverse', 'Peptide ID', 'Sequence ID', 'Modifications',
                          'rt.minus', 'rt.plus', 'muijs', 'sigmas', 'PEP.new', 'id')]
 write.table(ev.ff, 'dat/ev.adj.Fit2.txt', sep='\t', row.names=FALSE, quote=FALSE)
 
