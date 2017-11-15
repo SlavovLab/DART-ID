@@ -20,11 +20,13 @@ parameters {
   // canonical retention time for given peptide
   real<lower=0> mu[num_peptides];
 
-  real beta_0[num_experiments];
+
   real<lower=0> beta_1[num_experiments];
   real<lower=0> beta_2[num_experiments];
+  real<lower= -1.0*min(beta_1)*min(mu)> beta_0[num_experiments];
   real<lower=0> split_point[num_experiments];
 
+  
   real<lower=0> sigma_slope_global;
   real<lower=0> sigma_slope[num_experiments];
   real<lower=0> sigma_intercept[num_experiments];
@@ -77,5 +79,6 @@ model {
   for (i in 1:num_total_observations) {
     retention_times[i] ~ double_exponential(muij[muij_map[i]], sigma_ij[peptide_id[i]]);
   }
+
 
 }
