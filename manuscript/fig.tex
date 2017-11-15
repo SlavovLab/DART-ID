@@ -1,0 +1,155 @@
+%\include{Macros_nature2}
+%\let\citep=\autocite
+%\let\citet=\autocite
+%\addbibresource{cellp.bib}
+%\addbibresource{C:/Users/nslavov/Documents/B/texmf/bibtex/bib/people/my.bib}
+
+
+
+%\begin{document} \include{Captions}
+
+
+
+\newcommand{\suppFig}{Supplementary } % Supplemental   Extended Data
+
+
+
+
+%\newcommand{\ina}[2]{ \begin{overpic}[width = .42\textwidth]{#1} \put(-5,88){\large \bf \hvfont  #2}\end{overpic} }
+%\section*{Figure 1}\vspace{8mm}
+
+\begin{figure}[h!]
+   \begin{overpic}
+   		[width = .98\textwidth]{Figs/cellp_Diagram_with_Table_3.pdf} 
+   		\put(-1,  38 ){\large \bf \hvfont  a}
+   		\put(61,  38 ){\large \bf \hvfont  b}
+   	\end{overpic}
+   	 \\ [2em]
+	\inb{PCA_U_J_12.pdf}{c} %JH_ratios
+	\hspace{0.08\textwidth}
+	\inb{Dist_U_J_4}{d} % Figs/U_J_Pairwise_Corrs.pdf  ez30G-Clustered-10-1.pdf ez40A-Clustered-10-1.pdf
+	\caption{\concept}
+\end{figure}
+\newpage
+
+
+
+%\end{document}
+ 
+
+\newcommand{\inh}[2]{ \begin{overpic}[width = .28\textwidth]{#1} \put(-5,88){\large \bf \hvfont  #2}\end{overpic} }
+%\section*{Figure 2} \vspace{8mm}
+
+\begin{figure}[h!]
+   		\inh{EBs_Corrs_day3_knn2}{a}   \hspace{0.02\textwidth}
+	 	\inh{EBs_Corrs_day5_knn2}{}  \hspace{0.02\textwidth}
+	  	\inh{EBs_Corrs_day8_knn2}{} 
+	\\  [2em]
+%    	\inh{EBs_Corrs_day3}{a}   \hspace{0.02\textwidth}
+%	 	\inh{EBs_Corrs_day5}{}  \hspace{0.02\textwidth}
+%	  	\inh{EBs_Corrs_day8}{} 
+%	\\  [2em]	
+%	 	\inh{PC_1_across_Days}{b}  \hspace{0.02\textwidth}
+%	 	\inh{Figs/PC_1_across_Days}{c} \hspace{0.02\textwidth}
+%	 	\inh{PCA_EBs_Days}{d} % immune_bimodal
+%	 \\ [2em] 
+	   \inh{PCA_EBs_Days.pdf}{b} \hspace{0.02\textwidth}
+		\inh{PCA_EBs_Day8_2.pdf}{c}  \hspace{0.02\textwidth}
+		\inh{PCA_EBs_Day8_4.pdf}{d} 
+		%\inh{immune_bimodal.pdf}{f}
+	\caption{\prot}
+\end{figure} 
+\newpage
+
+  
+
+\newcommand{\fpa}[2]{ \begin{overpic}[width = .3\textwidth]{#1} \put(-5,70){\large \bf \hvfont  #2}\end{overpic} }
+%\section*{Figure 3} \vspace{8mm}
+
+\begin{figure}[h!]
+    \fpa{RNA_corrs_day7_2}{a}   \hspace{0.01\textwidth}
+	 \fpa{Protein_corrs_day8_2}{b}  \hspace{0.01\textwidth}
+	 \fpa{Cluster_Concordance_Jaccard_2}{c} %Cluster_Concordance
+	\\ [2em]
+   	 \inc{EBs_Corrs_Scatter_d8_knn3.png}{d}
+	 \hspace{0.08\textwidth}
+	 \inc{EBs_Corr_v_corr_violinP_knn2.png}{e}	
+	\caption{\rnaProt}
+\end{figure} 
+\newpage
+
+	
+
+\newcommand{\ind}[2]{ \begin{overpic}[width = .44\textwidth]{#1} \put(-3,85){\large \bf \hvfont #2}\end{overpic} }
+\noindent{\Huge \suppFig Figures} \vspace{12mm} %Supplemental
+%\section*{Extended Data Figure 1}  
+
+
+\begin{figure}[h!]
+	 \inh{TMT_channel_noise_45C_Dist.pdf}{a}
+       \hspace{0.02\textwidth}
+   	 \inh{TMT_channel_noise_6plex_2.pdf}{b} 
+   	   \hspace{0.02\textwidth}
+   	 \inh{TMT_channel_noise_RIs_2.pdf}{c}  %TMT_channel_noise_6plex
+\end{figure}
+\noindent{\bf \suppFig Figure 1 $|$} \noise 
+\newpage
+
+
+
+\begin{figure}[h!]
+   \begin{overpic}
+   		[width = .4\textwidth]{Figs/Labeling_Table_69.pdf} 
+   		\put(-3,  92 ){\large \bf \hvfont  a}
+   	\end{overpic}
+   	\hspace{0.06\textwidth}
+	\ind{PCA_U_J_69_Diff_Carrier.pdf}{b}
+\end{figure}
+\noindent{\bf \suppFig Figure 2 $|$} \carrier_Effect
+\newpage
+
+
+
+
+
+\newcommand{\inbb}[2]{ \begin{overpic}[width = .98\textwidth]{#1} \put(0,85){\large \bf \hvfont #2}\end{overpic} }
+\begin{figure}[h!]
+   	 \ind{SCoPE-MS_vs_bulk_Area.pdf}{a} %TMT_channel_noise_6plex
+   	 \hspace{0.06\textwidth}
+   	 \ind{SCoPE-MS_vs_bulk.pdf}{b} \\ [2em] %Across_40B_40B_Corrs_2
+   	 \ind{Across_37A_37A_Corrs.pdf}{c}
+   	 \hspace{0.06\textwidth}
+   	 \ind{38D_Reliability_vs_percentile.pdf}{d}
+\end{figure}
+\begin{spacing}{0.9}
+\noindent{\bf \suppFig Figure 3 $|$} {\small \JU_ratios }
+\end{spacing}
+\newpage
+
+
+
+
+\begin{figure}[h!]
+     \inb{iBAQ_hist_Covarage_EBs_PEP=0p057.pdf}{a} \hspace{0.06\textwidth}
+   	 \inb{PCA_EBs_Days_hist.pdf}{b} %TMT_channel_noise_6plex
+\end{figure}
+\noindent{\bf \suppFig Figure 4 $|$} \pc1byDay
+\newpage
+
+
+
+
+\begin{figure}[h!]
+   	 \inbb{RP_corrs.pdf}{a}
+\end{figure}
+\noindent{\bf \suppFig Figure 5 $|$} \RP_corrs
+\newpage
+
+
+
+%\printbibliography  \end{document}
+
+%\bibliographystyle{C:/Users/nslavov/Documents/B/latex/Science} \bibliography{cellp,C:/Users/nslavov/Documents/B/texmf/bibtex/bib/people/my}   \end{document}
+
+
+
