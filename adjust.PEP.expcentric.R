@@ -7,22 +7,14 @@ adjust.pep.expcentric <- function(ev, par.file='dat/params.Fit2.RData', path.out
   source('lib.R')
   
   ## load evidence
-  #ev <- read_tsv('dat/evidence.txt')
-  
-  
-  ## load STAN params
-  #load(par.file)
-  #load('dat/params_all.RData')
-  load.ev(ev, par.file=par.file)
-  
-  # remove abnormal LC experiments
-  # load experiments from correlation testing in similar.lc.R
-  exps.lc <- unlist(read_csv('dat/exps.corr.txt')[,2])
-  names(exps.lc) <- NULL
+  ev <- read_tsv('dat/evidence_elite.txt')
   
   ev <- ev %>%
-    filter(grepl('[0-9]{6}A', `Raw file`)) %>% # Only use Elite experiments
-    filter(`Raw file` %in% exps.lc) # Remove abnormal LC experiments
+    rename(`Sequence ID`=`Peptide ID`) %>%
+    rename(`Peptide ID`=`Mod. peptide ID`) # alias the modified peptide ID as the peptide ID
+  
+  ## load experiment and STAN params
+  load.ev(ev, par.file=par.file)
   
   dens.forw <- list()
   dens.rev <- list()
@@ -36,9 +28,10 @@ adjust.pep.expcentric <- function(ev, par.file='dat/params.Fit2.RData', path.out
     exp_id <- i
     exp_name <- levels(experiment_factors)[exp_id]
     # get exp subset of ev
-    exp <- subset(ev, ev$`Raw file`==exp_name, 
-                  c('Raw file', 'Sequence', 'PEP', 'Retention time', 
-                    'Best MS/MS', 'Peptide ID', 'Leading razor protein'))
+    exp <- ev %>%
+      filter(`Raw file`==exp_name) %>%
+      select(c('Raw file', 'Sequence', 'PEP', 'Retention time', 
+               'Best MS/MS', 'Peptide ID', 'Leading razor protein'))
     
     cat('\r', i, '/', num_exps, exp_name, nrow(exp), '                           ')
     flush.console()
@@ -77,7 +70,7 @@ adjust.pep.expcentric <- function(ev, par.file='dat/params.Fit2.RData', path.out
     
     set.seed(1)
     rev <- exp.mus[match(exp.peptide.map, exp.peptides)] - sample(exp.f$`Retention time`)
-    forw <- exp.dRT[exp.f$PEP < 0.02]
+    forw <- exp.dRT[exp.f$PEP < 0.05]
     # take the absolute value of the forward and reverse distribution
     forw <- abs(forw)
     rev <- abs(rev)
@@ -94,18 +87,9 @@ adjust.pep.expcentric <- function(ev, par.file='dat/params.Fit2.RData', path.out
     #           dRT belongs to distribution of correct IDs
     exp.f$rt.plus <- approx(den.forw$x, den.forw$y, xout=abs(exp.dRT))$y
     
-    
-    # P(dRT | Incorrect) = 1/(N-1) sum_{j not equal to i} P(dRT for j | j is correct)
-    sum.coef <- 1 / (nrow(exp.f) - 1)
-    exp.f$rt.minus <- rep(NA, nrow(exp.f))
-    for(j in 1:nrow(exp.f)) {
-      exp.f$rt.minus[j] <- sum(exp.f$rt.plus[-j], na.rm=TRUE) 
-    }
-    exp.f$rt.minus <- sum.coef * exp.f$rt.minus
-    
-    # OR... P(dRT | Incorrect) = probability of peptides dRT, given that PSM is incorrect
+    # P(dRT | Incorrect) = probability of peptides dRT, given that PSM is incorrect
     #           belongs to distribution of incorrect IDs
-    #exp.f$rt.minus <- approx(den.rev$x, den.rev$y, xout=abs(exp.dRT))$y
+    exp.f$rt.minus <- approx(den.rev$x, den.rev$y, xout=abs(exp.dRT))$y
     
     # fix missing data - distributions can be very sparse sometimes
     exp.f$rt.plus[exp.f$rt.plus == 0 | is.na(exp.f$rt.plus)] = .Machine$double.xmin
@@ -163,7 +147,7 @@ adjust.pep.expcentric <- function(ev, par.file='dat/params.Fit2.RData', path.out
                            'Reporter intensity corrected 4', 'Reporter intensity corrected 5', 
                            'Reporter intensity corrected 6', 'Reporter intensity corrected 7', 
                            'Reporter intensity corrected 8', 'Reporter intensity corrected 9',
-                           'Reverse', 'Peptide ID', 
+                           'Reverse', 'Peptide ID', 'Sequence ID', 'Modifications',
                            'rt.minus', 'rt.plus', 'muijs', 'sigmas', 'PEP.new', 'id')]
   
   if(is.null(path.out)) {

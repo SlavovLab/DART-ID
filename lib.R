@@ -71,3 +71,14 @@ clean.file.name <- function(name) {
   name <- gsub('[-|+|=]', '_', name)
   return(name)
 }
+
+theme_bert <- function() {
+  theme_minimal(base_size=16, base_family="Helvetica") %+replace% 
+    theme(
+      panel.background  = element_blank(),
+      legend.background = element_rect(fill="transparent", colour=NA),
+      legend.key = element_rect(fill="transparent", colour=NA),
+      axis.line=element_line(size=0.5, color='#888888'),
+      panel.grid=element_blank()
+    )
+}

@@ -145,7 +145,7 @@ validate.lib <- function(
     
     # NEW
     # -- originally bad IDs, upgraded to good ID (PEP > 0.05 & PEP.new < 0.05)
-    # -- set of NEW and ORIGINAL should be disjoint
+    # -- set of NEW and ORIGINAL should be disjoint, i.e., NEW ∩ ORIGINAL = ∅
     prot.data.new <- ev[ev$Proteins==prot & ev$PEP > 0.05 & ev$PEP.new < 0.05,data.cols]
     
     # TOTAL
@@ -187,6 +187,7 @@ validate.lib <- function(
       diag(prot.cor.tot) <- NA
     }
     
+    # concatenate to master vectors
     cors <- c(cors, as.vector(prot.cor))
     cors.new <- c(cors.new, as.vector(prot.cor.new))
     cors.tot <- c(cors.tot, as.vector(prot.cor.tot))
@@ -194,7 +195,7 @@ validate.lib <- function(
   
   ## Compute null distribution for peptide/protein correlations
   
-  cat('Building null correlation vector...\n')
+  cat('\nBuilding null correlation vector...\n')
   cors.null <- vector(mode='numeric')
   # set seed for consistency
   set.seed(1)
@@ -207,7 +208,6 @@ validate.lib <- function(
   for(i in 1:length(prots)) {
     ## pairwise correlation between peptides from random proteins
     
-    
     # randomly sample peptides from this list, and then compute the
     # pairwise correlation between them
     #
@@ -216,15 +216,15 @@ validate.lib <- function(
     # there are definitely proteins whose levels will correlate closely with others
     # expect this to be only slightly biased in the positive direction
     prot.data <- ev[sample(1:nrow(ev), size=n), data.cols]
-    
     prot.cor <- cor(t(prot.data), use='pairwise.complete.obs', method='pearson')
+    
     # set diagonal to NA
     diag(prot.cor) <- NA
-    # pass it up
+    # concatenate to cors.null vector
     cors.null <- c(cors.null, as.vector(prot.cor))
   }
   
-  # consolidate into a dataframe
+  # consolidate all groups into one dataframe
   cat('\nConsolidating correlation vectors...\n')
   cors.all <- data.frame(
     data=as.numeric(c(cors, cors.new, cors.tot, cors.null)),
@@ -238,9 +238,4 @@ validate.lib <- function(
   
   
   return(cors.all)
-  
-  
-  #cors.m %>%
-  #  ggplot(aes(x=Correlation, color=type)) +
-  #  geom_density()
 }

@@ -3,17 +3,43 @@ title: "RTLib Validation"
 output: rtlib_validation
 ---
 
+## Init
+Load libraries, common functions
+Load datasets
+ * ev.pep: Peptide-centric, Fit2 STAN (Updated 11/18/2017)
+ * ev.exp: Experiment-centric, Fit2 STAN (Updated 11/18/2017)
+ * ev.pwise: Pairwise
+
 ```{r}
 library(tidyverse)
 source('lib.R')
-```
-
-```{r}
 
 ev.pep <- read_tsv('dat/ev.adj.Fit2.txt')
 ev.exp <- read_tsv('dat/ev.adj.Fit2.expcentric.txt')
 ev.pwise <- read_tsv('dat/evidence+dRT.elite.txt')
+```
 
+## Basic evaluation of validation algorithm, on peptide-centric adjustment on experiment 19A
+
+ * _Original_ Distribution: Original PEP < 0.05
+ * _New_ Distribution: New PEP (PEP.new) < 0.05, and Original PEP > 0.05 (newly upgraded PSMs). Should be disjoint from _Original_ Distribution
+ * _Null_ Distribution: Fake proteins assembled from randomly matched peptides
+ * _Total_ Distribution (Not shown): New PEP < 0.05. *Not* the union between _Original_ and _New_, as some PSMs with Original PEP < 0.05 could be downgraded so that PEP.new > 0.05.
+
+```{r}
+cors <- validate.lib(ev.pep, exps=c('19A'))
+cors %>%
+  filter(Type != 'Total') %>%
+  ggplot(aes(x=data, color=Type)) +
+  geom_line(stat='density', position='identity')
+
+```
+
+
+## Compare performance with bulk J + H dataset, 19A
+19A is comprised of several raw files/runs, some targeted
+
+```{r}
 cors.exp <- validate.lib(ev.exp, exps=c('19A'))
 cors.pep <- validate.lib(ev.pep, exps=c('19A'))
 cors.pwise <- validate.lib(ev.pwise, ev.type='Ali', exps=c('19A'))
