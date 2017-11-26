@@ -5,23 +5,39 @@ library("splines")
 library(rstan)
 
 evidence <- read_tsv("~/Google\ Drive/Ali_RT_bayesian/dat/ev.adj.txt")
+evidence <- read_tsv('dat/evidence_elite.txt')
+
+evidence <- evidence %>%
+  rename(`Sequence ID`=`Peptide ID`) %>%
+  rename(`Peptide ID`=`Mod. peptide ID`) # alias the modified peptide ID as the peptide ID
 
 ## Filter of PEP  < .05 and remove REV and CONT and experiments on wrong LC column
 subEvidence <- evidence %>% filter(PEP < 0.05) %>%
     filter(grepl('[0-9]{6}A', `Raw file`)) %>%
     filter(!grepl('REV*', `Leading razor protein`)) %>%
     filter(!grepl('CON*',`Leading razor protein`))  %>%
-    select("Peptide ID", "Raw file", "Retention time", "PEP")
+    select("Peptide ID", "Raw file", "Retention time", "PEP") 
 
 ## Add factor indices
-subEvidence <- subEvidence %>% mutate(exp_id=`Raw file`) %>% mutate_at("exp_id", funs(as.numeric(as.factor(.))))
+subEvidence <- subEvidence %>% 
+  mutate(exp_id=`Raw file`) %>% 
+  mutate_at("exp_id", funs(as.numeric(as.factor(.))))
 
 ## Look at mean retention times to get a sense of alignment
-rt_means <- subEvidence %>% group_by(`Peptide ID`, `exp_id`) %>% summarise(avg=median(`Retention time`)) ##, pep_avg=mean(`PEP`))
-rt_means <- rt_means %>% spread(key=`exp_id`, value=avg)
+rt_means <- subEvidence %>% 
+  group_by(`Peptide ID`, `exp_id`) %>% 
+  summarise(avg=median(`Retention time`)) ##, pep_avg=mean(`PEP`))
+rt_means <- rt_means %>% 
+  spread(key=`exp_id`, value=avg)
 
 
-rank_means <- subEvidence %>% group_by(`exp_id`) %>% mutate_at(vars(`Retention time`), funs(rank(., na.last="keep")/(n()+1))) %>% ungroup() %>% group_by(`exp_id`, `Peptide ID`) %>% summarise(avg=median(`Retention time`)) %>% spread(key=`exp_id`, value=avg)
+rank_means <- subEvidence %>% 
+  group_by(`exp_id`) %>% 
+  mutate_at(vars(`Retention time`), funs(rank(., na.last="keep")/(n()+1))) %>% 
+  ungroup() %>% 
+  group_by(`exp_id`, `Peptide ID`) %>% 
+  summarise(avg=median(`Retention time`)) %>% 
+  spread(key=`exp_id`, value=avg)
 
 num_experiments <- length(unique(subEvidence[["exp_id"]]))
 
