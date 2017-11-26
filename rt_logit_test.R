@@ -4,49 +4,33 @@ library(tidyverse)
 library(splines)
 library(rstan)
 
-evidence <- read_tsv("~/Google\ Drive/Ali_RT_bayesian/dat/ev.adj.txt")
-evidence <- read_tsv('dat/evidence_elite.txt')
-
-evidence <- evidence %>%
-  rename(`Sequence ID`=`Peptide ID`) %>%
-  rename(`Peptide ID`=`Mod. peptide ID`) # alias the modified peptide ID as the peptide ID
+evidence <- read_tsv("~/Google\ Drive/bayesian_RT/dat/evidence_elite.txt")
 
 ## Filter of PEP  < .05 and remove REV and CONT and experiments on wrong LC column
 
-pep_thresh <- 0.5
+pep_thresh <- 0.3
 
 subEvidence <- evidence %>% filter(PEP < pep_thresh) %>%
     filter(grepl('[0-9]{6}A', `Raw file`)) %>%
     filter(!grepl('REV*', `Leading razor protein`)) %>%
     filter(!grepl('CON*',`Leading razor protein`))  %>%
-    select("Peptide ID", "Raw file", "Retention time", "PEP") 
+    select("Peptide ID", "Raw file", "Retention time", "PEP")
 
-
+dim(subEvidence)
 
 ## Add factor indices
-subEvidence <- subEvidence %>% 
-  mutate(exp_id=`Raw file`) %>% 
-  mutate_at("exp_id", funs(as.numeric(as.factor(.))))
+subEvidence <- subEvidence %>% mutate(exp_id=`Raw file`) %>% mutate_at("exp_id", funs(as.numeric(as.factor(.))))
 
 ## Remove peptides that occur in only one experiment
-toRemove <- subEvidence %>% group_by(`Peptide ID`) %>% summarise(n=length(unique(`exp_id`))) %>% filter(n <= 10)
+toRemove <- subEvidence %>% group_by(`Peptide ID`) %>% summarise(n=length(unique(`exp_id`))) %>% filter(n == 1)
 subEvidence <- subEvidence %>% filter(!(`Peptide ID` %in% toRemove[["Peptide ID"]]))
 
 ## Look at mean retention times to get a sense of alignment
-rt_means <- subEvidence %>% 
-  group_by(`Peptide ID`, `exp_id`) %>% 
-  summarise(avg=median(`Retention time`)) ##, pep_avg=mean(`PEP`))
-rt_means <- rt_means %>% 
-  spread(key=`exp_id`, value=avg)
+rt_means <- subEvidence %>% group_by(`Peptide ID`, `exp_id`) %>% summarise(avg=median(`Retention time`)) ##, pep_avg=mean(`PEP`))
+rt_means <- rt_means %>% spread(key=`exp_id`, value=avg)
 
 
-rank_means <- subEvidence %>% 
-  group_by(`exp_id`) %>% 
-  mutate_at(vars(`Retention time`), funs(rank(., na.last="keep")/(n()+1))) %>% 
-  ungroup() %>% 
-  group_by(`exp_id`, `Peptide ID`) %>% 
-  summarise(avg=median(`Retention time`)) %>% 
-  spread(key=`exp_id`, value=avg)
+rank_means <- subEvidence %>% group_by(`exp_id`) %>% mutate_at(vars(`Retention time`), funs(rank(., na.last="keep")/(n()+1))) %>% ungroup() %>% group_by(`exp_id`, `Peptide ID`) %>% summarise(avg=median(`Retention time`)) %>% spread(key=`exp_id`, value=avg)
 
 num_experiments <- length(unique(subEvidence[["exp_id"]]))
 
@@ -99,10 +83,10 @@ data <- list(num_experiments=num_experiments, num_peptides=num_peptides,
              experiment_id=exp_id, peptide_id=stan_peptide_id,
              retention_times=retention_times,
              pep = pep,
-             max_retention_time=max(retention_times))
+             max_retention_time=max(retention_times)*1.05)
 
 ## Compile the stan code
-sm <- stan_model(file="fit_RT3.stan")
+sm <- stan_model(file="fit_RT4.stan")
 
 muInit <- sapply(unique(stan_peptide_id), function(pid) {
     weights <- ((1-pep[stan_peptide_id==pid]) - (1-pep_thresh))/pep_thresh
@@ -110,67 +94,75 @@ muInit <- sapply(unique(stan_peptide_id), function(pid) {
 })
 
 muInit[muInit <= 0] <- 5
+muInit[muInit >= max(retention_times)] <- max(retention_times)*.9
 
 max_mu <- max(retention_times)
 muInit[muInit > max_mu] <- max_mu
 
+inv_logit <- function(a, b, x) {
+    max(retention_times)*1.05 * ( exp(a*(x-b)) / (1 + exp(a*(x-b))))
+}
+
 rt_distorted <- retention_times + rnorm(num_total_observations, 0, 10)
 rt_distorted[rt_distorted > max(retention_times)] <- max(retention_times)
 rt_distorted[rt_distorted < min(retention_times)] <- min(retention_times)
-beta_init <-  rbind(rep(10, num_experiments), rep(1, num_experiments))
+beta_init <-  rbind(rep(0.001, num_experiments), rep(100, num_experiments))
 
-for( i in 1:10 ) {
+## Iterative initialization procedure
+for (i in 1:10) {
 
-    print(i) 
+    beta_init <- sapply(sort(unique(exp_id)), function(id) {
 
-    lm_coefs <- sapply(sort(unique(exp_id)), function(id) {
-        rt_cur <- rt_distorted[exp_id == id] 
+        rt_cur <- rt_distorted[exp_id == id]
         mu_cur <- muInit[match(stan_peptide_id[exp_id == id], unique(stan_peptide_id))]
-        pep_cur <- pep[exp_id == id]
-        lm_cur <- lm(rt_cur ~ mu_cur, weights = 1-pep_cur)
+        pars <- optim(c(beta_init[1, id], beta_init[2, id]),  function(pars) {
+            a <- pars[1]
+            b <- pars[2]
 
-        lm_cur$coefficients
+            sum((inv_logit(a, b, mu_cur) - rt_cur)^2)
+        })
+        
+        pars$par
     })
-    
-    beta_init[1, ] <- lm_coefs[1, ]
-    beta_init[2, ]  = lm_coefs[2, ]
+
+    beta_init[1, ] <- pmax(beta_init[1, ], 1e-4)
+    beta_init[2, ]  = pmin(beta_init[2, ], 200)
     
     muInitPrev <- muInit
 
-    mu_pred <- (rt_distorted - beta_init[1, exp_id]) / beta_init[2, exp_id] 
+    p <- rt_distorted / (max(rt_distorted)*1.05) 
+    mu_pred <- log(p/(1-p)) / beta_init[1, exp_id] + beta_init[2, exp_id] 
     
     mu_pred[mu_pred <= 0] <- min(rt_distorted)
     mu_pred[mu_pred >= max(rt_distorted)] <- max(rt_distorted)
-    muPrev <- muInit
+
     muInit <- sapply(unique(stan_peptide_id), function(pid) {
         weights <- ((1-pep[stan_peptide_id==pid]) - (1-pep_thresh))/pep_thresh
         sum(mu_pred[stan_peptide_id==pid] * weights) / sum(weights)
     })
 
-    print( sum(muPrev - muInit)^2/length(muInit))
-##    plot(beta_init[1, emuInit[stan_peptide_id], rt_distorted, pch=19, cex=0.1)
-##    id <- 20; plot(muInit[stan_peptide_id[exp_id==id]]*beta_init[2, id] + beta_init[1, id], rt_distorted[exp_id == id], pch=19, cex=0.1)
+    plot(inv_logit(beta_init[1, exp_id], beta_init[2, exp_id], muInit[stan_peptide_id]), rt_distorted, pch=19, cex=0.1)
+    print( sum((muInitPrev - muInit)^2))
+    print(summary(muInit))
 
 }
 
-beta_0 = beta_init[1, ]
-beta_1 <- beta_2 <- beta_init[2, ]
-beta_0[beta_0 <= -1.0*min(beta_1)*min(muInit)] <- -1.0*min(beta_1)*min(muInit) + 1e-3
-       
-muInit[muInit >= max(retention_times)] <- 0.95*max(retention_times)
+muInit[muInit>=max(retention_times)] <-  0.95*max(retention_times)
+beta_1 <- beta_2 <- pmax(beta_init[1, ], 1e-4)
+beta_0 = pmin(beta_init[2, ], max(retention_times))
 
 
 initList <- list(mu=muInit,
                  beta_0 = beta_0,
-                 beta_1 = beta_1,
-                 beta_2 = beta_2,
+                 beta_1 = beta_1, 
                  sigma_slope=rep(0.1, num_experiments),
-                 sigma_intercept=rep(0.1, num_experiments),
-                 split_point=rep(median(muInit), num_experiments))
+                 sigma_intercept=rep(0.1, num_experiments))
 
 start <- Sys.time()
-pars <- optimizing(sm, data=data, init=initList, iter=20000, verbose=TRUE)$par
+pars <- optimizing(sm, data=data, init=initList, iter=3000, verbose=TRUE)$par
 print(Sys.time() - start)
+
+save(pars, file="logit_pars.RData")
 
 ## Beta fit
 library(rmutil)
@@ -181,19 +173,17 @@ residual_vec <- c()
 exp_vec <- c()
 col_vec <- c()
 
-pep_col_code <- cut(pep, breaks=10)
+pep_col_code <- as.integer(cut(pep, breaks=5))
+
+## Get canonical retention times
+mu <-  pars[grep("mu\\[", names(pars))]
 
 for(exp in 1:num_experiments) {
-    betas <- c(pars[paste0("beta_0[", exp, "]")], pars[paste0("beta_1[", exp, "]")], pars[paste0("beta_2[", exp, "]")])
 
-    ## Get canonical retention times
-    mu <-  pars[grep("mu\\[", names(pars))]
+    betas <- c(pars[paste0("beta_0[", exp, "]")], pars[paste0("beta_1[", exp, "]")], pars[paste0("beta_2[", exp, "]")])
 
     ## get experiment indices
     exp_indices <-  muij_to_exp==exp
-
-    ## split points
-    split <-  pars[grep(paste0("split_point\\[", exp, "\\]"), names(pars))]
 
     ## estimated muij for experiment
     exp_fit <- muij_fit[exp_indices]
@@ -216,23 +206,21 @@ for(exp in 1:num_experiments) {
     col_vec <- c(col_vec, obs_code)
     exp_vec <- c(exp_vec, rep(exp, length(residual)))
         
-    pdf(sprintf("tmp_figs/second-fit-%i.pdf", exp))
+    pdf(sprintf("tmp_figs2/second-fit-%i.pdf", exp))
     plot(predicted, observed, pch=19, cex=0.2)
     abline(a=0, b=1, col="blue")
-    abline(v=split, col="blue")
     dev.off()
 
 
-    pdf(sprintf("tmp_figs/canonical_v_original-%i.pdf", exp))
+
+    pdf(sprintf("tmp_figs2/canonical_v_original-%i.pdf", exp))
     plot(mus, observed, pch=19, cex=0.2)
-    abline(v=split, col="blue", lty=2)
-    segments(x0=0, y0=betas[1], x1=split, y1=betas[1]+betas[2]*split, col="green", lwd=1.5)
-    segments(x0=split, y0=betas[1]+betas[2]*split, x1=400, y1=betas[1] + betas[2]*split +betas[3]*(400-split), col="red", lwd=1.5)
+    curve(inv_logit(betas[2], betas[1], x), col="green", lwd=1.5, add=TRUE, from=0, to=250)
     dev.off()
 
     cols <- rev(heat.colors(10))
     
-    pdf(sprintf("tmp_figs/residuals-fit-%i.pdf", exp))
+    pdf(sprintf("tmp_figs2/residuals-fit-%i.pdf", exp))
     plot(predicted, observed-predicted,pch=19, cex=0.2, col=cols[obs_code])
     lines(predicted[order(predicted)],
           sapply(predicted_sd, function(s) qlaplace(.025, 0, s))[order(predicted)],
@@ -243,7 +231,7 @@ for(exp in 1:num_experiments) {
           col="red")
     
 
-    abline(v=split, col="blue")
+    ##abline(v=split, col="blue")
     dev.off()
     
 }
@@ -251,11 +239,11 @@ for(exp in 1:num_experiments) {
 library(ggridges)
 df <- data.frame(x=abs(residual_vec), y=as.factor(col_vec))
 
-df %>% group_by(y) %>% summarise(mean=mean(x), qtl=quantile(x, 0.99))
+pdf("~/Desktop/tmp2.pdf")
+df %>% group_by(y) %>% summarise(mean=mean(x), qtl=quantile(x, 0.90))
 head(df)
-pdf("~/Desktop/tmp.pdf")
-ggplot(df, aes(x=log2(x), y=y, fill=y)) + geom_density_ridges()
-dev.off() 
+ggplot(df, aes(x=log2(x), y=y, fill=y)) + geom_density_ridges() + xlim(c(-30, 10))
+dev.off()
 summary(pars[grep("sigma_intercept", names(pars))])
 summary(rlnorm(1000, 0, 2))
 
