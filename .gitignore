@@ -1,7 +1,7 @@
 # OSX files
 .DS_Store
 Icon\r
-\**\Icon\r
+*\**\Icon\r
 
 # Windows files
 desktop.ini
@@ -24,9 +24,9 @@ notes.txt
 *.rds
 
 # figures
-figures/*
-*.pdf
-*.png
+#figures/*
+#*.pdf
+#*.png
 
 # notes
 *.doc
@@ -41,3 +41,14 @@ old_figures/*
 # no shiny
 ShinyRT/*
 .Rproj.user
+
+# generated TEX files
+manuscript/*.aux
+manuscript/*.bbl
+manuscript/*.bcf
+manuscript/*.blg
+manuscript/*.log
+manuscript/*.out
+manuscript/*.run.xml
+manuscript/*.gz
+manuscript/*.pdf

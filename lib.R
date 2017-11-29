@@ -75,10 +75,38 @@ clean.file.name <- function(name) {
 theme_bert <- function() {
   theme_minimal(base_size=16, base_family="Helvetica") %+replace% 
     theme(
-      panel.background  = element_blank(),
+      panel.background  = element_rect(fill=NULL, color='black', size=0.5),
       legend.background = element_rect(fill="transparent", colour=NA),
       legend.key = element_rect(fill="transparent", colour=NA),
-      axis.line=element_line(size=0.5, color='#888888'),
+      #axis.line=element_line(size=0.5, color='#888888'),
+      axis.line=element_blank(),
+      axis.ticks=element_line(color='black', size=0.5),
       panel.grid=element_blank()
     )
 }
+
+# fancy scientific scales
+# from: https://stackoverflow.com/questions/11610377/how-do-i-change-the-formatting-of-numbers-on-an-axis-with-ggplot
+fancy_scientific <- function(l) {
+  # turn in to character string in scientific notation
+  l <- format(l, scientific = TRUE)
+  # quote the part before the exponent to keep all the digits
+  l <- gsub("^(.*)e", "'\\1'e", l)
+  # turn the 'e+' into plotmath format
+  l <- gsub("e", "%*%10^", l)
+  # make sure +0 just turns into 0
+  l <- gsub("\\+00", "00", l)
+  # return this as an expression
+  return(parse(text=l))
+}
+
+# from: https://stackoverflow.com/questions/8545035/scatterplot-with-marginal-histograms-in-ggplot2
+emptyPlot <- function() {
+  ggplot()+geom_point(aes(1,1), colour="white")+
+  theme(axis.ticks=element_blank(), 
+        panel.background=element_blank(), 
+        axis.text.x=element_blank(), axis.text.y=element_blank(),           
+        axis.title.x=element_blank(), axis.title.y=element_blank())
+}
+
+bHeatmap <- c('#710e0d', '#8b42df', '#4c94dc', '#40df91', '#fef245')
