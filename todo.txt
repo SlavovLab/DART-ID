@@ -1,0 +1,55 @@
+Run percolator on data
+https://github.com/percolator/percolator/wiki/Interface
+ * convert data into format the percolator likes
+ * need msms.txt
+ * write script to extract performance from percolator output
+ * compare to existing methods
+
+Compare to iRT
+http://onlinelibrary.wiley.com.ezproxy.neu.edu/doi/10.1002/pmic.201100463/full
+
+Could use the same principles of iRT - retention time is already normalized after the STAN alignment, and you can find common peptides between experiments, or by spiking in synthetic/labeled peptides.
+
+Validate Input:
+ * Correlation of RTs pairwise b/n experiments
+ * Take only small subset to do correlation with
+ * Web interface for this algorithm
+
+Validation:
+ * Fix positive bias in null distribution
+
+FIT3 NOTES:
+
+what to use for the P(RT|PSM is incorrect)? use the empirical RT distribution, or use a uniform distribution from 0 to max(RT-global), or 0 to max(RT-experiment)?
+
+in the STAN fit, adjust the uniform based on which experiment it comes from?
+
+Figure 1 - Method:
+A: PEP vs PEP.new scatterplot
+B: Fold Change Increase in IDs
+
+Figure 2 - Validation:
+A: Correlation matrix example for one protein
+B: Original vs. New vs. Null
+
+
+Supplemental Figures:
+
+Filtering:
+A: RT scatterplot b/n experiments
+B: Correlation b/b all experiments
+
+Alignment:
+
+A: 1 on the 2 piece linear model - choose a couple of experiments
+ - plot the fit and the residuals
+
+B: 1 on the mixture model
+ - pick a peptide-exp pair
+ - rug the individual observations
+ - plot densities on top of each other, alpha=0.5
+ - illustrate how this effects updated PEP... which plot to use?
+ - plot change in PEP vs. delta RT from the muijs
+
+
+DONE:

@@ -2,7 +2,7 @@
 # experiment-centric method of adjusting PEPs, using STAN parameters
 # i.e., compare distributions of correct vs. incorrect IDs
 
-adjust.pep.expcentric <- function(ev, par.file='dat/params.Fit2.RData', path.out=NULL) {
+adjust.pep.expcentric <- function(ev, par.file='dat/params.Fit4.RData', path.out=NULL) {
   library(tidyverse)
   source('lib.R')
   
@@ -11,8 +11,9 @@ adjust.pep.expcentric <- function(ev, par.file='dat/params.Fit2.RData', path.out
   
   ev <- ev %>%
     rename(`Sequence ID`=`Peptide ID`) %>%
-    rename(`Peptide ID`=`Mod. peptide ID`) # alias the modified peptide ID as the peptide ID
-  
+    rename(`Peptide ID`=`Mod. peptide ID`) %>% # alias the modified peptide ID as the peptide ID
+    mutate_at('PEP', funs(ifelse(. > 1, 1, .))) # cap PEP to 1
+    
   ## load experiment and STAN params
   load.ev(ev, par.file=par.file)
   
@@ -104,6 +105,9 @@ adjust.pep.expcentric <- function(ev, par.file='dat/params.Fit2.RData', path.out
     # - <- PSM=Incorrect
     exp.f$PEP.new <- (exp.f$PEP * exp.f$rt.minus) / 
       ((exp.f$PEP * exp.f$rt.minus) + ((1 - exp.f$PEP) * exp.f$rt.plus))
+    
+    # make sure that PEP.new is not above 1
+    exp.f$PEP.new[exp.f$PEP.new > 1] <- 1
     
     # output table for this experiment, for updated data
     exp.new <- data.frame(

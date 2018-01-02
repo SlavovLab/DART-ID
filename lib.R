@@ -73,16 +73,60 @@ clean.file.name <- function(name) {
 }
 
 theme_bert <- function() {
-  theme_minimal(base_size=16, base_family="Helvetica") %+replace% 
+  theme_bw(base_size=16, base_family="Helvetica") %+replace% 
     theme(
-      panel.background  = element_rect(fill=NULL, color='black', size=0.5),
+      #panel.background  = element_rect(fill=NULL, color='black', size=0.5),
+      panel.background=element_blank(),
+      panel.border=element_blank(),
+      axis.line.x=element_line(color='black', size=0.25),
+      axis.line.y=element_line(color='black', size=0.25),
       legend.background = element_rect(fill="transparent", colour=NA),
       legend.key = element_rect(fill="transparent", colour=NA),
       #axis.line=element_line(size=0.5, color='#888888'),
-      axis.line=element_blank(),
-      axis.ticks=element_line(color='black', size=0.5),
+      #axis.line=element_blank(),
+      axis.ticks=element_line(color='black', size=0.25),
+      #axis.ticks=element_blank(),
       panel.grid=element_blank()
     )
+}
+
+fold.change.comp <- function(exps, begin=1e-5, end=1, num.steps=100, log=T, add.dummy=T) {
+  library(pracma)
+  # only use the same raw files between all evidence files
+  common.exps <- Reduce(intersect, lapply(exps, function(exp) { exp$`Raw file` }))
+  exps <- lapply(exps, function(exp) { exp[exp$`Raw file` %in% common.exps,]})
+  
+  # equally spaced steps in log space
+  if(log) {
+    x <- logseq(begin, end, n=num.steps)
+  } else {
+    x <- seq(begin, end, length.out=num.steps)
+  }
+  
+  # frame to hold the results
+  df <- data.frame()
+  counter <- 0
+  for(i in x) {
+    ratios <- unlist(lapply(exps, function(exp) {
+      (sum(exp$PEP.new < i, na.rm=TRUE) / 
+         sum(exp$PEP < i & !is.na(exp$PEP.new)))
+    }))
+    
+    # add dummy maxquant experiment
+    if(add.dummy) {
+      ratios <- c(ratios, 1)
+      exp.names <- c(names(exps), 'MaxQuant')
+    } else {
+      exp.names <- names(exps)
+    }
+    
+    df <- rbind(df, data.frame(
+      x=as.numeric(i),
+      PEP=as.numeric(ratios),
+      Method=as.character(exp.names)
+    ))
+  }
+  return(df)
 }
 
 # fancy scientific scales

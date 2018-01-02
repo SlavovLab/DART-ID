@@ -8,7 +8,8 @@ library(gtable)
 library(RColorBrewer)
 source('lib.R')
 
-ev <- read_tsv('dat/ev.adj.Fit2.expcentric.txt')
+#ev <- read_tsv('dat/ev.adj.Fit2.expcentric.txt')
+ev <- read_tsv('dat/ev.adj.Fit3.txt')
 #ev <- parse.ev.adj(ev)
 
 ## PEP vs. PEP.new scatterplot -----
@@ -23,6 +24,13 @@ ev.f <- ev %>%
   arrange(desc(PEP)) %>%
   mutate(bin=cut(PEP, breaks=c(0, 1e-3, 1e-2, 5e-2, 1e-1, 5e-1, 7.5e-1, 1)))
 
+ev.f %>%
+  sample_n(1e5) %>%
+ggplot(aes(x=PEP, y=PEP.new)) +
+  geom_point(alpha=0.1) +
+  scale_x_log10(limits=c(1e-10, 1)) +
+  scale_y_log10(limits=c(1e-10, 1))
+
 ## Fig 1A - PEP vs. PEP.new Scatter/Density -----
 
 pdf(file='manuscript/Figs/Fig_1A.pdf', width=7, height=7, onefile=F)
@@ -33,8 +41,9 @@ p <- ggplot(ev.f, aes(x=PEP, y=PEP.new)) +
   #stat_density2d(aes(alpha=..level.., fill=..level..), bins=9, geom='polygon') +
   geom_abline(slope=1, intercept=0, color='red') +
   scale_fill_gradientn(colors=bHeatmap, 
-                       values=c(0, 0.05, 0.1, 0.2, 0.5, 1),
-                       labels=c(0, 500, 1000, 1500, 2000)) +
+                       values=c(0, 0.05, 0.1, 0.2, 0.5, 1)
+                       #labels=c(0, 500, 1000, 1500, 2000)) +
+  )+
   scale_alpha_continuous(guide=FALSE) +
   scale_x_log10(limits=c(1e-10, 1), 
                 breaks=logseq(1e-10, 1, 6), labels=fancy_scientific) +
@@ -174,27 +183,49 @@ grid.draw(g)
 
 ## PEP Fold Change Line Plot -------
 
-#t <- c(0, logseq(1e-10, 1, n=50))
-t <- seq(0,1,by=0.05)
-p <- c()
-for(i in 1:length(t)-1) {
-  # number of PSMs with PEP.new within interval / same with PEP
-  p[i] <- sum(ev.f$PEP.new > t[i] & ev.f$PEP.new < t[i+1]) / 
-    sum(ev.f$PEP > t[i] & ev.f$PEP < t[i+1])
-  #p[i] <-sum(ev.f$PEP.new < t[i+1]) / sum(ev.f$PEP < t[i+1])
-}
+source('lib.R')
 
-ggplot(data.frame(), aes(x=t[-1], y=p)) +
-  geom_hline(yintercept=1, color='red', linetype='longdash') +
+ev <- read_tsv('dat/ev.adj.Fit3c.txt')
+ev.perc <- read_tsv('dat/ev.perc_181217_noPEP.txt')
+ev.perc.nodoc <- read_tsv('dat/ev.perc_181217_nodoc.txt')
+
+## -----
+
+exps <- list(RTLib=ev,
+             Percolator=ev.perc)
+             #Percolator_NoDoc=ev.perc.nodoc)
+
+df <- fold.change.comp(exps, num.steps=100)
+df <- fold.change.comp(exps, begin=0, end=1, num.steps=30, log=F)
+
+ggplot(df, aes(x=x, y=PEP, color=Method)) +
   geom_path() +
-  geom_point() +
-  #scale_x_log10(name='PEP Interval', breaks=logseq(1e-10, 1, 6)) +
-  #              #labels=fancy_scientific) +
-  scale_x_continuous(breaks=seq(0, 1, by=0.2)) +
+  scale_x_log10() +
+  annotation_logticks(sides='b') +
+  #scale_y_continuous(limits=c(0.95,2.25), breaks=c(1, 1.25, 1.5, 1.75, 2, 2.25)) +
+  labs(x='PEP Threshold', y='Fold Change Increase in IDs',
+       title=paste0('Fold Change Increase of PSM IDs\n',
+                    '= #Adjusted PEPs / #Original PEPs above PEP Threshold'))
+
+pdf('manuscript/Figs/Fig_1B.pdf')
+
+ggplot(df, aes(x=x, y=PEP, color=Method)) +
+  #geom_hline(yintercept=1, color='red', linetype='longdash') +
+  geom_path() +
+  #geom_point() +
+  scale_x_log10(name='PEP Interval', breaks=logseq(1e-5, 1, 6)) +
+                #labels=fancy_scientific) +
+  annotation_logticks(sides='b') +
+  #scale_x_continuous(breaks=seq(0, 1, by=0.2)) +
+  scale_y_continuous(breaks=seq(0.4,2,by=0.2)) +
   labs(x='PEP Threshold', 
-       y=parse(text='frac(\'# Updated PEP < Threshold\', \'# Spectral PEP < Threshold\')')) +
+       y=parse(text='frac(\'# Updated PEP < Threshold\', \'# Spectral PEP < Threshold\')'),
+       #y='asdf',
+       #title=parse(text="frac(\'#Adjusted PEPs\', \'#Original PEPs above PEP Threshold\')")) +
+       title=paste0("Fold Change Increase of Confident PSMs")) +
   theme_bert()
 
+dev.off()
 
 
 

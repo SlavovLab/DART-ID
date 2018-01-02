@@ -12,7 +12,7 @@ source('lib.R')
 ## load evidence
 ev <- read_tsv('dat/evidence.txt')
 
-adjust.pep.expcentric(ev, path.out='dat/ev.adj.Fit2.expcentric.txt')
+#adjust.pep.expcentric(ev, path.out='dat/ev.adj.Fit2.expcentric.txt')
 
 ```
 
@@ -22,6 +22,7 @@ library(pracma)
 ev.ali <- parse.ev.adj('dat/evidence+dRT.elite.txt', type='Ali')
 ev.pep.old <- parse.ev.adj('dat/ev.adj.Fit2.txt_OLD')
 ev.pep <- parse.ev.adj('dat/ev.adj.Fit2.txt')
+ev.exp.old <- parse.ev.adj('dat/ev.adj.Fit2.expcentric.txt_OLD')
 ev.exp <- parse.ev.adj('dat/ev.adj.Fit2.expcentric.txt')
 
 # only use the same raw files between all evidence files
@@ -29,21 +30,24 @@ common.exps <- Reduce(intersect, list(ev.ali$`Raw file`, ev.pep$`Raw file`, ev.p
 ev.ali <- ev.ali[ev.ali$`Raw file` %in% common.exps,]
 ev.pep.old <- ev.pep.old[ev.pep.old$`Raw file` %in% common.exps,]
 ev.pep <- ev.pep[ev.pep$`Raw file` %in% common.exps,]
+ev.exp.old <- ev.exp[ev.exp.old$`Raw file` %in% common.exps,]
 ev.exp <- ev.exp[ev.exp$`Raw file` %in% common.exps,]
 
 acc <- 100
 t <- logseq(1e-3, 1e-1, n=acc)
-id.frac <- c(length=acc*4)
+id.frac <- c(length=acc*5)
 counter <- 0
 for(i in t) {
   counter <- counter + 1
   id.frac[counter] <- sum(ev.ali$PEP.new < i, na.rm=TRUE) / 
-    sum(ev.ali$PEP < i & !is.na(ev.ali$PEP.new))
+    sum(ev.ali$PEP < i)
   id.frac[acc+counter] <- sum(ev.pep.old$PEP.new < i, na.rm=TRUE) / 
     sum(ev.pep.old$PEP < i & !is.na(ev.pep.old$PEP.new))
   id.frac[2*acc+counter] <- sum(ev.pep$PEP.new < i, na.rm=TRUE) / 
     sum(ev.pep$PEP < i & !is.na(ev.pep$PEP.new))
-  id.frac[(3*acc)+counter] <- sum(ev.exp$PEP.new < i, na.rm=TRUE) / 
+  id.frac[(3*acc)+counter] <- sum(ev.exp.old$PEP.new < i, na.rm=TRUE) / 
+    sum(ev.exp.old$PEP < i & !is.na(ev.exp.old$PEP.new))
+  id.frac[(4*acc)+counter] <- sum(ev.exp$PEP.new < i, na.rm=TRUE) / 
     sum(ev.exp$PEP < i & !is.na(ev.exp$PEP.new))
   cat(counter, '/', acc, '                         \r')
   flush.console()
@@ -54,13 +58,68 @@ df <- data.frame(
   Method=as.factor(rep(c('Pairwise', 
                          'Peptide-Centric',
                          'Peptide-Centric/Mod Sequence',
-                         'Experiment-Centric'), 
+                         'Experiment-Centric',
+                         'Experiment-Centric/Mod Sequence'), 
                        each=acc))
 )
 
-ggplot(df, aes(x=rep(t,4), y=PEP, color=Method, fill=Method)) +
+df %>%
+  filter(!Method %in% c('Peptide-Centric', 'Experiment-Centric')) %>%
+ggplot(aes(x=rep(t,3), y=PEP, color=Method, fill=Method)) +
   #geom_point(size=1) + 
   geom_path() +#geom_smooth(method='loess') +
+  scale_x_log10() +
+  annotation_logticks(sides='b') +
+  #scale_y_continuous(limits=c(0.95,2.25), breaks=c(1, 1.25, 1.5, 1.75, 2, 2.25)) +
+  labs(x='PEP Threshold', y='Fold Change Increase in IDs',
+       title=paste0('Fold Change Increase of PSM IDs\n',
+                    '= #Adjusted PEPs / #Original PEPs above PEP Threshold'))
+
+```
+
+```{r}
+
+fold.change.comp <- function(exps) {
+  library(pracma)
+  # only use the same raw files between all evidence files
+  common.exps <- Reduce(intersect, lapply(exps, function(exp) { exp$`Raw file` }))
+  exps <- lapply(exps, function(exp) { exp[exp$`Raw file` %in% common.exps,]})
+  
+  num.steps <- 100
+  # equally spaced steps in log space
+  #x <- logseq(1e-10, 1, n=num.steps)
+  x <- logseq(1e-5, 1, n=num.steps)
+  # frame to hold the results
+  df <- data.frame()
+  counter <- 0
+  for(i in x) {
+    ratios <- unlist(lapply(exps, function(exp) {
+      (sum(exp$PEP.new < i, na.rm=TRUE) / 
+        sum(exp$PEP < i & !is.na(exp$PEP.new)))
+    }))
+    df <- rbind(df, data.frame(
+      x=as.numeric(i),
+      PEP=as.numeric(ratios),
+      Method=as.character(names(exps))
+    ))
+  }
+  return(df)
+}
+
+ev.ali <- parse.ev.adj('dat/evidence+dRT.elite.txt', type='Ali')
+ev.fit2 <- parse.ev.adj('dat/ev.adj.Fit2.txt')
+ev.fit2.exp <- parse.ev.adj('dat/ev.adj.Fit2.expcentric.txt')
+ev.fit3 <- parse.ev.adj('dat/ev.adj.Fit3.txt')
+
+exps <- list(Pairwise=ev.ali, 
+             Fit2_PeptideCentric=ev.fit2, 
+             Fit2_ExperimentCentric=ev.fit2.exp,
+             Fit3_PeptideCentric=ev.fit3)
+
+df <- fold.change.comp(exps)
+
+ggplot(df, aes(x=x, y=PEP, color=Method)) +
+  geom_path() +
   scale_x_log10() +
   annotation_logticks(sides='b') +
   #scale_y_continuous(limits=c(0.95,2.25), breaks=c(1, 1.25, 1.5, 1.75, 2, 2.25)) +

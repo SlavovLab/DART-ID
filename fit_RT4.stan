@@ -44,9 +44,9 @@ transformed parameters {
   // muij is the mean retention time for peptide i in experiment j 
   real<lower=0, upper=max_retention_time> muij[num_pep_exp_pairs];
   for (i  in 1:num_pep_exp_pairs) {
-
-    muij[i] = max_retention_time*inv_logit(beta_1[muij_to_exp[i]] * (mu[muij_to_pep[i]] - beta_0[muij_to_exp[i]]));
-
+    muij[i] = max_retention_time * 
+      inv_logit(beta_1[muij_to_exp[i]] * 
+      (mu[muij_to_pep[i]] - beta_0[muij_to_exp[i]]));
   }
 
   // standard deviation grows linearly with time

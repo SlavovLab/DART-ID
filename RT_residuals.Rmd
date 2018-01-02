@@ -1,0 +1,54 @@
+---
+title: "RT Residuals"
+output: rt_residuals
+---
+
+```{r,include=FALSE, Init}
+library(tidyverse)
+source('lib.R')
+
+ev <- read_tsv('dat/ev.adj.Fit2.expcentric.txt')
+```
+
+```{r}
+plot(density(ev$`Retention time`))
+
+ev.a <- ev %>%
+  filter(`Retention time` > 180)
+
+```
+
+## Look for a relationship between residual RT of fit and PEP
+
+```{r}
+
+ev.f <- ev %>%
+  filter(!is.na(PEP.new)) %>%
+  mutate(RTe=`Retention time`-muijs)
+
+# should be double exponential/laplace distribution, just like it is defined in the STAN model
+plot(density(ev.f$RTe))
+
+ev.f %>%
+  sample_n(1e4) %>%
+  ggplot() +
+  geom_point(aes(x=abs(RTe), y=PEP.new), alpha=0.3) +
+  #geom_point(aes(x=abs(RTe), y=PEP), alpha=0.3, color='red') +
+  #geom_abline(slope=1, intercept=0) +
+  scale_x_log10() +
+  scale_y_log10(limits=c(1e-5, 1)) 
+
+cor(abs(ev.f$RTe), ev.f$PEP)
+cor(abs(ev.f$RTe), ev.f$PEP.new)
+
+## do they correspond to retention length? (overloaded columns)
+
+ev.f %>%
+  sample_n(1e4) %>%
+  ggplot(aes(x=abs(RTe), y=`Retention length`)) +
+  geom_point(alpha=0.3) +
+  scale_x_log10()
+
+cor(abs(ev.f$RTe), ev.f$`Retention length`)
+
+```
