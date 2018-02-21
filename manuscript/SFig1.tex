@@ -1,0 +1,65 @@
+%\begin{document}
+\noindent{\Huge Extended Data Figures}
+\vspace{6mm}
+\begin{figure}[h!]
+  \noindent{\hspace{-3mm} {\large \bf \hvfont  a}
+    \hspace{3 mm} {\large Alignment Method} }
+  \\ \vspace{1 mm}
+  \begin{minipage}{0.60\linewidth}
+    \(\rho_{ijk} = f_k(\mu_i) + \epsilon_{ik}\) \\ \\
+    {$\rho_{ijk}$} -- {\small Retention time for peptide $i$ in experiment $k$}\\
+    {$\mu_i$} -- {\small Canonical retention time for each peptide}\\
+    \[ f_k(\mu_i) = 
+    \begin{cases}
+	  \beta_0^{(k)} + \beta_1^{(k)}\mu_i & \text{if }  \mu_i < s^{(k)}  \\
+	  \beta_0^{(k)} + \beta_1^{(k)}s^{(k)} + \beta_2^{(k)}(\mu_i - s^{(k)}) & \text{if } \mu_i \ge s^{(k)}
+    \end{cases} \]    
+  \end{minipage}
+  \hspace{8 mm}
+  \begin{minipage}{0.35\linewidth}
+    \begin{overpic}
+      [width=0.99\textwidth]{Figs/alignment_demo.pdf}
+      \put(-7,12){\large \bf $\beta_0^{(k)}$}
+      \put(20,30){\large \bf $\beta_1^{(k)}$}
+      \put(57,67){\large \bf $\beta_2^{(k)}$}
+      \put(46,17){\large \bf $s^{(k)}$}
+      % axes
+      \put(-7,50){\large \bf $\rho_{ijk}$}
+      \put(50,0){\large \bf $\mu_i$}
+    \end{overpic}
+  \end{minipage}
+  
+  \vspace{5 mm}
+  \noindent{\hspace{-3 mm} {\large \bf \hvfont b}
+    \hspace{3 mm} {\large Mixture Model} } \hspace{60 mm} {\large Example -- 3 Peptides} \\
+  \vspace{-10 mm}
+  \begin{minipage}{0.43\linewidth}
+  \begin{multline}
+  p(\rho\;\vert\;\mbox{PEP},\mu,\sigma) = \prod_{i,j,k}^{}\\ 
+   ( \mbox{PEP}_{ijk} \times \text{LogNormal}(\rho_{ijk}\;\vert\;\mu_{0},\sigma_{0})\;+\;\\
+  (1-\mbox{PEP}_{ijk}) \times \text{Normal}(\rho_{ijk}\;\vert\;\mu_{ijk},\sigma_{i}) )
+  \end{multline} 
+  {$\mu_0, \sigma_0$} -- {\small Log mean, standard deviation for all RTs in experiment $k$} \\
+  {$\mu_{ijk}$} -- {\small Adjusted canonical RT for peptide $i$ in experiment $k$} \\
+  {$\sigma_i$} -- {\small RT standard deviation for peptide $i$} \\
+  
+  \end{minipage}
+  \begin{minipage}{0.55\linewidth}
+    \begin{flushright}
+    \begin{overpic}
+    [width=0.99\textwidth]{Figs/model_demo.pdf}
+    \put(44,60){\large \bf $i=1$}
+    \put(53,48){\large \bf $i=2$}
+    \put(71,54){\large \bf $i=3$}
+    \put(18,18){\large \bf $\mu_0, \sigma_0$}
+    \end{overpic}
+    \end{flushright}
+  \end{minipage}
+  \vspace{10 mm}
+\end{figure}
+
+\begin{spacing}{1.0}
+\noindent{\bf Extended Data Figure 1 $|$}\suppmodel
+\end{spacing}
+
+%\end{document}
