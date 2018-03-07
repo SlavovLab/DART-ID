@@ -24,66 +24,70 @@ y2 <- dnorm(x, mean=120, sd=2)
 #lines(x, y1, type='l', col='red')
 
 density.plot <- 
-ggplot(data.frame()) +
-  geom_path(aes(x=x, y=y1, color='Null RT Density (All RTs)')) +
-  geom_path(aes(x=x, y=y2, color='Predicted RT Density\nfor Top Match')) +
-  #geom_vline(xintercept=80, color='black', linetype='longdash') +
+  ggplot(data.frame()) +
+  geom_path(aes(x=x, y=y2, color='b'), size=0.75) +
+  geom_path(aes(x=x, y=y1, color='a'), size=0.75) +
   scale_color_manual(values=c('red', 'blue', 'black')) +
   scale_x_continuous(limits=c(0, 170), expand=c(0,0)) +
-  scale_y_continuous(expand=c(0,0.003)) +
-  labs(x=NULL, y='Density', color='Distribution') +
+  scale_y_continuous(limits=c(0, 0.25), expand=c(0,0.003)) +
+  labs(x=NULL, y='Density', color=NULL) +
   theme_bert() +
   theme(
     #plot.margin = unit(c(0.5,0.5,0.5,0.5), 'cm'),
     legend.position = c(0.1, 0.5),
-    legend.background = element_rect(fill='white', color=NULL, size=0.25),
-    legend.key.height = unit(1.25, 'cm'),
+    #legend.background = element_rect(fill='white', color=NULL, size=0.25),
+    legend.key.height = unit(0.65, 'cm'),
     axis.text = element_blank(),
     axis.ticks = element_blank()
   )
 
 den.plot.1 <- 
-density.plot + 
+  density.plot + 
   #geom_vline(xintercept=80, color='black', linetype='longdash') +
-  geom_segment(aes(x=80, y=0, xend=80, yend=0.2, color='Observed RT'), linetype='longdash') +
+  geom_segment(aes(x=119, y=0, xend=119, yend=0.25, color='c'), size=0.5, linetype='longdash') +
   #annotate('text', x=80, y=-0.015, label='Observed RT', size=5) +
-  scale_color_manual(values=c('red', 'black', 'blue'), guide=F)
+  scale_color_manual(values=c('red', 'blue', 'black'), guide=F)
 
 den.plot.2 <- 
-density.plot + 
+  density.plot + 
   #geom_vline(xintercept=119, color='black', linetype='longdash') +
-  geom_segment(aes(x=119, y=0, xend=119, yend=0.2, color='Observed RT'), linetype='longdash') +
+  geom_segment(aes(x=135, y=0, xend=135, yend=0.25, color='c'), size=0.5, linetype='longdash') +
   #annotate('text', x=119, y=-0.015, label='Observed RT', size=5) +
-  scale_color_manual(values=c('red', 'black', 'blue')) +
+  scale_color_manual(values=c('red', 'blue', 'black'),
+                     labels=c('Observed RT',
+                              'Predicted RT Density',
+                              'Null RT Density')) +
+  guides(color=guide_legend(override.aes=list(linetype=c(1,1,2),
+                                              size=c(0.75,0.75,0.5)))) +
   labs(y=' ') 
 den.plot.1 <- ggplotGrob(den.plot.1)
 den.plot.2 <- ggplotGrob(den.plot.2)
 
 
 bdf <- data.frame(
-  a=factor(c('Spectra Only', 'Updated'), levels=c('Spectra Only', 'Updated')),
-  b=as.numeric(c(1.5, 3))
+  a=factor(c('Spectra', 'Spectra+RT'), levels=c('Spectra', 'Spectra+RT')),
+  b=as.numeric(c(5e-2, 1e-3))
 )
 
-bar.plot.1 <- ggplot(bdf) +
-#ggplot(bdf) +
-  geom_bar(aes(x=a, y=b), stat='identity',
-           fill='grey90', color='black') +
-  labs(x=NULL, y='Error Prob. (PEP)\nfor Top Match') +
-  scale_y_continuous(expand=c(0,0), limits=c(0,3.2)) +
-  theme_bert() %+replace% theme(
-    axis.line.y=element_blank(),
-    axis.ticks.y=element_blank(),
-    axis.text.y=element_blank()
-  )
-bdf$b <- c(1.5, 0.5)
-bar.plot.2 <- 
+bar.plot.1 <- 
 ggplot(bdf) +
-  geom_bar(aes(x=a, y=b), stat='identity',
+  geom_bar(aes(x=a, y=-log10(b)), stat='identity',
+           fill='grey90', color='black') +
+  labs(x=NULL, y=parse(text='-log[10](PEP)')) +
+  scale_y_continuous(expand=c(0,0), limits=c(0,3.5), breaks=seq(0,3)) +
+  theme_bert() %+replace% theme(
+    axis.text.x=element_text(size=11)
+  )
+
+bdf$b <- c(5e-2, 0.3)
+bar.plot.2 <- 
+  ggplot(bdf) +
+  geom_bar(aes(x=a, y=-log10(b)), stat='identity',
            fill='grey90', color='black') +
   labs(x=NULL, y=' ') +
-  scale_y_continuous(expand=c(0,0), limits=c(0,3.2)) +
+  scale_y_continuous(expand=c(0,0), limits=c(0,3.5), breaks=seq(0,3)) +
   theme_bert() %+replace% theme(
+    axis.text.x=element_text(size=11),
     axis.line.y=element_blank(),
     axis.ticks.y=element_blank(),
     axis.text.y=element_blank()
@@ -92,112 +96,108 @@ ggplot(bdf) +
 bar.plot.1 <- ggplotGrob(bar.plot.1)
 bar.plot.2 <- ggplotGrob(bar.plot.2)
 
-grid.arrange(den.plot.1, den.plot.2, bar.plot.1, bar.plot.2, 
-             ncol=2, nrow=2, widths=c(1,1), heights=c(3,2))
+gs <- list(den.plot.1, den.plot.2, bar.plot.1, bar.plot.2,
+           textGrob('Case 1', gp=gpar(fontsize=18)), textGrob('Case 2', gp=gpar(fontsize=18)))
+lay <- rbind(c(1,2),c(3,4),c(5,6))
 
+#grid.arrange(den.plot.1, den.plot.2, bar.plot.1, bar.plot.2, 
+#             ncol=2, nrow=2, widths=c(1,1), heights=c(3,2))
 
+pdf(file='manuscript/Figs/Fig_1B.pdf', width=5, height=4)
 
-## dPEP Ridges ------
+grid.arrange(grobs=gs, layout_matrix=lay,
+             widths=c(1,1), heights=c(3,2,0.5))
 
-ev.f <- ev %>%
-  filter(!is.na(PEP.new)) %>%
-  select(c('Raw file', 'Sequence', 'PEP', 'PEP.new', 'Retention time', 'muijs')) %>%
-  mutate(PEP=ifelse(PEP > 1, 1, PEP), 
-         PEP=ifelse(PEP == 0, .Machine$double.xmin, PEP)) %>%
-  mutate(dPEP=log2(PEP/PEP.new),
-         dRT=log2(abs(`Retention time`-muijs))) %>%
-  mutate_at(vars(dPEP, dRT), funs(ifelse(is.infinite(.), NA, .))) %>%
-  #mutate(bin=cut(PEP, breaks=c(0, 5e-2, 1e-1, 5e-1, 9e-1, 1)))
-  mutate(bin=cut(PEP, breaks=seq(0, 1, by=0.1)))
+dev.off()
 
-## dPEP Ridges - Plotting ----
+## Figure 1C, 1D -------
 
-ggplot(ev.f) +
-  #geom_density(aes(dPEP))
-  geom_density_ridges(aes(x=dRT, y=bin, group=bin), rel_min_height=0.01) +
-  geom_vline(xintercept=0) +
-  scale_x_continuous(limits=c(-3, 3))
-  #theme_ridges()
+library(tidyverse)
+library(pracma)
+library(gridExtra)
+library(grid)
+library(gtable)
+library(RColorBrewer)
+source('lib.R')
 
-## -----
+ev <- read_tsv('dat/ev.adj.Fit3.txt')
+
+## PEP vs. PEP.new scatterplot -----
 
 ev.f <- ev %>%
   select(c('Sequence', 'PEP', 'PEP.new')) %>%
   filter(!is.na(PEP.new)) %>%
   filter(PEP > 0 & PEP.new > 0) %>%
   mutate_at('PEP', funs(ifelse(. > 1, 1, .))) %>%
-  mutate(dPEP=log10(PEP/PEP.new)) %>%
+  mutate_at('PEP.new', funs(ifelse(. > 1, 1, .))) %>%
+  mutate(dPEP=log2(abs(PEP-PEP.new))) %>%
+  mutate(dPEP=ifelse(is.infinite(dPEP), 0, dPEP)) %>%
   arrange(desc(PEP)) %>%
-  mutate(bin=cut(PEP, breaks=c(0, 5e-2, 1e-1, 5e-1, 9e-1, 1)))
+  mutate(bin=cut(PEP, breaks=c(0, 1e-3, 1e-2, 5e-2, 1e-1, 1)))
 
+ev.f %>%
+  sample_n(1e5) %>%
+  ggplot(aes(x=PEP, y=PEP.new)) +
+  geom_point(alpha=0.1) +
+  scale_x_log10(limits=c(1e-10, 1)) +
+  scale_y_log10(limits=c(1e-10, 1))
 
-## Alignment Ridges -----
+## New scatter ----------
 
-ev.f <- ev %>%
-  select(c('Sequence', 'Leading razor protein', 'Raw file', 'PEP', 'PEP.new', 'Peptide ID', 
-           'Retention time', 'muijs', 'sigmas')) %>%
-  filter(!is.na(PEP.new)) %>%
-  #filter(PEP < 0.05) %>%
-  filter(!grepl('REV*', `Leading razor protein`)) %>% # Remove Reverse matches
-  filter(!grepl('CON*',`Leading razor protein`)) # Remove Contaminants
+scatter <- 
+  ggplot(ev.f, aes(x=PEP, y=PEP.new)) +
+  #ggplot(ev.f, aes(x=PEP, y=PEP.new)) +
+  stat_bin2d(bins=30, drop=TRUE, geom='tile', aes(fill=..density..)) +
+  geom_abline(slope=1, intercept=0, color='red', size=0.75) +
+  geom_hline(yintercept=1e-2, linetype='dotted', color='black', size=0.75) +
+  geom_vline(xintercept=1e-2, linetype='dotted', color='black', size=0.75) +
+  #scale_fill_viridis(begin=0.1, end=1,
+  #                   breaks=c(0, 0.01, 0.02, 0.03, 0.04)) +
+  #scale_fill_gradientn(colors=c('#FFFFFF', rev(heat.colors(n=4)))) +
+  #scale_fill_gradientn(colors=c('#FFFFFF', viridis(n=10)), values=c(0,1e-2,seq(1e-2,1,length.out=9))) +
+  scale_fill_gradient(low='white', high='red') +
+  scale_x_log10(expand=c(0.01,0), limits=c(1e-8, 1), 
+                breaks=logseq(1e-10, 1, 6), labels=fancy_scientific) +
+  #breaks=logseq(1e-10, 1, 6)) +
+  scale_y_log10(expand=c(0.01,0), limits=c(1e-8, 1), 
+                breaks=logseq(1e-10, 1, 6), labels=fancy_scientific) +
+  #breaks=logseq(1e-10, 1, 6)) +
+  labs(x='Spectra PEP', y='Spectra + RT PEP', fill='Density') +
+  theme_bert() + theme(
+    plot.margin=unit(c(0.5,0.75,0.5,0.5), 'cm'),
+    axis.line=element_line(color='black', size=0.5),
+    legend.position=c(0.97, 0.27),
+    legend.title=element_text(size=12),
+    legend.text=element_text(size=12),
+    legend.key.size=unit(0.5,'cm'),
+    axis.text=element_text(size=10)
+    #legend.margin=margin(t=0.5, unit='cm'),
+    #legend.spacing=unit(0.5, 'cm')
+  )
 
-# clean up raw file names and extract an experiment ID from it
-# need the experiment ID (19A, 30B, etc.), to match with sample metadata from the
-# experiment description excel sheet/.csv
-ev.f$file <- clean.file.name(ev.f$`Raw file`)
-ev.f$exp <- str_extract(ev.f$file, '[1-9][0-9][A-Z](\\d)?')
+# fold change increase in IDs
 
-psm.count <- ev.f %>%
-  group_by(`Peptide ID`) %>%
-  summarise(Sequence=unique(Sequence), 
-            Protein=unique(`Leading razor protein`), 
-            count=length(`Peptide ID`)) %>%
-  arrange(desc(count))
+df <- fold.change.comp(list(RTLib=ev))
 
+fold.change <- ggplot(df, aes(x=x, y=PEP, color=Method)) +
+  #geom_point() +
+  geom_path(size=1) +
+  #geom_smooth() +
+  geom_hline(yintercept=1, color='black', linetype='dashed', size=1) +
+  scale_x_log10(limits=c(1e-3, 1), 
+                breaks=logseq(1e-3, 1, 4)) +
+  scale_y_continuous(limits=c(0.9, 2),
+                     breaks=seq(1,2,by=0.2)) +
+  labs(x='PEP Threshold', y='Fold Change Increase in IDs') +
+  theme_bert() +
+  theme(
+    legend.position=c(0.8, 0.8),
+    axis.line=element_line(color='black', size=0.5)
+  )
 
+pdf(file='manuscript/Figs/Fig_1C_1D.pdf', width=7, height=3.5, onefile=F)
 
-## ------
+grid.arrange(ggplotGrob(scatter), ggplotGrob(fold.change), 
+             nrow=1, ncol=2, widths=c(1,1))
 
-library(ggridges)
-library(rmutil)
-
-
-i <- 5
-pep.id <- psm.count$`Peptide ID`[i]
-ev.p <- ev.f %>% 
-  filter(`Peptide ID`==pep.id)
-
-# take the top [num.files]
-num.files <- 5
-
-alignment.dat <- ev.p %>%
-  group_by(exp) %>%
-  summarise(count=length(exp), 
-            mu=first(unique(muijs)), 
-            sigma=first(unique(sigmas))) %>%
-  arrange(desc(count)) %>%
-  top_n(num.files, wt=count)
-
-files <- alignment.dat$exp[1:num.files]
-
-density.dat <- data.frame(x=numeric(), y=numeric(), exp=character())
-range <- seq(0,250,by=0.5)
-for(j in 1:num.files) {
-  density.dat <- rbind(density.dat, data.frame(
-    x=as.numeric(range),
-    y=as.numeric(dlaplace(range, m=alignment.dat$mu[j], s=alignment.dat$sigma[j])),
-    exp=as.character(files[j])
-  ))
-}
-
-ev.p %>% 
-  filter(exp %in% files) %>%
-  filter(PEP.new < 0.05) %>%
-  ggplot() +
-  geom_density_ridges(aes(x=`Retention time`, y=exp, group=exp), 
-                      rel_min_height=0.01) +
-  geom_path()
-  #geom_hline(yintercept=2, color='red') +
-  #scale_x_continuous(limits=c(40, 150)) +
-  labs(title=unique(ev.p$Sequence))
-
+dev.off()
