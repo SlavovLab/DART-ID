@@ -1,4 +1,11 @@
 \include{Macros_nature2}
+\include{Captions}
+
+\usepackage{lineno}
+\linenumbers
+
+\usepackage{enumitem}
+
 \let\citep=\cite
 \let\citet=\cite
 %\let\citep=\autocite
@@ -18,13 +25,16 @@
 A principled Bayesian framework increases confident peptide identifications from LC-MS/MS experiments
 }
 \end{spacing}
-\vspace{10mm}
+
+\vspace{5mm}
 
 \noindent\ann{
 Albert Chen,$^{1}$
 Alexander Franks,$^{2}$
 Nikolai Slavov$^{1,3}$
 }
+
+\vspace{2mm}
 
 {\small 
 \noindent 
@@ -34,6 +44,7 @@ $^{3}$Department of Biology, Northeastern University, Boston, MA 02115, USA\\
 }
 
 \begin{spacing}{1.55} 
+\thispagestyle{empty}
 \noindent{\bf
 Abstract....      
 }
@@ -44,30 +55,86 @@ Abstract....
 
 \section{Introduction}
 
-Recent advancements in the sensitivity and discriminatory power of protein mass-spectrometry (MS) have enabled the analysis of increasingly limited amounts of samples. Most recently, we have achieved the quantification of single cell proteomes using the method Single Cell Proteomics by Mass Spectrometry (SCOPE-MS). The challenge, however, is identifying peptide sequences on extremely low levels of samples, where noise and interference can severely diminish identification rates. To help overcome this challenge, we developed the \methodname\;method to boost peptide identification rates from existing  
+Recent advancements in the sensitivity and discriminatory power of protein mass-spectrometry (MS) have enabled the analysis of increasingly limited amounts of samples. Most recently, we have achieved the quantification of single cell proteomes using the method Single Cell Proteomics by Mass Spectrometry (SCoPE-MS). The challenge is identifying peptide sequences with extremely low levels of samples, where the limited number of generated fragment ions severely diminish identification rates. To help overcome this challenge, we developed the \methodname\;method to boost peptide identification rates from existing spectra and search results, using the retention time (RT) of a peptide sequence as an additional feature.
 
-The retention time (RT) of a peptide is an informative feature of its sequence. The predictive retention time of peptides, computed by software packages such as Skyline or ELUDE, is commonly used in Data Independent Acquisition (DIA), and in targeted MS/MS experiments where acquisition time is limited, i.e., multiple reaction monitoring (MRM). In shotgun proteomics and Data Dependent Acquisition (DDA), the retention time is only used to boost label-free quantification and does not use the additional information in the MS2 spectra. Quantitative analyses such as tandem mass tag (TMT) data sets currently do not benefit from the additional information in the retention time of the precursor ion. The Percolator program can use the retention time with a semi-supervised support vector machine (SVM), but as described in section ... \citep{kall2007percolator}.
+The retention time of a peptide is an informative feature of its sequence. In the past, RTs were used along with precursor m/z to identify peptides without the using fragment spectra. The predictive retention time of peptides, computed by software packages such as Skyline or ELUDE, is commonly used in Data Independent Acquisition (DIA) and in targeted MS/MS experiments where acquisition time is limited, i.e., multiple reaction monitoring (MRM). In shotgun proteomics and Data Dependent Acquisition (DDA), the retention time is only used to boost the identification in label-free quantification and does not use the additional information in the MS2 spectra. Quantitative analyses such as tandem-mass-tag (TMT) data currently do not benefit from the additional information in the retention time of the precursor ion. Programs such as Percolator can use the retention time as a predictive feature in its semi-supervised support vector machine, but its use of RT is non-principled, as it assumes linearity and treats the RT feature the same as various other features \citep{kall2007percolator}.
 
-We sought to extend the use of retention times to ions with MS2 spectra, within a rigorous Bayesian framework. The confidence in individual observations (peptide-spectrum-matches, or PSMs) is based on comparing observed mass-spectra with 1) theoretical predication for the spectrum of each peptide sequence in the database and 2) in a reversed sequence database, which provides a null distribution. These results are used to estimate posterior error probability (PEP) for each PSM based on the MS spectra. 
+We sought to extend the use of retention times to ions with MS2 spectra within a rigorous Bayesian framework. The confidence in individual observations (peptide-spectrum-matches, or PSMs) is based on comparing observed mass-spectra with 1) theoretical predication for the spectrum of each peptide sequence in the database and 2) in a reversed sequence database, which provides a null distribution. These results are used to estimate posterior error probability (PEP) for each PSM based on the MS spectra. We use the peptide retention time as an additional piece of evidence, independent from the spectra, to boost the confidence in correct observations and decrease the confidence for incorrect observations. 
 
-For some PSMs, the spectra alone provides strong evidence for the match and thus confidence in the identified peptide sequence. For others, however, the spectra alone are not sufficient evidence for confident assignment of the spectra to an associated sequence. In such cases, we would like to use the peptide retention time as an additional piece of evidence, independent from the spectra, to boost the confidence in correct observations and decrease the confidence for incorrect observations. To this end, we suggest the following framework of Bayesian inference:
 
-\[ P(\mbox{ PSM = Correct }|\mbox{ RT }) = \frac{P(\mbox{ RT }|\mbox{ PSM = Correct })P(\mbox{ PSM = Correct })}{P(\mbox{ RT })} \]
+\section{Alignment Method}
+
+In order to use the RT of a peptide as an additional feature for its identification, we must first predict the RT for that peptide sequence. The more accurate the prediction, the more powerful the additional feature is for updating the confidence in an observation. Theoretically, RTs predicted with infinite accuracy could identify peptide sequences from their RT alone.
+
+Predicting the RT for a peptide identified across multiple experiments requires the RT to be normalized or aligned in such a way that eliminates the chromatographic variation in individual experiments. Current methods of RT alignment rely on reference measurements, such as spiked-in reference peptides in the iRT method, or rely on selecting confidently identified peptides in a reference experiment. The RT shifts, used to align the RTs in different experiments, have been predicted through both linear and non-linear models.
+
+%%The use of reference measurements, whether from spiked-in standards or from highly abundant peptides, is ... because of the measurement error in the reference measurements. Selecting a reference experiment from a set of experiments to align is also non-trivial, as the choice of what measurements to use for the alignment can significantly affect the outcome of the alignment.
+
+We opted for a "global" alignment, where we forgo the need to spike in standards, or choose certain observations to align against. The experiment-specific retention time shifts, as well as the peptide-specific retention times, are all determined simultaneously through our global alignment model. The model defines a "canonical" retention time for each peptide and the regression parameters for each experiment, so that the regression parameters applied to the canonical RT give the predicted RT for a peptide in an experiment. An optimization method then finds the best parameters for each experiment and peptide. Additional parameters to the model are described in ...
+
+\section{Results}
+
+\subsection{Validation}
+
+The results from \methodname\; were validated by exploiting the biological difference and varying protein levels of two human cell lines, Jurkat (J) and HEK293 (H). 10-plex tandem mass tag (TMT) data from both single cell and bulk cell lysates was used, where all experiments contained the two cell lines in separate channels. To evaluate the PEP adjusted results from \methodname, PSMs were first divided into two disjoint sets:
+
+\begin{itemize}
+\item \textbf{Original} -- $\mbox{Spectral PEP} < \alpha$
+\item \textbf{New} -- $(\mbox{Spectral PEP} > \alpha) \cap (\mbox{Updated PEP} < \alpha)$
+\end{itemize}
+where $\alpha$ was a threshold, usually set to 0.05. The following analysis was performed identically for both sets of data.
+
+PSMs were grouped into their constituent proteins, and the 10-channel data from the PSMs of each protein were correlated against each other. Null correlations were also calculated, by selecting PSMs at random to create a fake protein. The resultant correlation matrices from each protein group of PSMs were then collapsed into a single vector of correlations. The kernel smoothed density of these correlations was then used to build a profile for the experiments, where the median correlation was expected to be around 1, and the null around 0.
+
+We found that...
+
+
+\subsection{Implementation}
+
+The model was implemented using the STAN modeling language \citep{carpenter2017stan}.  All densities were represented on the log scale. STAN was interfaced into R scripts with \texttt{rstan}. STAN was used with its \texttt{optimizing} function, which gave maximum-likelihood estimates (MLEs) of our parameters instead of complete distributions. R was further used for data filtering, PEP updating, model adjustment, and figure creation. All code is made available on GitHub.
+
+\section{Discussion}
+
+\section{Supplemental Information}
+
+To this end, we suggest the following framework of Bayesian inference:
+
+\[ P(\mbox{ ID is correct }|\mbox{ RT }) = \frac{P(\mbox{ RT }|\mbox{ ID is correct })P(\mbox{ ID is correct })}{P(\mbox{ RT })} \]
 
 where:
 
-\begin{itemize}
-\item $P(\mbox{ PSM = Correct }|\mbox{ RT })$ -- the posterior probability that an observation is correct given its observed retention time (RT)
+\vspace{-4mm}
 
-\item $P(\mbox{ PSM = Correct })$ -- the prior probability for the PSM estimated from the spectra, i.e., $1- \mbox{PEP}$, where PEP is the posterior error probability estimated from the spectra alone. 
-\item $P(\mbox{ RT })$ -- The marginal likelihood for the RT, which we estimate as a sum of the probabilities that the PSM is correct and that the PSM is incorrect. 
+\begin{itemize}%[leftmargin=*]
+\item $P(\mbox{ ID is correct }|\mbox{ RT })$ -- the posterior probability that an observation is correct given its observed retention time (RT)
+
+\item $P(\mbox{ RT })$ -- The marginal likelihood for the RT, which we estimate as a sum of the probabilities that the PSM is correct and that the PSM is incorrect. According to the law of total probability, $P(\mbox{ RT })$ can be defined as:
+
+\vspace{-14mm}
+
+\begin{align}
+P(\mbox{ RT }) =\;&P(\mbox{ RT }|\mbox{ ID is correct })P(\mbox{ ID is correct })\;+ \nonumber \\
+                 &P(\mbox{ RT }|\mbox{ ID is incorrect })P(\mbox{ ID is incorrect }) \nonumber
+\end{align}
+
+\vspace{-8mm}
+\end{itemize}
+
+\indent where:
+
+\begin{itemize}
+\vspace{-4mm}
 
 %\[ P(\mbox{ RT }) = P(\mbox{ RT }|\mbox{ PSM = Correct })P(\mbox{ PSM = Correct }) + 
 %P(\mbox{ RT }|\mbox{ PSM = Incorrect })P(\mbox{ PSM = Incorrect }) \]
 %
-\item $P(\mbox{ RT }|\mbox{ PSM = Correct })$ -- the conditional likelihood of the RT for the peptide to which the PSM is matched. This probability is estimated from a mixture model as described in the Alignment Methods section below.
+\item $P(\mbox{ RT }|\mbox{ ID is correct })$ -- The conditional likelihood of the PSM's RT if it corresponds to its assigned peptide sequence. This is estimated from a distribution centered on the predicted RT, and evaluated at the observed RT.
 
-\item $P(\mbox{ RT }|\mbox{ PSM = Incorrect })$ -- The probability of observing the RT of the PSM if it is incorrect, i.e., the probability that a measured spectrum will have the observed RT if it corresponds to a peptide sequence different from the one assigned to the PSM. It is estimated from the empirical distribution of RTs for all PSMs in the experiment.
+\item $P(\mbox{ ID is correct })$ -- The prior probability for the PSM being correct, i.e., $1- \mbox{PEP}$, where PEP is the posterior error probability estimated from the spectra alone. 
+
+\item $P(\mbox{ RT }|\mbox{ ID is incorrect })$ -- The conditional likelihood of the PSM's RT if it corresponds to a peptide sequence different from the one assigned. This is estimated from the empirical distribution of all RTs in the experiment.
+
+\item $P(\mbox{ ID is incorrect })$ -- The probability for the PSM being incorrect, i.e., $\mbox{PEP}$
 
 \end{itemize}
 
@@ -81,7 +148,8 @@ where:
 %	 	  	P(RT\; | \mbox{ PSM = Incorrect })P(\mbox{ PSM = Incorrect })
 %$$
 
-\section{Alignment Methods}
+
+
 
 PSMs were filtered so that contaminants and decoy matches were removed. Peptides with only one PSM were cut as they do not contribute to the alignment. We then select the remaining PSMs with a PEP below a certain threshold (in this case PEP < 0.5).
 
@@ -105,31 +173,6 @@ The distribution of the retention time of a PSM of peptide $i$ in experiment $k$
 
 where $\lambda_{ijk}$ is the PEP for a given PSM, $\mu_{ijk}$ is the canonical retention time for a given PSM, and $\sigma_{i}$ is the standard deviation for that peptide. $\mu_{0}$ and $\sigma_{0}$ are the mean and standard deviation of the log density of all retention times, respectively.
 
-\section{Results}
-
-\subsection{Validation}
-
-The results from \methodname\; were validated by exploiting the biological difference and varying protein levels of two human cell lines, Jurkat (J) and HEK293 (H). 10-plex tandem mass tag (TMT) data from both single cell and bulk cell lysates was used, where all experiments contained the two cell lines in separate channels. To evaluate the PEP adjusted results from \methodname, PSMs were first divided into two disjoint sets:
-
-\begin{itemize}
-\item \textbf{Original} -- $\mbox{Spectral PEP} < \alpha$
-\item \textbf{New} -- $(\mbox{Spectral PEP} > \alpha) \cap (\mbox{Updated PEP} < \alpha)$
-\end{itemize}
-where $\alpha$ was a threshold, usually set to 0.05. The following analysis was performed identically for both sets of data.
-
-PSMs were grouped into their constituent proteins, and the 10-channel data from the PSMs of each protein were correlated against each other. Null correlations were also calculated, by selecting PSMs at random to create a fake protein. The resultant correlation matrices from each protein group of PSMs were then collapsed into a single vector of correlations. The kernel smoothed density of these correlations was then used to build a profile for the experiments, where the median correlation was expected to be around 1, and the null around 0.
-
-We found that...
-
-
-\subsection{Implementation}
-
-The model was implemented using the STAN modeling language \citep{carpenter2017stan}.  All densities were represented on the log scale. STAN was interfaced into R scripts with \texttt{rstan}. R was further used for data filtering, PEP updating, model adjustment, and figure creation.
-
-\section{Discussion}
-
-\bigskip
-\bigskip
 \bigskip
 
 \noindent {\bf Acknowledgments:} We thank ...\\
@@ -142,14 +185,9 @@ competing financial interests.\\
 
 %\end{itemize} %\end{addendum} 
 
-\begin{figure}[h!]
-	\begin{overpic}
-		[width = .98\textwidth]{Figs/Fig_1A.pdf} 
-   		%\put(-1,  38 ){\large \bf \hvfont  a}
-	\end{overpic}
-	\caption{Sample caption}
-	\label{plot:test}
-\end{figure}
+\include{figs}
+
+\include{SFig1}
 
 \printbibliography
 

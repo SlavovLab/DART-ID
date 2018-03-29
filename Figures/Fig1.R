@@ -97,7 +97,7 @@ bar.plot.1 <- ggplotGrob(bar.plot.1)
 bar.plot.2 <- ggplotGrob(bar.plot.2)
 
 gs <- list(den.plot.1, den.plot.2, bar.plot.1, bar.plot.2,
-           textGrob('Case 1', gp=gpar(fontsize=18)), textGrob('Case 2', gp=gpar(fontsize=18)))
+           textGrob('       (i)', gp=gpar(fontsize=18)), textGrob('    (ii)', gp=gpar(fontsize=18)))
 lay <- rbind(c(1,2),c(3,4),c(5,6))
 
 #grid.arrange(den.plot.1, den.plot.2, bar.plot.1, bar.plot.2, 
@@ -135,17 +135,17 @@ ev.f <- ev %>%
   arrange(desc(PEP)) %>%
   mutate(bin=cut(PEP, breaks=c(0, 1e-3, 1e-2, 5e-2, 1e-1, 1)))
 
-ev.f %>%
-  sample_n(1e5) %>%
-  ggplot(aes(x=PEP, y=PEP.new)) +
-  geom_point(alpha=0.1) +
-  scale_x_log10(limits=c(1e-10, 1)) +
-  scale_y_log10(limits=c(1e-10, 1))
+# ev.f %>%
+#   sample_n(1e5) %>%
+#   ggplot(aes(x=PEP, y=PEP.new)) +
+#   geom_point(alpha=0.1) +
+#   scale_x_log10(limits=c(1e-10, 1)) +
+#   scale_y_log10(limits=c(1e-10, 1))
 
 ## New scatter ----------
 
 scatter <- 
-  ggplot(ev.f, aes(x=PEP, y=PEP.new)) +
+ggplot(ev.f, aes(x=PEP, y=PEP.new)) +
   #ggplot(ev.f, aes(x=PEP, y=PEP.new)) +
   stat_bin2d(bins=30, drop=TRUE, geom='tile', aes(fill=..density..)) +
   geom_abline(slope=1, intercept=0, color='red', size=0.75) +
@@ -158,19 +158,20 @@ scatter <-
   scale_fill_gradient(low='white', high='red') +
   scale_x_log10(expand=c(0.01,0), limits=c(1e-8, 1), 
                 breaks=logseq(1e-10, 1, 6), labels=fancy_scientific) +
-  #breaks=logseq(1e-10, 1, 6)) +
+                #breaks=logseq(1e-10, 1, 6)) +
   scale_y_log10(expand=c(0.01,0), limits=c(1e-8, 1), 
                 breaks=logseq(1e-10, 1, 6), labels=fancy_scientific) +
-  #breaks=logseq(1e-10, 1, 6)) +
-  labs(x='Spectra PEP', y='Spectra + RT PEP', fill='Density') +
+                #breaks=logseq(1e-10, 1, 6)) +
+  labs(x='Spectra', y='Spectra + RT', fill='Density', title='Posterior Error Prob. (PEP)') +
   theme_bert() + theme(
-    plot.margin=unit(c(0.5,0.75,0.5,0.5), 'cm'),
+    plot.margin=unit(c(0.5,1,0.5,0.5), 'cm'),
     axis.line=element_line(color='black', size=0.5),
     legend.position=c(0.97, 0.27),
     legend.title=element_text(size=12),
     legend.text=element_text(size=12),
     legend.key.size=unit(0.5,'cm'),
-    axis.text=element_text(size=10)
+    axis.text=element_text(size=12),
+    plot.title=element_text(size=14)
     #legend.margin=margin(t=0.5, unit='cm'),
     #legend.spacing=unit(0.5, 'cm')
   )
@@ -179,20 +180,24 @@ scatter <-
 
 df <- fold.change.comp(list(RTLib=ev))
 
-fold.change <- ggplot(df, aes(x=x, y=PEP, color=Method)) +
+fold.change <- 
+ggplot(df, aes(x=x, y=(PEP-1)*100, color=Method)) +
   #geom_point() +
   geom_path(size=1) +
   #geom_smooth() +
   geom_hline(yintercept=1, color='black', linetype='dashed', size=1) +
   scale_x_log10(limits=c(1e-3, 1), 
-                breaks=logseq(1e-3, 1, 4)) +
-  scale_y_continuous(limits=c(0.9, 2),
-                     breaks=seq(1,2,by=0.2)) +
-  labs(x='PEP Threshold', y='Fold Change Increase in IDs') +
+                breaks=logseq(1e-3, 1, 4), labels=fancy_scientific) +
+  scale_y_continuous(limits=c(-5, 100),
+                     breaks=seq(0, 100, by=25)) +
+  scale_color_manual(values=c('red'), guide=F) +
+  labs(x='PEP Threshold', y='% Increase in Peptide IDs') +
   theme_bert() +
   theme(
+    plot.margin=unit(c(0.5,0.5,0.5,1), 'cm'),
     legend.position=c(0.8, 0.8),
-    axis.line=element_line(color='black', size=0.5)
+    axis.line=element_line(color='black', size=0.5),
+    axis.text=element_text(size=12)
   )
 
 pdf(file='manuscript/Figs/Fig_1C_1D.pdf', width=7, height=3.5, onefile=F)
