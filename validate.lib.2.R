@@ -1,12 +1,9 @@
 validate.lib <- function(
   ev, 
-  ev.type='STAN',
-  #exps=NULL,                 # subset of experiments to use
-  raw.files=NULL,             # subset of raw files to use
   sparse.filter=0.5,          # filter out sparse observations. 
                               # this is the fraction of columns in 
                               # the TMT data that is allowed to be NA
-  unique.only=TRUE,           # only take unique peptides
+  unique.only=FALSE,          # only take unique peptides
   psm.freq.thresh=10,         # minimum number of PSMs per protein
   alpha=0.05,                 # significance threshold that separates
                               # Original and New sets (PEP < alpha)
@@ -24,23 +21,27 @@ validate.lib <- function(
   library(VIM)
   source('lib.R')
   
-  cat('Validating raw files', paste(raw.files, collapse=', '), '\n')
+  #cat('Loading evidence file...\n')
+  # load evidence file
+  #ev <- parse.ev.adj(ev.in, type=ev.type)
+  
+  # assign protein IDs
+  # ev$Protein_ID <- as.numeric(as.factor(ev$Proteins))
+  
+  #cat('Validating raw files', paste(raw.files, collapse=', '), '\n')
   cat('Processing evidence file...\n')
-
+  # # clean up raw file names and extract an experiment ID from it
+  # # need the experiment ID (19A, 30B, etc.), to match with sample metadata from the
+  # # experiment description excel sheet/.csv
+  # ev$file <- clean.file.name(ev$`Raw file`)
+  # ev$exp <- str_extract(ev$file, '[1-9][0-9][A-Z](\\d)?')
+  # 
   # load excel description
   desc <- process.desc()
   desc.types <- dcast(desc, Exp~Type, value.var='Type', fun.aggregate=length)
   desc.types$Exp <- as.character(desc.types$Exp)
   
-  if (!is.null(raw.files)) {
-    # filter by raw files if defined and experiment IDs aren't
-    if(length(raw.files) < 1) {
-      stop('No raw file names given')
-    }
-    ev <- ev[ev$`Raw file` %in% raw.files,]
-  } 
-  
-  # find out the indices of columns with TMT reporter ion data
+  # find out the indices of columns with reporter ion data
   # should be 10 columns, but the code doesn't rely on this number
   data.cols <- grep('intensity', colnames(ev))
   
@@ -56,8 +57,13 @@ validate.lib <- function(
     ev$Proteins <- ev$`Leading razor protein`
   }
   
-  # remove REV and CON proteins
+  # remove REV proteins
+  # these are MaxQuant decoys that scored higher than the actual
+  # peptide of interest
   ev <- ev[!grepl('REV*',ev$Proteins),]
+  
+  # remove CON proteins
+  # common contaminants, like Keratin, Albumin, etc.
   ev <- ev[!grepl('CON*',ev$Proteins),]
   
   # load keratin protein IDs
@@ -65,21 +71,21 @@ validate.lib <- function(
   # this is slow for many observations. might be faster to do a
   # str_extract to get the uniprot ID, and then to do a match() call
   ev <- ev[!grepl(paste(keratins, collapse='|'), ev$Proteins),]
-  
+
   # set zeroes to NA
-  ev[,data.cols][ev[,data.cols] == 0] <- NA
-  
-  # remove rows with more than (sparse.filter as fraction) NAs
-  ev <- ev[apply(!apply(ev[,data.cols], 1, is.na), 2, sum) >= length(data.cols) * sparse.filter,]
-  
-  cat(nrow(ev), 'observations remaining after filtering\n')
+  ev[,data.cols][ev[,data.cols]==0] <- NA
   
   ## remove carrier and empty channels
   # these channel indices vary between experiments, 
   # so we're gonna have to loop thru these and check for each one
-  exps <- str_extract(clean.file.name(unique(ev$`Raw file`)), '[1-9][0-9][A-Z]')
+  #exps <- str_extract(clean.file.name(unique(ev$`Raw file`)), '[1-9][0-9][A-Z]')
   
-  for(i in unique(exps)) {
+  # pull experiment number from raw file name
+  ev$exp <- str_extract(clean.file.name(ev$`Raw file`), '[1-9][0-9][A-Z]')
+  # remove rows that don't belong to a recognized experiment
+  ev <- ev[!is.na(ev$exp),]
+  
+  for(i in unique(ev$exp)) {
     #if(sum(grepl(i,ev$exp)) <= 0) next
     inds.remove <- desc[desc$Exp==i & (desc$Type=='MIXED' | desc$Type=='NA' | is.na(desc$Type)),'ch']
 
@@ -88,8 +94,13 @@ validate.lib <- function(
     # make relative to the ev data frame
     inds.remove <- inds.remove + data.cols[1] - 1
     # set to NA
-    ev[,inds.remove] <- NA
+    ev[ev$exp==i,inds.remove] <- NA
   }
+  
+  cat(nrow(ev), 'observations remaining after filtering\n')
+  
+  # remove rows with more than (sparse.filter as fraction) NAs
+  ev <- ev[apply(!apply(ev[,data.cols], 1, is.na), 2, sum) >= length(data.cols) * sparse.filter,]
   
   ## normalize data
   
@@ -101,8 +112,8 @@ validate.lib <- function(
   
   # now normalize across rows, to get the difference between the channels
   # AKA the difference between different cells/conditions
-  ev[,data.cols] <- ev[,data.cols] / apply(ev[,data.cols], 1, median, na.rm=T)
-  #ev[,data.cols] <- ev[,data.cols] / apply(ev[,data.cols], 1, mean, na.rm=T)
+  #ev[,data.cols] <- ev[,data.cols] / apply(ev[,data.cols], 1, median, na.rm=T)
+  ev[,data.cols] <- ev[,data.cols] / apply(ev[,data.cols], 1, mean, na.rm=T)
   
   ## only use proteins with many peptides
   
@@ -114,14 +125,9 @@ validate.lib <- function(
   # pep.freq.thresh defaults to 10
   prots <- as.character(prot.map$Var1[prot.map$Freq >= psm.freq.thresh])
   
-  if(length(prots) < 1) {
-    stop(paste('No proteins with more PSMs than', psm.freq.thresh))
-  }
-  
   cat(length(prots), 'proteins selected to build correlation matrices\n')
   
   ## Correlate peptides within each protein
-  #
   # Iterate over proteins and do pairwise correlation between 
   # quantitation vectors of peptides.
   # Do this for certain subsets of the protein data, 
@@ -133,86 +139,70 @@ validate.lib <- function(
   
   # significance threshold
   alpha <- 0.05
+  raw.files <- unique(ev$`Raw file`)
   
   for(i in 1:length(prots)) {
-    
-    #prot <- 'sp|P06733|ENOA_HUMAN'
-    #prot <- 'sp|P11142|HSP7C_HUMAN' # heat shock
     
     prot <- prots[i]
     cat('\r', match(prot, prots), '/', length(prots), '-', prot, '                           ')
     flush.console()
     
     # get PSMs for this protein
+    ev.p <- subset(ev, Proteins==prot & PEP < alpha)
+    ev.p.new <- subset(ev, Proteins==prot & PEP > alpha & PEP.new < alpha)
     
-    # ORIGINAL 
-    # -- originally good IDs (PEP < 0.05), ignoring result of RTLib method
-    prot.data <- data.matrix(subset(ev, Proteins==prot & PEP < alpha, 
-                                    select=data.cols))
-    prot.names <- ev[ev$Proteins==prot & ev$PEP < alpha,] %>%
-      pull('Sequence')
-    
-    # NEW
-    # -- originally bad IDs, upgraded to good ID (PEP > 0.05 & PEP.new < 0.05)
-    # -- set of NEW and ORIGINAL should be disjoint, i.e., NEW ∩ ORIGINAL = ∅
-    prot.data.new <- data.matrix(subset(
-      ev, Proteins==prot & PEP > alpha & PEP.new < alpha, select=data.cols))
-    prot.names.new <- subset(ev, Proteins==prot & PEP > alpha & PEP.new < alpha) %>%
-      pull('Sequence')
-    
-    # lets say... must have more than n observations to 
-    # have a meaninful correlation matrix
-    # not enough data can push extremely low/high correlations, 
-    # especially when so many of our columns are NA anyways
-    #
-    # the pairwise.complete.obs method of the cor() function can exacerbate 
-    # this effect if there aren't enough observations
-    #cor.size.thresh <- 5
-    
-    if(nrow(prot.data) < cor.size.thresh | 
-       nrow(prot.data.new) < 1) {
+    if(nrow(ev.p) < 1 & nrow(ev.p.new) < 1) {
       next
     }
-    if(similarity=='correlation') {
-      prot.cor <- cor.sim(prot.data)
-      prot.cor.new <- cor.sim(rbind(prot.data.new, prot.data))
-    } else if (similarity == 'cosine') {
-      prot.cor <- cos.sim(prot.data)
-      prot.cor.new <- cos.sim(prot.data)
+    
+    #prot.data <- ev.p[,data.cols]
+    prot.data <- matrix(nrow=(nrow(ev.p) + nrow(ev.p.new)), 
+                        ncol=length(data.cols)*length(raw.files))
+    
+    row.counter <- 1
+    row.counter.new <- nrow(prot.data) - nrow(ev.p.new) - 1
+    if(row.counter.new < 1) { row.counter.new <- 1 }
+    
+    for(j in 1:length(raw.files)) {
+      raw.file <- raw.files[j]
+      
+      ev.pr <- data.matrix(subset(ev.p, `Raw file`==raw.file, select=data.cols))
+      if(nrow(ev.pr) > 0) {
+        prot.data[row.counter:(row.counter+nrow(ev.pr) - 1),
+                  (((j - 1) * length(data.cols)) + 1):(j * length(data.cols))] <- ev.pr
+        row.counter <- row.counter + nrow(ev.pr)
+      }
+      
+      ev.pr.new <- data.matrix(subset(ev.p.new, `Raw file`==raw.file, select=data.cols))
+      if(nrow(ev.pr.new) > 0) { 
+        prot.data[row.counter.new:(row.counter.new + nrow(ev.pr.new) - 1),
+                  (((j - 1) * length(data.cols)) + 1):(j* length(data.cols))] <- ev.pr.new
+        row.counter.new <- row.counter.new + nrow(ev.pr.new)
+      }
     }
     
-    cor.mat <- prot.cor.new
-    #cor.mat <- prot.cor
-    diag(cor.mat) <- 1
-    #cor.mat[upper.tri(cor.mat)] <- NA
-    rownames(cor.mat) <- c(prot.names.new, prot.names)
-    colnames(cor.mat) <- c(prot.names.new, prot.names)
-    # rownames(cor.mat) <- prot.names
-    # colnames(cor.mat) <- prot.names
+    # remove NA columns
+    prot.data <- prot.data[,apply(prot.data, 2, sum, na.rm=T)!=0]
     
-    # ggplot(melt(cor.mat, na.rm=T), aes(x=Var1, y=Var2, fill=value)) +
-    #   geom_tile(color='white') +
-    #   scale_fill_gradient2(low = "blue", high = "red", mid = "white", 
-    #                        midpoint = 0, limit = c(-1,1), space = "Lab", 
-    #                        name="Pearson\nCorrelation") +
-    #   theme_minimal()+ 
-    #   theme(axis.text.y = element_text(size=8),
-    #         axis.text.x = element_text(angle = 45, vjust = 1, 
-    #                                    size = 8, hjust = 1)
-    #         #axis.text.x = element_blank()
-    #         ) +
-    #   labs(x=NULL, y=NULL)+
-    #   coord_fixed()
+    if(length(prot.data) < 1) next
+    
+    # run spearman correlation on prot data matrix
+    # this might take a while...
+    cor.mat <- cor(t(prot.data), use='pairwise.complete.obs', method='spearman')
+    # eliminate diagonal
+    diag(cor.mat) <- NA
+    
+    # squash into 1-d vectors
+    prot.cor <- as.numeric(cor.mat[1:nrow(ev.p),1:nrow(ev.p)])
+    prot.cor <- prot.cor[!is.na(prot.cor)]
+    if(nrow(ev.p.new) > 0) {
+      prot.cor.new <- as.numeric(cor.mat[(nrow(ev.p)+1):nrow(cor.mat),])
+      prot.cor.new <- prot.cor.new[!is.na(prot.cor.new)]
+    }
     
     # concatenate to master vectors
-    cors <- c(cors, as.vector(prot.cor))
-    # only take comparisons between new data itself and new data vs. old data,
-    # don't copy the original correlation matrix in
-    cors.new <- c(cors.new, c(
-      as.vector(prot.cor.new[1:nrow(prot.data.new),-(1:nrow(prot.data.new))]),
-      as.vector(prot.cor.new[,1:nrow(prot.data.new)])))
-
-    # cor.size <- c(cor.size, length(prot.cor))
+    cors <- c(cors, prot.cor)
+    cors.new <- c(cors.new, prot.cor.new)
   }
   
   #plot(cumsum(cor.size), xlab='Proteins', ylab='Correlation Vector Size')
@@ -235,7 +225,6 @@ validate.lib <- function(
     flush.console()
     
     ## pairwise correlation between peptides from random proteins
-    if(i < 1) next
     
     # randomly sample peptides from this list, and then compute the
     # pairwise correlation between them
@@ -246,26 +235,52 @@ validate.lib <- function(
     # expect this to be only slightly biased in the positive direction
     
     n <- prot.map[i,'Freq']
+    ev.r <- ev[sample(1:nrow(ev), size=n),]
+    prot.data <- matrix(nrow=n, ncol=length(data.cols) * length(raw.files))
     
-    prot.data <- ev[sample(1:nrow(ev), size=n), data.cols]
-    
-    if(similarity=='correlation') {
-      prot.cor <- cor.sim(prot.data)
-    } else if (similarity=='cosine') {
-      prot.cor <- cos.sim(prot.data)
+    row.counter <- 1
+    for(j in 1:length(raw.files)) {
+      raw.file <- raw.files[j]
+      
+      ev.rr <- data.matrix(subset(ev.r, `Raw file`==raw.file, select=data.cols))
+      if(nrow(ev.rr) > 0) {
+        prot.data[row.counter:(row.counter+nrow(ev.rr) - 1),
+                  (((j - 1) * length(data.cols)) + 1):(j * length(data.cols))] <- ev.rr
+        row.counter <- row.counter + nrow(ev.rr)
+      }
     }
     
+    # remove NA columns
+    prot.data <- prot.data[,apply(prot.data, 2, sum, na.rm=T)!=0]
+    
+    # run spearman correlation on prot data matrix
+    # this might take a while...
+    cor.mat <- cor(t(prot.data), use='pairwise.complete.obs', method='spearman')
+    
     # set diagonal to NA
-    diag(prot.cor) <- NA
+    diag(cor.mat) <- NA
+    
+    # 1-dimensionalise correlation matrix
+    null.cor <- as.vector(cor.mat)
+    null.cor <- null.cor[!is.na(null.cor)]
+    
     # concatenate to cors.null vector
-    cors.null <- c(cors.null, as.vector(prot.cor))
+    cors.null <- c(cors.null, null.cor)
     
     #plot(density(as.vector(prot.cor), na.rm=T))
   }
   
-  # remove NAs
-  cors <- cors[!is.na(cors)]
-  cors.new <- cors.new[!is.na(cors.new)]
+  # par(mfrow=c(1,2))
+  # plot(x=seq(-1,1,by=0.01), y=1-ecdf(cors)(seq(-1,1,by=0.01)), type='l', col='black',
+  #      xlab='Correlation', ylab='Survival (1-CDF)', main='Validation - Mean Normalization')
+  # lines(x=seq(-1,1,by=0.01), y=1-ecdf(cors.new)(seq(-1,1,by=0.01)), type='l', col='blue')
+  # lines(x=seq(-1,1,by=0.01), y=1-ecdf(cors.null)(seq(-1,1,by=0.01)), type='l', col='red')
+  # 
+  # plot(density(cors), col='black', xlab='Correlation', ylab='Density', main='')
+  # lines(density(cors.new), col='blue')
+  # lines(density(cors.null), col='red')
+  
+  save(cors, cors.new, cors.null, file='cors.validation.2.mean.RData')
   
   # consolidate all groups into one dataframe
   cat('\nConsolidating correlation vectors...\n')
@@ -320,8 +335,7 @@ cor.sim <- function(data) {
   # impute missing data
   data <- kNN(data, k=5, imp_var=F)
   
-  #cor <- cor(t(data), method='pearson')
-  cor <- cor(t(data), method='spearman')
+  cor <- cor(t(data), method='pearson')
   # set diagonal to NA
   diag(cor) <- NA
   

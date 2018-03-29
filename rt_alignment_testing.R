@@ -14,19 +14,22 @@ evidence <- evidence %>%
   rename(`Peptide ID`=`Mod. peptide ID`) # alias the modified peptide ID as the peptide ID
 
 ## Filter of PEP < pep_thresh and remove REV and CON and experiments on wrong LC column
-
 pep_thresh <- 0.5
 
+# load exclusion list - common contaminants + keratins
+exclude <- read_lines('pd_exclude.txt')
+
 subEvidence <- evidence %>% 
+  # remove EB/ES experiments - human only
+  filter(!grepl('28C|28D|30[K-L]|31[A-F]|32[E-I]|3[3-6][A-I]', `Raw file`)) %>%
   filter(PEP < pep_thresh) %>%
   filter(!grepl('REV*', `Leading razor protein`)) %>%
   filter(!grepl('CON*',`Leading razor protein`))  %>%
-  select("Peptide ID", "Raw file", "Retention time", "PEP") 
-
-## Add factor indices
-subEvidence <- subEvidence %>% 
-  mutate(exp_id=`Raw file`) %>% 
-  mutate_at("exp_id", funs(as.numeric(as.factor(.))))
+  filter(!grepl(paste(exclude, collapse='|'), Proteins)) %>%
+  filter(`Retention length` < 5) %>%
+  select("Peptide ID", "Raw file", "Retention time", "PEP") %>%
+  ## Add factor indices
+  mutate(exp_id=as.numeric(as.factor(`Raw file`)))
 
 ## Remove peptides that occur in less than n experiments
 toRemove <- subEvidence %>% 
@@ -174,9 +177,8 @@ for( i in 1:10 ) {
     })
 
     print( sum(muPrev - muInit)^2/length(muInit))
-##    plot(beta_init[1, emuInit[stan_peptide_id], rt_distorted, pch=19, cex=0.1)
-##    id <- 20; plot(muInit[stan_peptide_id[exp_id==id]]*beta_init[2, id] + beta_init[1, id], rt_distorted[exp_id == id], pch=19, cex=0.1)
-
+    #plot(beta_init[1, muInit[stan_peptide_id], rt_distorted, pch=19, cex=0.1)
+    #id <- 20; plot(muInit[stan_peptide_id[exp_id==id]]*beta_init[2, id] + beta_init[1, id], rt_distorted[exp_id == id], pch=19, cex=0.1)
 }
 
 beta_0 <- beta_init[1, ]
@@ -210,13 +212,12 @@ load('fit_RT3c.RData')
 
 load('dat/alignment_data.RData')
 
-
-
 start <- Sys.time()
 pars <- optimizing(sm, data=data, init=initList, iter=20000, verbose=TRUE)$par
 print(Sys.time() - start)
 
-save(pars, file='dat/params.Fit3c.RData')
+save(pars, file='dat/params.Fit3c.RTL.RData')
+#save(pars, file='dat/params.Fit3c.RData')
 
 ## Beta fit
 library(rmutil)
@@ -264,35 +265,35 @@ for(exp in 1:num_experiments) {
     col_vec <- c(col_vec, obs_code)
     exp_vec <- c(exp_vec, rep(exp, length(residual)))
         
-    # pdf(sprintf("tmp_figs/second-fit-%i.pdf", exp))
-    # plot(predicted, observed, pch=19, cex=0.2)
-    # abline(a=0, b=1, col="blue")
-    # abline(v=split, col="blue")
-    # dev.off()
-    # 
-    # 
-    # pdf(sprintf("tmp_figs/canonical_v_original-%i.pdf", exp))
-    # plot(mus, observed, pch=19, cex=0.2)
-    # abline(v=split, col="blue", lty=2)
-    # segments(x0=0, y0=betas[1], x1=split, y1=betas[1]+betas[2]*split, col="green", lwd=1.5)
-    # segments(x0=split, y0=betas[1]+betas[2]*split, x1=400, y1=betas[1] + betas[2]*split +betas[3]*(400-split), col="red", lwd=1.5)
-    # dev.off()
-    # 
-    # cols <- rev(heat.colors(10))
-    # 
-    # pdf(sprintf("tmp_figs/residuals-fit-%i.pdf", exp))
-    # plot(predicted, observed-predicted,pch=19, cex=0.2, col=cols[obs_code])
-    # lines(predicted[order(predicted)],
-    #       sapply(predicted_sd, function(s) qlaplace(.025, 0, s))[order(predicted)],
-    #       col="red")
-    # 
-    # lines(predicted[order(predicted)],
-    #       sapply(predicted_sd, function(s) qlaplace(.975, 0, s))[order(predicted)],
-    #       col="red")
-    # 
-    # 
-    # abline(v=split, col="blue")
-    # dev.off()
+    pdf(sprintf("tmp_figs/second-fit-%i.pdf", exp))
+    plot(predicted, observed, pch=19, cex=0.2)
+    abline(a=0, b=1, col="blue")
+    abline(v=split, col="blue")
+    dev.off()
+
+
+    pdf(sprintf("tmp_figs/canonical_v_original-%i.pdf", exp))
+    plot(mus, observed, pch=19, cex=0.2)
+    abline(v=split, col="blue", lty=2)
+    segments(x0=0, y0=betas[1], x1=split, y1=betas[1]+betas[2]*split, col="green", lwd=1.5)
+    segments(x0=split, y0=betas[1]+betas[2]*split, x1=400, y1=betas[1] + betas[2]*split +betas[3]*(400-split), col="red", lwd=1.5)
+    dev.off()
+
+    cols <- rev(heat.colors(10))
+
+    pdf(sprintf("tmp_figs/residuals-fit-%i.pdf", exp))
+    plot(predicted, observed-predicted,pch=19, cex=0.2, col=cols[obs_code])
+    lines(predicted[order(predicted)],
+          sapply(predicted_sd, function(s) qlaplace(.025, 0, s))[order(predicted)],
+          col="red")
+
+    lines(predicted[order(predicted)],
+          sapply(predicted_sd, function(s) qlaplace(.975, 0, s))[order(predicted)],
+          col="red")
+
+
+    abline(v=split, col="blue")
+    dev.off()
     
 }
 
