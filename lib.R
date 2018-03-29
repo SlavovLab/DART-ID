@@ -1,6 +1,4 @@
-source('process.desc.R')
 source('parse.ev.adj.R')
-source('adjust.pep.expcentric.R')
 source('validate.lib.R')
 
 load.ev <- function(ev, par.file='dat/params.Fit2.RData', include.REV=FALSE, include.CON=FALSE) {
@@ -135,9 +133,11 @@ fancy_scientific <- function(l) {
   # turn in to character string in scientific notation
   l <- format(l, scientific = TRUE)
   # quote the part before the exponent to keep all the digits
-  l <- gsub("^(.*)e", "'\\1'e", l)
+  l <- gsub("^(.*)e", "e", l)
+  #l <- gsub("^(.*)e", "'\\1'e", l)
   # turn the 'e+' into plotmath format
-  l <- gsub("e", "%*%10^", l)
+  l <- gsub("e", "10^", l)
+  #l <- gsub("e", "%*%10^", l)
   # make sure +0 just turns into 0
   l <- gsub("\\+00", "00", l)
   # return this as an expression
@@ -154,3 +154,113 @@ emptyPlot <- function() {
 }
 
 bHeatmap <- c('#710e0d', '#8b42df', '#4c94dc', '#40df91', '#fef245')
+
+#' Process Experiment Description Excel Sheet
+process.desc <- function() {
+  desc <- read.csv('dat/SingleCellExperiments_Description.csv')
+  # only take the portion we need
+  desc <- desc[1:308,]
+  # remove rows that don't have experiment info
+  desc <- desc[grepl('^\\d{2,3}[A-Z]{1}', desc$`Exp...`),]
+  desc <- desc[,c(1, 3:12)]
+  names(desc)[1] <- 'Exp'
+  rownames(desc) <- NULL
+  desc <- melt(desc, id.vars=c('Exp'), variable.name='Channel', value.name='Sample',
+               factorsAsStrings=F)
+  desc$Exps <- as.character(desc$Exp)
+  # channel ID
+  desc$ch <- as.numeric(desc$Channel)
+  
+  desc$Sample <- as.character(desc$Sample)
+  desc$Sample[desc$Sample %in% c('', '0', 'Empty', 'N/A', 'PBS')] <- NA
+  
+  ## Quantity - how many cells were in each channel
+  desc$Quantity <- str_extract(desc$Sample, '\\d+(e\\d)?(\\.\\dk?)?')
+  # convert scientific notation
+  desc$Quantity[grep('\\de\\d', desc$Quantity)] <- 
+    as.numeric(desc$Quantity[grep('\\de\\d', desc$Quantity)])
+  # convert "k" notation
+  desc$Quantity[grep('\\d\\.\\dk', desc$Quantity)] <- 
+    as.numeric(str_extract(desc$Quantity[grep('\\d+\\.\\dk', desc$Quantity)], '\\d+\\.\\d')) * 1000
+  
+  ## Type - what kind of cell it was
+  # J = Jurkat
+  # H = Hek293
+  # U = U937
+  # ES|EB = Mouse
+  desc$Type <- str_extract(desc$Sample, '[JHUjhu]{1}|([Ee]{1}[SsBb]{1})')
+  # Mixed type - more than one type of cell
+  # most likely a carrier channel
+  desc$Type[grepl('\\&|and', desc$Sample)] <- 'Mixed'
+  
+  # Uppercase = intact, single cell
+  # Lowercase = diluted, lysed mixture
+  desc$Diluted <- F
+  desc$Diluted[grepl('[jhu]|es|eb', desc$Type)] <- T
+  desc$Diluted[is.na(desc$Type)] <- NA
+  
+  # Re-normalize cell type for easier searching
+  desc$Type <- toupper(desc$Type)
+  
+  return(desc)
+}
+
+fold.change.comp <- function(exps) {
+  library(pracma)
+  # only use the same raw files between all evidence files
+  #common.exps <- Reduce(intersect, lapply(exps, function(exp) { exp$`Raw file` }))
+  #exps <- lapply(exps, function(exp) { exp[exp$`Raw file` %in% common.exps,]})
+  
+  num.steps <- 100
+  # equally spaced steps in log space
+  #x <- logseq(1e-10, 1, n=num.steps)
+  x <- logseq(1e-5, 1, n=num.steps)
+  # frame to hold the results
+  df <- data.frame()
+  counter <- 0
+  for(i in x) {
+    ratios <- unlist(lapply(exps, function(exp) {
+      (sum(exp$PEP.new < i, na.rm=TRUE) / 
+         sum(exp$PEP < i & !is.na(exp$PEP.new)))
+    }))
+    df <- rbind(df, data.frame(
+      x=as.numeric(i),
+      PEP=as.numeric(ratios),
+      Method=as.character(names(exps))
+    ))
+  }
+  return(df)
+}
+
+remove.channels <- function(ev) {
+  # load excel description
+  desc <- process.desc()
+  desc.types <- dcast(desc, Exp~Type, value.var='Type', fun.aggregate=length)
+  desc.types$Exp <- as.character(desc.types$Exp)
+  
+  ## remove carrier and empty channels
+  # these channel indices vary between experiments, 
+  # so we're gonna have to loop thru these and check for each one
+  exps <- str_extract(clean.file.name(unique(ev$`Raw file`)), '[1-9][0-9][A-Z]')
+  exps <- unique(exps[!is.na(exps)])
+  
+  for(i in exps) {
+    #if(sum(grepl(i,ev$exp)) <= 0) next
+    inds.remove <- desc[desc$Exp==i & (desc$Type=='MIXED' | desc$Type=='NA' | is.na(desc$Type)),'ch']
+    
+    cat('Channel(s)',inds.remove,'from experiment',i,'are blanks or carrier channels. Removing...\n')
+    
+    # make relative to the ev data frame
+    inds.remove <- inds.remove + data.cols[1] - 1
+    # set to NA
+    ev[,inds.remove] <- NA
+  }
+  
+  return(ev)
+}
+
+get.exp.ids <- function(raw.files) {
+  exps <- str_extract(clean.file.name(raw.files), '[1-9][0-9][A-Z]')
+  exps <- unique(exps[!is.na(exps)])
+  return(exps)
+}
