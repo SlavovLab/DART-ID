@@ -5,13 +5,19 @@ library(rmutil)
 #load('dat/params.Fit3.RData')
 #load('dat/params.Fit3b.RData')
 load('dat/params.Fit3c.RData')
+load('dat/params.Fit3c.RTL.RData')
 
 ev <- read_tsv('dat/evidence_elite.txt')
 
 # alias the modified peptide ID as the peptide ID
 ev <- ev %>%
   rename(`Sequence ID`=`Peptide ID`) %>%
-  rename(`Peptide ID`=`Mod. peptide ID`) 
+  rename(`Peptide ID`=`Mod. peptide ID`) %>%
+  # remove EB/ES experiments - human only
+  filter(!grepl('28C|28D|30[K-L]|31[A-F]|32[E-I]|3[3-6][A-I]', `Raw file`))
+
+# load exclusion list - common contaminants + keratins
+exclude <- read_lines('pd_exclude.txt')
 
 ## Filter of PEP < pep_thresh
 ## !!!!!!!
@@ -22,6 +28,8 @@ ev.f <- ev %>%
   filter(PEP < pep_thresh) %>%
   filter(!grepl('REV*', `Leading razor protein`)) %>% # Remove Reverse matches
   filter(!grepl('CON*',`Leading razor protein`))  %>% # Remove Contaminants
+  filter(!grepl(paste(exclude, collapse='|'), Proteins)) %>% # Remove from exclusion list
+  filter(`Retention length` < 5) %>% # Remove "smeared" scans
   select("Peptide ID", "Raw file", "Retention time", "PEP") %>%
   mutate(exp_id=`Raw file`) %>%  # new column - exp_id = numeric version of experiment file
   mutate_at("exp_id", funs(as.numeric(as.factor(.))))
@@ -70,7 +78,7 @@ sigma_ijs <- pars[grep('sigma_ij', names(pars))]
 # output table
 ev.new <- data.frame(
   Raw.file=character(),
-  Obs.ID=numeric(),
+  `Best MS/MS`=numeric(),
   rt.minus=numeric(),
   rt.plus=numeric(),
   muijs=numeric(),
@@ -194,7 +202,7 @@ for(i in 1:num_exps) {
   # output table for this experiment, for updated data
   exp.new <- data.frame(
     Raw.file=as.character(exp.f$`Raw file`),
-    Obs.ID=as.numeric(exp.f$`Best MS/MS`),
+    `Best MS/MS`=as.numeric(exp.f$`Best MS/MS`),
     rt.minus=as.numeric(exp.rt.minus),
     rt.plus=as.numeric(exp.rt.plus),
     muijs=as.numeric(exp.mus[match(exp.peptide.map, exp.peptides)]),
@@ -204,7 +212,7 @@ for(i in 1:num_exps) {
   # append non matched data to output table
   exp.new <- rbind(exp.new, data.frame(
     Raw.file=as.character(exp$`Raw file`[!exp.matches]),
-    Obs.ID=as.numeric(exp$`Best MS/MS`[!exp.matches]),
+    `Best MS/MS`=as.numeric(exp$`Best MS/MS`[!exp.matches]),
     rt.minus=NA,
     rt.plus=NA,
     muijs=NA,
@@ -217,14 +225,14 @@ for(i in 1:num_exps) {
 }
 
 # reorder ev.new in the same fashion as the original ev
-ev.new.f <- ev.new[order(ev.new$Obs.ID),]
+ev.new.f <- ev.new[order(ev.new$Best.MS.MS),]
 rownames(ev.new.f) <- NULL
 
 # combine ev and ev.new
 ev.adjusted <- cbind(ev, ev.new.f)
 # remove some columns we dont need
 ev.adjusted <- ev.adjusted[,!(names(ev.adjusted) %in% 
-                                c('Obs.ID', 'Raw.file'))]
+                                c('Raw.file'))]
 
 #write.table(ev.adjusted, 'dat/ev.adjusted.elite.txt', sep='\t', row.names=FALSE, quote=FALSE)
 
@@ -236,12 +244,11 @@ ev.ff <- ev.adjusted[, c('Sequence', 'Proteins', 'Leading razor protein', 'Raw f
                          'Reporter intensity corrected 6', 'Reporter intensity corrected 7', 
                          'Reporter intensity corrected 8', 'Reporter intensity corrected 9',
                          'Reverse', 'Peptide ID', 'Sequence ID', 'Modifications',
-                         'rt.minus', 'rt.plus', 'muijs', 'sigmas', 'PEP.new', 'id')]
+                         'rt.minus', 'rt.plus', 'muijs', 'sigmas', 'PEP.new', 'Best.MS.MS', 'id')] %>%
+         rename(`Best MS/MS`='Best.MS.MS')
 
 #write.table(ev.ff, 'dat/ev.adj.Fit3.txt', sep='\t', row.names=FALSE, quote=FALSE)
-write_tsv(ev.ff, 'dat/ev.adj.Fit3c.txt')
-
-
+write_tsv(ev.ff, 'dat/ev.adj.Fit3c.RTL.txt')
 
 ## analyze the results -----
 
