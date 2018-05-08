@@ -1,0 +1,10 @@
+rule all:
+  input:
+    
+
+rule convert:
+  input:
+    data="path/to/{dataset}.txt"
+  output:
+    "{dataset}.converted.txt"
+  shell:
