@@ -35,7 +35,7 @@ validate.lib <- function(
   if (!is.null(raw.files)) {
     # filter by raw files if defined and experiment IDs aren't
     if(length(raw.files) < 1) {
-      stop('No raw file names given')
+      #stop('No raw file names given')
     }
     ev <- ev[ev$`Raw file` %in% raw.files,]
   } 
@@ -118,7 +118,7 @@ validate.lib <- function(
     stop(paste('No proteins with more PSMs than', psm.freq.thresh))
   }
   
-  cat(length(prots), 'proteins selected to build correlation matrices\n')
+  cat(length(prots), 'proteins with over', psm.freq.thresh, 'PSMs selected to build correlation matrices\n')
   
   ## Correlate peptides within each protein
   #

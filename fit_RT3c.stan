@@ -16,6 +16,8 @@ data {
   real<lower=0> retention_times[num_total_observations];
   real<lower=0> mean_log_rt;
   real<lower=0> sd_log_rt;
+  real<lower=0> mean_rt;
+  real<lower=0> sd_rt;
   real<lower=0, upper=1> pep[num_total_observations];
 
   real<lower=0> max_retention_time;
@@ -108,15 +110,6 @@ model {
     //
     // lognormal doesnt completely capture the true empirical distribution of RTs,
     // but definitely does a better job than just the uniform over the range of RTs
-    //
-    //real comp1 = log(1-pep[i]) + double_exponential_lpdf(retention_times[i] | muij[muij_map[i]], sigma_ij[peptide_id[i]]);
-    //real comp1 = log(1-pep[i]) + normal_lpdf(retention_times[i] | muij[muij_map[i]], sigma_ij[peptide_id[i]]);
-    //real comp2 = log(pep[i]) + lognormal_lpdf(retention_times[i] | mean_log_rt, sd_log_rt);
-
-    //real lse = log_sum_exp(comp1, comp2); 
-    
-    //target += lse;
-    
 
     target += log_mix(pep[i],
                       lognormal_lpdf(retention_times[i] | mean_log_rt, sd_log_rt),

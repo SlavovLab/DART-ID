@@ -1,4 +1,4 @@
-validate.lib <- function(
+validate.lib.2 <- function(
   ev, 
   sparse.filter=0.5,          # filter out sparse observations. 
                               # this is the fraction of columns in 

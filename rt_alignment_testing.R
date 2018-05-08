@@ -8,20 +8,21 @@ rstan_options(auto_write = TRUE)
 options(mc.cores = parallel::detectCores())
 
 evidence <- read_tsv('dat/evidence_elite.txt')
+evidence <- read_tsv("/gd/Slavov_Lab/SingleCell_Data/FP17/evidence.txt")
 
 evidence <- evidence %>%
   rename(`Sequence ID`=`Peptide ID`) %>%
   rename(`Peptide ID`=`Mod. peptide ID`) # alias the modified peptide ID as the peptide ID
 
 ## Filter of PEP < pep_thresh and remove REV and CON and experiments on wrong LC column
-pep_thresh <- 0.5
+pep_thresh <- 0.1
 
 # load exclusion list - common contaminants + keratins
 exclude <- read_lines('pd_exclude.txt')
 
 subEvidence <- evidence %>% 
   # remove EB/ES experiments - human only
-  filter(!grepl('28C|28D|30[K-L]|31[A-F]|32[E-I]|3[3-6][A-I]', `Raw file`)) %>%
+  #filter(!grepl('28C|28D|30[K-L]|31[A-F]|32[E-I]|3[3-6][A-I]', `Raw file`)) %>%
   filter(PEP < pep_thresh) %>%
   filter(!grepl('REV*', `Leading razor protein`)) %>%
   filter(!grepl('CON*',`Leading razor protein`))  %>%
@@ -35,7 +36,7 @@ subEvidence <- evidence %>%
 toRemove <- subEvidence %>% 
   group_by(`Peptide ID`) %>% 
   summarise(num.exps=length(unique(`exp_id`))) %>% 
-  filter(num.exps <= 10) %>%
+  filter(num.exps <= 3) %>%
   pull(`Peptide ID`)
 subEvidence <- subEvidence %>% 
   filter(!(`Peptide ID` %in% toRemove))
@@ -122,17 +123,17 @@ set.seed(0)
 muInit <- sapply(unique(stan_peptide_id), function(pid) {
   # mean of peptide retention times, weighted by PEP
   weights <- ((1 - pep[stan_peptide_id == pid]) - (1 - pep_thresh)) / pep_thresh
-  sum(retention_times[stan_peptide_id==pid] * weights) / sum(weights) + rnorm(1, 0, 10)
+  sum(retention_times[stan_peptide_id==pid] * weights) / sum(weights) + rnorm(1, 0, 0)
 })
 # negative or very low retention times not allowed. floor at 5 minutes
-mu.min <- 5
+mu.min <- 1
 muInit[muInit <= mu.min] <- mu.min
 # canonical retention time shouldn't be bigger than largest real RT
 mu.max <- max(retention_times)
 muInit[muInit > mu.max] <- mu.max
 
 # take retention times and distort by +- 10 mins
-rt_distorted <- retention_times + rnorm(num_total_observations, 0, 10)
+rt_distorted <- retention_times + rnorm(num_total_observations, 0, 1)
 # make sure distorted retention times stay within bounds of real ones
 rt_distorted[rt_distorted > max(retention_times)] <- max(retention_times)
 rt_distorted[rt_distorted < min(retention_times)] <- min(retention_times)
@@ -172,8 +173,8 @@ for( i in 1:10 ) {
     # new set of priors for canonical RTs based on weighted combination of
     # this set of predicted canonical RTs
     muInit <- sapply(unique(stan_peptide_id), function(pid) {
-        weights <- ((1-pep[stan_peptide_id==pid]) - (1-pep_thresh))/pep_thresh
-        sum(mu_pred[stan_peptide_id==pid] * weights) / sum(weights)
+        weights <- ((1 - pep[stan_peptide_id == pid]) - (1 - pep_thresh)) / pep_thresh
+        sum(mu_pred[stan_peptide_id == pid] * weights) / sum(weights)
     })
 
     print( sum(muPrev - muInit)^2/length(muInit))
@@ -200,7 +201,7 @@ initList <- list(mu=muInit,
                  sigma_intercept=rep(0.1, num_experiments),
                  split_point=rep(median(muInit), num_experiments))
 
-save(data, initList, file='dat/alignment_data.RData')
+save(data, initList, file='dat/FP17_alignment_data.RData')
 
 ## Compile the stan code
 #sm <- stan_model(file="fit_RT3.stan")
@@ -213,10 +214,10 @@ load('fit_RT3c.RData')
 load('dat/alignment_data.RData')
 
 start <- Sys.time()
-pars <- optimizing(sm, data=data, init=initList, iter=20000, verbose=TRUE)$par
+pars <- optimizing(sm, data=data, init=initList, iter=40000, verbose=TRUE)$par
 print(Sys.time() - start)
 
-save(pars, file='dat/params.Fit3c.RTL.RData')
+save(pars, file='dat/params.FP17.RData')
 #save(pars, file='dat/params.Fit3c.RData')
 
 ## Beta fit
@@ -265,14 +266,13 @@ for(exp in 1:num_experiments) {
     col_vec <- c(col_vec, obs_code)
     exp_vec <- c(exp_vec, rep(exp, length(residual)))
         
-    pdf(sprintf("tmp_figs/second-fit-%i.pdf", exp))
+    pdf(sprintf("FP17_align/second-fit-%i.pdf", exp))
     plot(predicted, observed, pch=19, cex=0.2)
     abline(a=0, b=1, col="blue")
     abline(v=split, col="blue")
     dev.off()
 
-
-    pdf(sprintf("tmp_figs/canonical_v_original-%i.pdf", exp))
+    pdf(sprintf("FP17_align/canonical_v_original-%i.pdf", exp))
     plot(mus, observed, pch=19, cex=0.2)
     abline(v=split, col="blue", lty=2)
     segments(x0=0, y0=betas[1], x1=split, y1=betas[1]+betas[2]*split, col="green", lwd=1.5)
@@ -281,7 +281,7 @@ for(exp in 1:num_experiments) {
 
     cols <- rev(heat.colors(10))
 
-    pdf(sprintf("tmp_figs/residuals-fit-%i.pdf", exp))
+    pdf(sprintf("FP17_align/residuals-fit-%i.pdf", exp))
     plot(predicted, observed-predicted,pch=19, cex=0.2, col=cols[obs_code])
     lines(predicted[order(predicted)],
           sapply(predicted_sd, function(s) qlaplace(.025, 0, s))[order(predicted)],

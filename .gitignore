@@ -68,3 +68,6 @@ pca_plots/*
 # ignore notebooks
 python/*.ipynb
 python/.ipynb_checkpoints/*
+
+Figures/**/*
+Alignments/**/*
