@@ -116,16 +116,23 @@ exps <- list(Pairwise=ev.ali,
              Fit2_ExperimentCentric=ev.fit2.exp,
              Fit3_PeptideCentric=ev.fit3)
 
+exps <- list(Pairwise=ev.ali,
+             Global=ev.pep)
+
 df <- fold.change.comp(exps)
 
 ggplot(df, aes(x=x, y=PEP, color=Method)) +
   geom_path() +
-  scale_x_log10() +
+  geom_hline(yintercept=1, linetype='longdash', color='black') +
+  #geom_point() +
+  scale_x_log10(limits=c(1e-5, 1.1)) +
   annotation_logticks(sides='b') +
+  scale_color_manual(values=c('red', 'blue')) +
   #scale_y_continuous(limits=c(0.95,2.25), breaks=c(1, 1.25, 1.5, 1.75, 2, 2.25)) +
   labs(x='PEP Threshold', y='Fold Change Increase in IDs',
        title=paste0('Fold Change Increase of PSM IDs\n',
-                    '= #Adjusted PEPs / #Original PEPs above PEP Threshold'))
+                    '= #Adjusted PEPs / #Original PEPs above PEP Threshold')) +
+  theme_bert()
 
 ```
 

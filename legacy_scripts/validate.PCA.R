@@ -96,10 +96,10 @@ go.pca <- function(data) {
   # remove rows with more than 50% NA
   data <- data[apply(!apply(data, 1, is.na), 2, sum) > 5,]
   # normalize columns by median
-  #data <- sweep(x=data, MARGIN=2, FUN='/',
-  #              STATS=apply(data, MARGIN=2, FUN=median, na.rm=TRUE))
+  data <- sweep(x=data, MARGIN=2, FUN='/',
+                STATS=apply(data, MARGIN=2, FUN=median, na.rm=TRUE))
   # rescale rows around 0
-  #data <- t(apply(data, 1, scale))
+  data <- t(apply(data, 1, scale))
   # impute missing data
   data <- data.matrix(kNN(data, k=10, imp_var=F))
   if(sum(is.na(data)) > 0) {
