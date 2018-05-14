@@ -1,0 +1,7 @@
+name: rtlib
+channels:
+  defaults
+dependencies:
+  - python=3.6.4
+  - pip:
+    - mkdocs==0.16.3

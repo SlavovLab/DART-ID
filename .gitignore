@@ -72,7 +72,8 @@ python/alignment/**/*
 python/__pycache__/**/*
 python/rt_update/**/*
 python/cached-model*
-
+python/rtlib/__pycache__/**/*
+python/rtlib/cached_fits/**/*
 
 Figures/**/*
 Alignments/**/*

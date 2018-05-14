@@ -15,19 +15,18 @@ import time
 
 from converter import add_converter_args, convert_pd, convert_mq, process_files
 from hashlib import md5
-from scipy.stats import laplace
-from sklearn import linear_model
+#from scipy.stats import laplace
 
 pd.options.mode.chained_assignment = None
-verbose = False
+logger = logging.getLogger()
 
-def align(dfa, filter_pep=0.5, mu_min=1, rt_distortion=10, prior_iters=10, stan_iters=2e4, stan_attempts=3, stan_file=None, print_figures=False, output_path=None):
+def align(dfa, filter_pep=0.5, mu_min=1, rt_distortion=10, prior_iters=10, stan_iters=2e4, stan_attempts=3, stan_file=None, print_figures=False, save_params=False, output_path=None):
 
   # take subset of confident observations to use for alignment
   dff = dfa[-(dfa["exclude"])]
   dff = dff.reset_index(drop=True)
 
-  logging.info(str(dff.shape[0]) + " / " + str(dfa.shape[0]) + " (" + "{:.2f}".format(dff.shape[0]/dfa.shape[0]*100) + "%)" + " confident, alignable observations (PSMs) after filtering.")
+  logger.info("{} / {} ({:.2%}) confident, alignable observations (PSMs) after filtering.".format(dff.shape[0], dfa.shape[0], dff.shape[0] / dfa.shape[0]))
 
   # refactorize peptide id into stan_peptide_id, 
   # to preserve continuity when feeding data into STAN
@@ -38,7 +37,7 @@ def align(dfa, filter_pep=0.5, mu_min=1, rt_distortion=10, prior_iters=10, stan_
   num_observations = dff.shape[0]
   num_peptides = dff["stan_peptide_id"].max() + 1
   
-  logging.info('Building peptide-experiment pairs...')
+  logger.info('Building peptide-experiment pairs...')
 
   # build a unique peptide-experiment ID
   pep_exp_all = dff["stan_peptide_id"].map(str) + " - " + dff["exp_id"].map(str)
@@ -52,7 +51,7 @@ def align(dfa, filter_pep=0.5, mu_min=1, rt_distortion=10, prior_iters=10, stan_
   muij_to_pep = splt.str.get(0).map(int)
   muij_to_exp = splt.str.get(1).map(int)
 
-  logging.info(str(num_pep_exp_pairs) + " peptide-experiment pairs.")
+  logger.info("{} peptide-experiment pairs.".format(num_pep_exp_pairs))
 
   # build dictionary of data to feed to STAN
   # revert all data to primitive types to avoid problems later
@@ -76,7 +75,7 @@ def align(dfa, filter_pep=0.5, mu_min=1, rt_distortion=10, prior_iters=10, stan_
     "max_retention_time": dff["retention_time"].max()
   }
 
-  logging.info("Initializing fit priors for " + str(num_peptides) + " peptides...")
+  logger.info("Initializing fit priors for {} peptides...".format(num_peptides))
 
   # get the average retention time for a peptide, weighting by PEP
   def get_mu(x):
@@ -103,7 +102,7 @@ def align(dfa, filter_pep=0.5, mu_min=1, rt_distortion=10, prior_iters=10, stan_
   # second element is beta_1 and beta_2, the slopes of the two segments
   beta_init = np.array((np.repeat(10, num_experiments), np.repeat(1, num_experiments)), dtype=float)
 
-  logging.info("Optimizing priors with linear approximation for " + str(prior_iters) + " iterations.")
+  logger.info("Optimizing priors with linear approximation for {} iterations.".format(prior_iters))
 
   mu_pred = np.zeros(num_peptides)
   # temporary data frame to quickly map over in the loop
@@ -136,7 +135,7 @@ def align(dfa, filter_pep=0.5, mu_min=1, rt_distortion=10, prior_iters=10, stan_
     # this set of predicted canonical RTs
     mu_init = dft.groupby("stan_peptide_id")[["pep", "retention_time"]].apply(get_mu).values
 
-    logging.info("Iter " + str(i + 1) + " | Avg. canonical RT shift: " + "{:.5f}".format(pow(np.sum(mu_prev - mu_init), 2) / len(mu_init)))
+    logger.info("Iter {} | Avg. canonical RT shift: {:.5f}".format(i + 1, pow(np.sum(mu_prev - mu_init), 2) / len(mu_init)))
 
   # grab linear regression params
   # set beta_2 (slope of second segment) to the same as the slope of the 1st segment
@@ -166,14 +165,12 @@ def align(dfa, filter_pep=0.5, mu_min=1, rt_distortion=10, prior_iters=10, stan_
   # run STAN, store optimization parameters
   op = stan_optimize(stan_file=stan_file, stan_data=stan_data, init_list=init_list, stan_iters=stan_iters, stan_attempts=stan_attempts, verbose=verbose)
 
-  # write parameters to file
   # exp_params - contains regression parameters for each experiment
   # peptide_params - contains canonical RT (mu) for each peptide sequence
   # pair_params - contains muij and sigmaij for each peptide-experiment pair
   #               not exactly necessary as these can be extrapolated from 
   #               exp_params and peptide_params
   # 
-  logging.info("Writing STAN parameters to file...")
   exp_params = pd.DataFrame({ key: op[key] for key in ["beta_0", "beta_1", "beta_2", "split_point", "sigma_slope", "sigma_intercept"]})
   peptide_params = pd.DataFrame({ key: op[key] for key in ["mu"]})
   pair_params = pd.DataFrame({ key: op[key] for key in ["muij", "sigma_ij"]})
@@ -185,11 +182,13 @@ def align(dfa, filter_pep=0.5, mu_min=1, rt_distortion=10, prior_iters=10, stan_
   pair_params = pair_params.assign(muij_to_pep=muij_to_pep)
   pair_params = pair_params.assign(muij_to_exp=muij_to_exp)
 
-  # write parameters to file, so operations can be done on alignment data without
-  # the entire alignment to run again
-  exp_params.to_csv(os.path.join(output_path, "exp_params.txt"), sep="\t", index=False)
-  pair_params.to_csv(os.path.join(output_path, "pair_params.txt"), sep="\t", index=True, index_label="pair_id")
-  peptide_params.to_csv(os.path.join(output_path, "peptide_params.txt"), sep="\t", index=True, index_label="peptide_id")
+  if save_params:
+    # write parameters to file, so operations can be done on alignment data without
+    # the entire alignment to run again
+    logger.info("Writing STAN parameters to file...")
+    exp_params.to_csv(os.path.join(output_path, "exp_params.txt"), sep="\t", index=False)
+    pair_params.to_csv(os.path.join(output_path, "pair_params.txt"), sep="\t", index=True, index_label="pair_id")
+    peptide_params.to_csv(os.path.join(output_path, "peptide_params.txt"), sep="\t", index=True, index_label="peptide_id")
 
   # write parameters to dict for further operations
   params = {}
@@ -199,8 +198,8 @@ def align(dfa, filter_pep=0.5, mu_min=1, rt_distortion=10, prior_iters=10, stan_
 
   # generate alignment plots?
   if print_figures:
-    logging.info("Generating Alignment Figures...")
-    generate_figures(params, exp_names, muij_map, dff["retention_time"], dff["pep"], output_path)
+    logger.info("Generating Alignment Figures...")
+    generate_figures(dff, params, muij_map, output_path)
 
   return params
 
@@ -215,12 +214,12 @@ def stan_optimize(stan_file, stan_data, init_list, stan_iters, stan_attempts, ve
   op = None
   while op is None and counter <= num_tries:
     try:
-      logging.info("Starting STAN Model | Attempt #" + str(counter) + " ...")
+      logger.info("Starting STAN Model | Attempt #{} ...".format(counter))
       start = time.time()
       op = sm.optimizing(data=stan_data, init=init_list, iter=stan_iters, verbose=verbose)
-      logging.info("STAN Model Finished. Run time: " + "{:.3f}".format(time.time() - start) + " seconds.")
+      logger.info("STAN Model Finished. Run time: {:.3f} seconds.".format(time.time() - start))
     except RuntimeError as e:
-      logging.error(str(e))
+      logger.error(str(e))
       counter = counter + 1
 
   if op is None:
@@ -228,18 +227,19 @@ def stan_optimize(stan_file, stan_data, init_list, stan_iters, stan_attempts, ve
 
   return op
 
-def generate_figures(params, exp_names, muij_map, retention_times, pep, output_path):
+def generate_figures(dff, params, muij_map, output_path):
+  exp_names = np.sort(dff["raw_file"].unique())
   # split PEP into 10 bins, for coloring points later
-  pep_col_code = pd.cut(pep, 10)
+  pep_col_code = pd.cut(dff["pep"], 10)
   # make figures folder if it doesn't exist yet
   figures_path = os.path.join(output_path, "alignment_figs")
   if not os.path.exists(figures_path):
-    logging.info("Path for alignment figures " + figures_path + "does not exist. Creating...")
+    logger.info("Path for alignment figures {} does not exist. Creating...".format(figures_path))
     os.makedirs(figures_path)
 
   # generate figures for each experiment
-  for exp in params["exp"]["exp_id"].values:
-    logging.info("Generating Summary for Experiment " + str(exp) + " | " + exp_names[exp])
+  for exp in np.sort(params["exp"]["exp_id"].values):
+    logger.info("Generating Summary for Experiment {} | {}".format(exp, exp_names[exp]))
 
     exp_params = params["exp"].iloc[exp]
     exp_indices = params["pair"]["muij_to_exp"] == exp
@@ -255,8 +255,8 @@ def generate_figures(params, exp_names, muij_map, retention_times, pep, output_p
     mus = params["peptide"]["mu"][params["pair"]["muij_to_pep"][muij_map][exp_indices[muij_map]]]
 
     # observed values
-    observed = retention_times.values[exp_indices[muij_map]]
-    obs_peps = pep.values[exp_indices[muij_map]]
+    observed = dff["retention_time"].values[exp_indices[muij_map]]
+    obs_peps = dff["pep"].values[exp_indices[muij_map]]
     obs_code = pep_col_code.values[exp_indices[muij_map]]
     residual = observed - predicted
 
@@ -304,16 +304,95 @@ def generate_figures(params, exp_names, muij_map, retention_times, pep, output_p
     fig = plt.gcf()
     fig.set_size_inches(7, 7)
     fname = os.path.join(figures_path, str(exp) + "_" + exp_names[exp] + ".png")
-    logging.info("Saving figure to " + fname + " ...")
+    logger.info("Saving figure to {} ...".format(fname))
     fig.savefig(fname, dpi=160)
     
     plt.close()
     fig.clf()
 
+  ## Generate summary figures
+  ## ========================
+  
+  ## retention time distributions
+  
+  dff["muij"] = params["pair"]["muij"][muij_map].values
+  dff["pep_col_code"] = pd.cut(dff["pep"], 10)
+  dff["residual"] = dff["retention_time"] - dff["muij"]
+  dff["abs_residual"] = np.abs(dff["retention_time"] - dff["muij"])
+  dff["residual_sq"] = pow(dff["retention_time"] - dff["muij"], 2)
+
+  f, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2)
+  ax1.hist(dff["retention_time"], bins=30)
+  ax1.set(xlabel="RT (mins)", ylabel="Frequency")
+
+  ax2.hist(np.log(dff["retention_time"]), bins=30)
+  ax2.set(xlabel="Log RT (mins)")
+
+  ax3.hist(params["peptide"]["mu"], bins=30)
+  ax3.set(xlabel="RT (mins)", ylabel="Frequency", title="Canonical RTs")
+  ax4.hist(np.log(params["peptide"]["mu"]), bins=30)
+  ax4.set(xlabel="Log RT (mins)", title="Canonical RTs")
+
+  f.suptitle("RT Distribution Across All Experiments")
+
+  plt.subplots_adjust(hspace=0.4, wspace=0.3)
+
+  fig = plt.gcf()
+  fig.set_size_inches(7, 7)
+  fname = os.path.join(figures_path, "00_RT_Distributions.png")
+  logger.info("Saving RT Distributions figure to {} ...".format(fname))
+  fig.savefig(fname, dpi=160)
+
+  plt.close()
+  f.clf()
+
+  ## residual summary
+  """
+  res = dff.groupby(["exp_id", "pep_col_code"])["abs_residual"].mean()
+  res_map = np.reshape(res.values, (len(exp_names), 10))
+
+  f, (ax1, ax2) = plt.subplots(1, 2)
+
+  mp = ax1.imshow(res_map, interpolation="nearest", vmin=0)
+  plt.colorbar(mp, ax=ax1)
+
+  ax1.set_xticks(np.arange(-.5, 10, 1))
+  # Major ticks
+  ax1.set_xticks(np.arange(0, 10, 1));
+  ax1.set_yticks(np.arange(0, 11, 1));
+  # Labels for major ticks
+  #ax1.set_xticklabels(pep_col_code.cat.categories.to_series(), rotation=45, ha="right");
+  ax1.set_xticklabels(np.arange(1, 11, 1))
+  ax1.set_yticklabels(exp_names);
+  # Minor ticks
+  ax1.set_xticks(np.arange(-.5, 10, 1), minor=True);
+  ax1.set_yticks(np.arange(-.5, 10, 1), minor=True);
+  # Gridlines based on minor ticks
+  ax1.grid(which='minor', color='w', linestyle='-', linewidth=1)
+  ax1.set(title="abs(Residual RT) (mins)")
+
+  res_bars = dff.groupby(["exp_id"])["abs_residual"].mean()
+  ax2.bar(range(0, len(exp_names)), res_bars.values)
+  ax2.set_xticks(np.arange(0, num_experiments, 1))
+  ax2.set_xticklabels(exp_names, rotation=45, ha="right")
+  ax2.set(ylabel="abs(Residual RT) (mins)")
+
+  plt.subplots_adjust(hspace=0.3, wspace=0.3)
+
+  fig = plt.gcf()
+  fig.set_size_inches(9, 4)
+  fname = os.path.join(figures_path, "00_Residuals_By_Experiment.png")
+  logger.info("Saving Residuals by Experiment figure to {} ...".format(fname))
+  fig.savefig(fname, dpi=160)
+
+  plt.close()
+  fig.clf()
+  """
+
 # taken from: https://pystan.readthedocs.io/en/latest/avoiding_recompilation.html#automatically-reusing-models
 def StanModel_cache(model_file=None, model_name=None):
   if model_file is None:
-    model_file = "./fit_RT3d.stan"
+    model_file = "./fits/fit_RT3d.stan"
   elif type(model_file) is not str:
     model_file = model_file.name
 
@@ -328,7 +407,7 @@ def StanModel_cache(model_file=None, model_name=None):
 
   # Use just as you would `stan`
   code_hash = md5(model_code.encode("ascii")).hexdigest()
-  cache_fn = "cached-model-{}-{}.pkl".format(model_name, code_hash)
+  cache_fn = "./cached_fits/cached-model-{}-{}.pkl".format(model_name, code_hash)
 
   try:
       # load cached model from file
@@ -340,36 +419,31 @@ def StanModel_cache(model_file=None, model_name=None):
           # save model to file
           pickle.dump(sm, f)
   else:
-      logging.info("Using cached StanModel: " + model_name + "_" + code_hash)
+      logger.info("Using cached StanModel: {}_{}".format(model_name, code_hash))
 
   return sm
 
 def add_alignment_args(parser):
-  parser.add_argument("-s", "--stan-file", type=argparse.FileType("r"), default=None, help="Path to STAN fit file. Leave empty to use the provided STAN configuration.")
-  parser.add_argument("-mm", "--mu-min", type=float, default=1.0, help="Minimum value of canonical retention time for a peptide, when first calculating priors. Any canonical RT below this value will floor to this value.")
-  parser.add_argument("-rd", "--rt-distortion", type=float, default=10.0, help="Distortion of retention times before alignment, in minutes. Increase this number if the STAN alignment is too close to optima before alignment. Default: 10. 10 dminutes is for a normal 180 min. proteomics run, so reduce this respective to your average run-time.")
-  parser.add_argument("-ip", "--prior-iters", type=int, default=10, help="Number of iterations for generating priors before STAN alignment. Increase this number to get closer to the optima before alignment. Default: 10")
-  parser.add_argument("-is", "--stan-iters", type=int, default=1e5, help="Number of max iterations passed onto STAN. Optimization may terminate normally before reaching this number of iterations. For larger amounts of data, this may need to be increased in order to terminate the optimization normally at the gradient threshold. Default: 20,000")
-  parser.add_argument("-as", "--stan-attempts", type=int, default=3, help="Number of attempts to run STAN with. Consider changing parameters to improve generation of priors before trying to run STAN more times.")
+  parser.add_argument("--stan-file", type=argparse.FileType("r"), default=None, help="Path to STAN fit file. Leave empty to use the provided STAN configuration.")
+  parser.add_argument("--mu-min", type=float, default=1.0, help="Minimum value of canonical retention time for a peptide, when first calculating priors. Any canonical RT below this value will floor to this value.")
+  parser.add_argument("--rt-distortion", type=float, default=0.0, help="Distortion of retention times before alignment, in minutes. Increase this number if the STAN alignment is too close to optima before alignment, but be careful as this drags your results away from the optima and that STAN may not reach it within its given restrictions, either in iterations or for its line search thresholds. Default: 0.")
+  parser.add_argument("--prior-iters", type=int, default=10, help="Number of iterations for generating priors before STAN alignment. Increase this number to get closer to the optima before alignment. Default: 10")
+  parser.add_argument("--stan-iters", type=int, default=1e5, help="Number of max iterations passed onto STAN. Optimization may terminate normally before reaching this number of iterations. For larger amounts of data, this may need to be increased in order to terminate the optimization normally at the gradient threshold. Default: 100,000")
+  parser.add_argument("--stan-attempts", type=int, default=3, help="Number of attempts to run STAN with. Consider changing parameters to improve generation of priors before trying to run STAN more times. Default: 3")
   parser.add_argument("-f", "--print-figures", action="store_true", default=False,
-    help="Print alignment figures for each experiment that is aligned. Each alignment figure is stored as an image, with a summary of the segmented fit, as well as the residuals of the fit.")
+    help="Print alignment figures for each experiment that is aligned. Each alignment figure is stored as an image, with a summary of the segmented fit, as well as the residuals of the fit. Default: False")
+  parser.add_argument("--save-params", action="store_true", default=False, help="Save alignment parameters after alignment to exp_params.txt, pair_params.txt, and peptide_params.txt. Default: False")
 
-
-if __name__ == "__main__":
+def main():
   parser = argparse.ArgumentParser()
   #parser.add_argument("input", help="Input file from search engine", type=str)
-  parser.add_argument("input", type=argparse.FileType("r"), nargs="+",
-    help="Input file(s) from search engine")
-  parser.add_argument("-o", "--output", type=str, default="./alignment",
-    help="Path to output data. Default: './alignment'")
+  parser.add_argument("input", type=argparse.FileType("r"), nargs="+", help="Input file(s) from search engine")
+  parser.add_argument("-o", "--output", type=str, default="./alignment", help="Path to output data. Default: './alignment'")
 
   add_converter_args(parser)
   add_alignment_args(parser)
 
   args = parser.parse_args()
-
-  if args.verbose:
-    verbose = True
 
   # create output folder
   if args.output is None or len(args.output) < 1:
@@ -378,31 +452,34 @@ if __name__ == "__main__":
     os.makedirs(args.output)
 
   # set up logger
-  for handler in logging.root.handlers[:]:
+  for handler in logger.root.handlers[:]:
     logging.root.removeHandler(handler) 
    
   logFormatter = logging.Formatter("%(asctime)s [%(threadName)-12.12s] [%(levelname)-5.5s]  %(message)s")
-  rootLogger = logging.getLogger()
+  logger = logging.getLogger()
+
+  if args.verbose: logger.setLevel(logging.DEBUG)
+  else: logger.setLevel(logging.WARNING)
 
   fileHandler = logging.FileHandler(os.path.join(args.output, "alignment.log"), mode="w")
   fileHandler.setFormatter(logFormatter)
-  rootLogger.addHandler(fileHandler)
+  logger.addHandler(fileHandler)
 
   consoleHandler = logging.StreamHandler()
   consoleHandler.setFormatter(logFormatter)
-  rootLogger.addHandler(consoleHandler)
+  logger.addHandler(consoleHandler)
 
-  logging.info(" ".join(sys.argv[1:]))
+  logger.info(" ".join(sys.argv[1:]))
 
-  logging.info("Beginning alignment procedure.")
+  logger.info("Beginning alignment procedure.")
 
   df, df_original = process_files(args)
 
-  logging.info("Finished converting files")
+  logger.info("Finished converting files")
 
-  align(df, filter_pep=args.filter_pep, mu_min=args.mu_min, rt_distortion=args.rt_distortion, prior_iters=args.prior_iters, stan_iters=args.stan_iters, stan_attempts=args.stan_attempts, stan_file=args.stan_file, print_figures=args.print_figures, output_path=args.output)
+  align(df, filter_pep=args.filter_pep, mu_min=args.mu_min, rt_distortion=args.rt_distortion, prior_iters=args.prior_iters, stan_iters=args.stan_iters, stan_attempts=args.stan_attempts, stan_file=args.stan_file, print_figures=args.print_figures, save_params=args.save_params, output_path=args.output)
 
-  #print(df)
-  #sm = StanModel_cache()
+if __name__ == "__main__":
+  main()
 
 
