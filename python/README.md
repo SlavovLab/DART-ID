@@ -4,32 +4,43 @@ RTLib Project
 Intro
 -----
 
-The RTLib code goal is to make the process as simple as possible. Run update.py, point it at the inputs, and expect an additional PEP_new column at the end. There are still some parameters that you will need to tweak manually as the default settings have not been fully generalized yet.
+The RTLib code goal is to make the process as simple as possible. Run update.sh, point it at the inputs, and expect an additional PEP_new column at the end. There are still some parameters that you will need to tweak manually as the default settings have not been fully generalized yet.
 
-# Dependencies
-
-- Python >= 3.6.4
-- numpy
-- scipy
-- matplotlib
-- pystan
-
-Preferably use the conda distribution to get numpy and scipy and everything else. The only package that does not come with the conda distribution is pystan, which can be installed with:
+# Installation
 
 ```
-conda install pystan
+# clone the git repo
+git clone https://github.com/blahoink/RTLib
+# install with pip
+cd RTLib
+pip install ./
+```
+
+If there is an update in the codebase, then you can pull updates from the server with:
+
+```
+cd RTLib
+git pull origin master
+```
+
+Then uninstall and reinstall the package
+
+```
+pip uninstall rtlib
+pip install ./
 ```
 
 # Known bugs:
 
 - I/O issues when outputting to a Google File Stream folder. Output to a local folder instead, and then drag it into Google File Stream later
-- 
 
 Files
 -----
 
 converter.py  - converts MQ files to intermediate format with only essential columns
+
 align.py      - generates initial values and runs STAN alignment
+
 update.py     - uses alignment data to update original PEP
 
 update.py has calls to both align.py and converter.py, so if you want to run the full pipeline and not just a section of it, stick with using update.py.
@@ -115,9 +126,9 @@ Example runs
 ============
 
 ```
-python rtlib/update.py /gd/SingleCell_Data/FP17/evidence.txt --type MQ -e ~/git/RTLib/pd_exclude.txt -f --save-params --filter-pep 0.5 --filter-num-exps 3 -o ~/git/RTLib/Alignments/FP17_20180511_2
+./update.sh /gd/SingleCell_Data/FP17/evidence.txt --type MQ -e ~/git/RTLib/pd_exclude.txt -f -v --save-params -o ~/git/RTLib/Alignments/FP17_20180511_2
 ```
 
 ```
-python rtlib/update.py /gd/Slavov_Lab/SingleCell_Data/SCOPE-QE-QC/SQC55_hiFDR/evidence.txt /gd/Slavov_Lab/SingleCell_Data/SCOPE-QE-QC/SQC57_hiFDR/evidence.txt /gd/Slavov_Lab/SingleCell_Data/SCOPE-QE-QC/SQC61_hiFDR/evidence.txt /gd/Slavov_Lab/SingleCell_Data/SCOPE-QE-QC/SQC65_hiFDR/evidence.txt -t MQ -e ~/git/RTLib/pd_exclude.txt -f -v --prior-iters 15 --filter-pep 0.5 --remove-exps 61A\|61B -o ~/git/RTLib/Alignments/NCE_20180514_1
+./update.sh /gd/Slavov_Lab/SingleCell_Data/SCOPE-QE-QC/SQC55_hiFDR/evidence.txt /gd/Slavov_Lab/SingleCell_Data/SCOPE-QE-QC/SQC57_hiFDR/evidence.txt /gd/Slavov_Lab/SingleCell_Data/SCOPE-QE-QC/SQC61_hiFDR/evidence.txt /gd/Slavov_Lab/SingleCell_Data/SCOPE-QE-QC/SQC65_hiFDR/evidence.txt -t MQ -e ~/git/RTLib/pd_exclude.txt -f -v --prior-iters 15 --filter-pep 0.5 --remove-exps 61A\|61B -o ~/git/RTLib/Alignments/NCE_20180514_1
 ```
