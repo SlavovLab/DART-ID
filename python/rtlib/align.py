@@ -13,7 +13,7 @@ import re
 import sys
 import time
 
-from converter import add_converter_args, convert_pd, convert_mq, process_files
+from rtlib.converter import add_converter_args, convert_pd, convert_mq, process_files
 from hashlib import md5
 from scipy.stats import norm, lognorm, laplace
 

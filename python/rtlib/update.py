@@ -9,8 +9,8 @@ import pandas as pd
 import sys
 import time
 
-from align import add_alignment_args, align
-from converter import add_converter_args, convert_pd, convert_mq, process_files
+from rtlib.align import add_alignment_args, align
+from rtlib.converter import add_converter_args, convert_pd, convert_mq, process_files
 from scipy.stats import norm, lognorm, laplace
 
 logger = logging.getLogger()

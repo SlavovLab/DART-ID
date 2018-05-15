@@ -45,4 +45,18 @@
 # 
 # python update.py /gd/SingleCell_Data/FP18/evidence.txt --type MQ -e ~/git/RTLib/pd_exclude.txt --rt-distortion 0 -f -v --prior-iters 10 --stan-iters 100000 --filter-pep 0.3 --filter-num-exps 3 -o ~/git/RTLib/Alignments/FP18_20180507_2
 # 
-# python update.py /gd/SingleCell_Data/FP17/evidence.txt --type MQ -e ~/git/RTLib/pd_exclude.txt --rt-distortion 1 -f -v --prior-iters 10 --stan-iters 100000 --filter-pep 0.5 --filter-num-exps 3 --filter-retention-length 1 -o ~/git/RTLib/Alignments/FP17_20180507_1
+# python update.py /gd/SingleCell_Data/FP17/evidence.txt --type MQ -e ~/git/RTLib/pd_exclude.txt --rt-distortion 0 -f -v --prior-iters 10 --stan-iters 100000 --filter-pep 0.5 --filter-num-exps 3 --filter-retention-length 1 -o ~/git/RTLib/Alignments/FP17_20180507_1
+# 
+# python update.py /gd/Slavov_Lab/SingleCell_Data/SCOPE-QE-QC/SQC55_hiFDR/evidence.txt /gd/Slavov_Lab/SingleCell_Data/SCOPE-QE-QC/SQC57_hiFDR/evidence.txt /gd/Slavov_Lab/SingleCell_Data/SCOPE-QE-QC/SQC61_hiFDR/evidence.txt /gd/Slavov_Lab/SingleCell_Data/SCOPE-QE-QC/SQC65_hiFDR/evidence.txt -t MQ -e ~/git/RTLib/pd_exclude.txt -f -v --rt-distortion 0 --prior-iters 10 --stan-iters 100000 --filter-pep 0.5 --filter-num-exps 3 --filter-retention-length 1 --remove-exps 55C\|55L\|61A\|61B -o ~/git/RTLib/Alignments/NCE_20180507_4
+# 
+# python update.py /gd/Slavov_Lab/SingleCell_Data/SCOPE-QE-QC/SQC55_hiFDR/evidence.txt -t MQ -e ~/git/RTLib/pd_exclude.txt -f -v --rt-distortion 0 --prior-iters 10 --stan-iters 100000 --filter-pep 0.5 --filter-num-exps 3 --filter-retention-length 1 -o ~/git/RTLib/Alignments/NCE55_20180507_1
+# 
+# python update.py /gd/Slavov_Lab/SingleCell_Data/SCOPE-QE-QC/SQC55_hiFDR/evidence.txt /gd/Slavov_Lab/SingleCell_Data/SCOPE-QE-QC/SQC57_hiFDR/evidence.txt /gd/Slavov_Lab/SingleCell_Data/SCOPE-QE-QC/SQC61_hiFDR/evidence.txt /gd/Slavov_Lab/SingleCell_Data/SCOPE-QE-QC/SQC65_hiFDR/evidence.txt -t MQ -e ~/git/RTLib/pd_exclude.txt -f -v --rt-distortion 0 --prior-iters 15 --stan-iters 100000 --filter-pep 0.5 --filter-num-exps 3 --filter-retention-length 1 --remove-exps 61A\|61B -o ~/git/RTLib/Alignments/NCE_20180508_3
+# 
+# python converter.py /gd/Slavov_Lab/SingleCell_Data/SCOPE-QE-QC/SQC55_hiFDR/evidence.txt /gd/Slavov_Lab/SingleCell_Data/SCOPE-QE-QC/SQC57_hiFDR/evidence.txt /gd/Slavov_Lab/SingleCell_Data/SCOPE-QE-QC/SQC61_hiFDR/evidence.txt /gd/Slavov_Lab/SingleCell_Data/SCOPE-QE-QC/SQC65_hiFDR/evidence.txt -t MQ -e ~/git/RTLib/pd_exclude.txt --filter-pep 0.5 --filter-num-exps 3 --filter-retention-length 1 -o ~/git/RTLib/dat/ev_nce_c.txt
+# 
+# python update.py /gd/SingleCell_Data/FP17/evidence.txt --type MQ -e ~/git/RTLib/pd_exclude.txt --rt-distortion 0 -f -v --prior-iters 10 --stan-iters 100000 --filter-pep 0.5 --filter-num-exps 3 --filter-retention-length 1 --remove-exps 17C -o ~/git/RTLib/Alignments/FP17_20180510_1
+# 
+# python rtlib/update.py /gd/SingleCell_Data/FP17/evidence.txt --type MQ -e ~/git/RTLib/pd_exclude.txt --rt-distortion 0 -f --save-params --prior-iters 10 --stan-iters 100000 --filter-pep 0.5 --filter-num-exps 3 --remove-exps 17C -p ~/git/RTLib/Alignments/FP17_20180511_1 -o ~/git/RTLib/Alignments/FP17_20180511_2
+# 
+# python rtlib/update.py /gd/Slavov_Lab/SingleCell_Data/SCOPE-QE-QC/SQC55_hiFDR/evidence.txt /gd/Slavov_Lab/SingleCell_Data/SCOPE-QE-QC/SQC57_hiFDR/evidence.txt /gd/Slavov_Lab/SingleCell_Data/SCOPE-QE-QC/SQC61_hiFDR/evidence.txt /gd/Slavov_Lab/SingleCell_Data/SCOPE-QE-QC/SQC65_hiFDR/evidence.txt -t MQ -e ~/git/RTLib/pd_exclude.txt -f -v --prior-iters 15 --stan-iters 100000 --filter-pep 0.5 --remove-exps 61A\|61B -o ~/git/RTLib/Alignments/NCE_20180514_1
