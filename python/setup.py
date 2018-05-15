@@ -13,8 +13,8 @@ setup(
   name=name,
   version="1.0.0",
   description="",
-  long_description="""hey""",
-  long_description_content_type="text/markdown",
+  #long_description="""hey""",
+  #long_description_content_type="text/markdown",
   url="github.com/asdfasdf",
   author="",
   author_email="",
@@ -41,7 +41,7 @@ setup(
     "Tracker": "",
     "Lab Page": ""
   },
-  packages=find_packages(exclude=["docs", "example"]),
+  packages=find_packages(exclude=["docs", "example", "__pycache__", ".ipynb_checkpoints"]),
   #libraries=[],
   #setup_requires=[],
   install_requires=[
@@ -51,9 +51,9 @@ setup(
     "pandas>=0.22.0",
     "matplotlib>=2.1.2"
   ],
-  tests_requires=[
-    "pytest"
-  ],
+  #test_requires=[
+  #  "pytest"
+  #],
   extras_require={
 
   },
@@ -67,9 +67,9 @@ setup(
   
   entry_points={
     "console_scripts": [
-      ("rtlib_convert", "rtlib.converter:main"),
-      ("rtlib_align",   "rtlib.align:main"),
-      ("rtlib_update",  "rtlib.update:main")
+      ("rtlib_convert=rtlib.converter:main"),
+      ("rtlib_align=rtlib.align:main"),
+      ("rtlib_update=rtlib.update:main")
     ]
   }
 

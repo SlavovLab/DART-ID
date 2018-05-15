@@ -412,7 +412,7 @@ def StanModel_cache(model_file=None, model_name=None):
 
   # Use just as you would `stan`
   code_hash = md5(model_code.encode("ascii")).hexdigest()
-  cache_fn = os.path.join(dirname, "cached_fits/cached-model-{}-{}.pkl".format(model_name, code_hash))
+  cache_fn = os.path.join(dirname, "fits/cached-model-{}-{}.pkl".format(model_name, code_hash))
 
   try:
       # load cached model from file
