@@ -196,7 +196,7 @@ def main():
   params = {}
   if args.params_folder is None:
     logger.info("Running alignment...")
-    params = align(df, filter_pep=args.filter_pep, mu_min=args.mu_min, rt_distortion=args.rt_distortion, prior_iters=args.prior_iters, stan_iters=args.stan_iters, stan_file=args.stan_file, save_params=args.save_params, print_figures=args.print_figures, output_path=args.output)
+    params = align(df, filter_pep=args.filter_pep, mu_min=args.mu_min, rt_distortion=args.rt_distortion, prior_iters=args.prior_iters, stan_iters=args.stan_iters, stan_file=args.stan_file, save_params=args.save_params, print_figures=args.print_figures, output_path=args.output, verbose=args.verbose)
   else:
     # load parameters if they are specified in the command line
     logger.info("Using provided alignment parameters. Loading params...")
@@ -252,7 +252,7 @@ def main():
   else:
     logger.info("Saving output to separate files...")
     for i, f in enumerate(args.input):
-      out_path = os.path.join(args.output, os.path.splitext(os.path.basename(f.name))[0] + args.output_suffix + ".txt")
+      out_path = os.path.join(args.output, os.path.splitext(os.path.basename(f.name))[0] + args.output_suffix + str(i) + ".txt")
       logger.info("Saving input file {} to {}".format(i, out_path))
       df_a = df_adjusted.loc[df_adjusted["input_id"] == i]
       # save to file
