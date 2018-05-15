@@ -15,12 +15,14 @@ import time
 
 from converter import add_converter_args, convert_pd, convert_mq, process_files
 from hashlib import md5
-#from scipy.stats import laplace
+from scipy.stats import norm, lognorm, laplace
 
 pd.options.mode.chained_assignment = None
 logger = logging.getLogger()
 
-def align(dfa, filter_pep=0.5, mu_min=1, rt_distortion=10, prior_iters=10, stan_iters=2e4, stan_attempts=3, stan_file=None, print_figures=False, save_params=False, output_path=None):
+dirname = os.path.dirname(__file__)
+
+def align(dfa, filter_pep=0.5, mu_min=1, rt_distortion=10, prior_iters=10, stan_iters=2e4, stan_attempts=3, stan_file=None, print_figures=False, save_params=False, output_path=None, verbose=False):
 
   # take subset of confident observations to use for alignment
   dff = dfa[-(dfa["exclude"])]
@@ -52,6 +54,8 @@ def align(dfa, filter_pep=0.5, mu_min=1, rt_distortion=10, prior_iters=10, stan_
   muij_to_exp = splt.str.get(1).map(int)
 
   logger.info("{} peptide-experiment pairs.".format(num_pep_exp_pairs))
+
+  max_rts = np.reshape(dff.groupby(["exp_id"])[["retention_time"]].max().values, (1, num_experiments))
 
   # build dictionary of data to feed to STAN
   # revert all data to primitive types to avoid problems later
@@ -289,8 +293,8 @@ def generate_figures(dff, params, muij_map, output_path):
     plt.scatter(predicted, residual, s=1, c=pep_col_code.cat.codes.values[exp_indices[muij_map]])
     plt.plot([0, 300], [0, 0], color="blue")
     plt.plot(np.repeat(exp_params["split_point"], 2), [-100, 300], color="blue", linestyle="dashed")
-    plt.plot(predicted.values[np.argsort(predicted)], laplace.ppf(0.025, loc=0, scale=predicted_sd)[np.argsort(predicted)], color="red")
-    plt.plot(predicted.values[np.argsort(predicted)], laplace.ppf(0.975, loc=0, scale=predicted_sd)[np.argsort(predicted)], color="red")
+    plt.plot(predicted.values[np.argsort(predicted)], norm.ppf(0.025, loc=0, scale=predicted_sd)[np.argsort(predicted)], color="red")
+    plt.plot(predicted.values[np.argsort(predicted)], norm.ppf(0.975, loc=0, scale=predicted_sd)[np.argsort(predicted)], color="red")
     plt.axis([predicted.min()-5, predicted.max()+5, residual.min()-5, residual.max()+5])
     cbar = plt.colorbar()
     cbar.ax.set_yticklabels(pep_col_code.cat.categories.values)
@@ -391,8 +395,9 @@ def generate_figures(dff, params, muij_map, output_path):
 
 # taken from: https://pystan.readthedocs.io/en/latest/avoiding_recompilation.html#automatically-reusing-models
 def StanModel_cache(model_file=None, model_name=None):
+
   if model_file is None:
-    model_file = "./fits/fit_RT3d.stan"
+    model_file = os.path.join(dirname, "fits/fit_RT3d.stan")
   elif type(model_file) is not str:
     model_file = model_file.name
 
@@ -407,7 +412,7 @@ def StanModel_cache(model_file=None, model_name=None):
 
   # Use just as you would `stan`
   code_hash = md5(model_code.encode("ascii")).hexdigest()
-  cache_fn = "./cached_fits/cached-model-{}-{}.pkl".format(model_name, code_hash)
+  cache_fn = os.path.join(dirname, "cached_fits/cached-model-{}-{}.pkl".format(model_name, code_hash))
 
   try:
       # load cached model from file
@@ -477,7 +482,7 @@ def main():
 
   logger.info("Finished converting files")
 
-  align(df, filter_pep=args.filter_pep, mu_min=args.mu_min, rt_distortion=args.rt_distortion, prior_iters=args.prior_iters, stan_iters=args.stan_iters, stan_attempts=args.stan_attempts, stan_file=args.stan_file, print_figures=args.print_figures, save_params=args.save_params, output_path=args.output)
+  align(df, filter_pep=args.filter_pep, mu_min=args.mu_min, rt_distortion=args.rt_distortion, prior_iters=args.prior_iters, stan_iters=args.stan_iters, stan_attempts=args.stan_attempts, stan_file=args.stan_file, print_figures=args.print_figures, save_params=args.save_params, output_path=args.output, verbose=args.verbose)
 
 if __name__ == "__main__":
   main()
