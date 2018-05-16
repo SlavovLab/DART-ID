@@ -4,7 +4,7 @@ RTLib Project
 Intro
 -----
 
-The RTLib code goal is to make the process as simple as possible. Run update.sh, point it at the inputs, and expect an additional PEP_new column at the end. There are still some parameters that you will need to tweak manually as the default settings have not been fully generalized yet.
+The RTLib code goal is to make the process as simple as possible. Run ```rtlib_update```, point it at the inputs, and expect an additional PEP_new column at the end. There are still some parameters that you will need to tweak manually as the default settings have not been fully generalized yet.
 
 # Installation
 
