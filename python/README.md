@@ -12,7 +12,7 @@ The RTLib code goal is to make the process as simple as possible. Run update.sh,
 # clone the git repo
 git clone https://github.com/blahoink/RTLib
 # install with pip
-cd RTLib
+cd RTLib/python
 pip install ./
 ```
 
