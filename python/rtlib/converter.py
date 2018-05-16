@@ -96,7 +96,7 @@ def convert_mq(df, use_unmodified_sequence=False, filter_pep=0.5, filter_retenti
 
   # see if the user even needs to filter the proteins out from the data
   # if not, don't even bother pulling out the protein data
-  if len(exclusion_list) > 0 or filter_contaminants or filter_decoys:
+  if len(exclusion_list) > 0 or not include_contaminants or not include_decoys:
 
     # grab the leading razor protein for filtering
     prots = []
