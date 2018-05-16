@@ -14,6 +14,8 @@ git clone https://github.com/blahoink/RTLib
 # install with pip
 cd RTLib/python
 pip install ./
+cd ../..
+rm -rf RTLib/python
 ```
 
 If there is an update in the codebase, then you can pull updates from the server with:
@@ -37,21 +39,21 @@ pip install ./
 Files
 -----
 
-./converter.sh  - converts MQ files to intermediate format with only essential columns
+```rtlib_convert```  - converts MQ files to intermediate format with only essential columns
 
-./align.sh      - generates initial values and runs STAN alignment
+```rtlib_align```      - generates initial values and runs STAN alignment
 
-./update.sh     - uses alignment data to update original PEP
+```rtlib_update```     - uses alignment data to update original PEP
 
 update.py has calls to both align.py and converter.py, so if you want to run the full pipeline and not just a section of it, stick with using update.py.
 
 Parameters
 ----------
 
-View parameters anytime yourself by typing "update.py -h". Also look at "testing.sh" to see some examples of past runs.
+View parameters anytime yourself by typing "rtlib_update -h". Also look at "testing.sh" to see some examples of past runs.
 
 ```
-usage: ./update.sh input [input ...]
+usage: rtlib_update input [input ...]
                  [-h] [-o OUTPUT] [-t {MQ,PD}] [-v] [--include-contaminants]
                  [--include-decoys]
                  [--filter-retention-length FILTER_RETENTION_LENGTH]
@@ -126,9 +128,9 @@ Example runs
 ============
 
 ```
-./update.sh /gd/SingleCell_Data/FP17/evidence.txt --type MQ -e ~/git/RTLib/pd_exclude.txt -f -v --save-params -o ~/git/RTLib/Alignments/FP17_20180511_2
+rtlib_update /gd/SingleCell_Data/FP17/evidence.txt --type MQ -e ~/git/RTLib/pd_exclude.txt -f -v --save-params -o ~/git/RTLib/Alignments/FP17_20180511_2
 ```
 
 ```
-./update.sh /gd/Slavov_Lab/SingleCell_Data/SCOPE-QE-QC/SQC55_hiFDR/evidence.txt /gd/Slavov_Lab/SingleCell_Data/SCOPE-QE-QC/SQC57_hiFDR/evidence.txt /gd/Slavov_Lab/SingleCell_Data/SCOPE-QE-QC/SQC61_hiFDR/evidence.txt /gd/Slavov_Lab/SingleCell_Data/SCOPE-QE-QC/SQC65_hiFDR/evidence.txt -t MQ -e ~/git/RTLib/pd_exclude.txt -f -v --prior-iters 15 --filter-pep 0.5 --remove-exps 61A\|61B -o ~/git/RTLib/Alignments/NCE_20180514_1
+rtlib_update /gd/Slavov_Lab/SingleCell_Data/SCOPE-QE-QC/SQC55_hiFDR/evidence.txt /gd/Slavov_Lab/SingleCell_Data/SCOPE-QE-QC/SQC57_hiFDR/evidence.txt /gd/Slavov_Lab/SingleCell_Data/SCOPE-QE-QC/SQC61_hiFDR/evidence.txt /gd/Slavov_Lab/SingleCell_Data/SCOPE-QE-QC/SQC65_hiFDR/evidence.txt -t MQ -e ~/git/RTLib/pd_exclude.txt -f -v --prior-iters 15 --filter-pep 0.5 --remove-exps 61A\|61B -o ~/git/RTLib/Alignments/NCE_20180514_1
 ```
