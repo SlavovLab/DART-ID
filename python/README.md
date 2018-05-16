@@ -37,11 +37,11 @@ pip install ./
 Files
 -----
 
-converter.py  - converts MQ files to intermediate format with only essential columns
+./converter.sh  - converts MQ files to intermediate format with only essential columns
 
-align.py      - generates initial values and runs STAN alignment
+./align.sh      - generates initial values and runs STAN alignment
 
-update.py     - uses alignment data to update original PEP
+./update.sh     - uses alignment data to update original PEP
 
 update.py has calls to both align.py and converter.py, so if you want to run the full pipeline and not just a section of it, stick with using update.py.
 
@@ -51,7 +51,7 @@ Parameters
 View parameters anytime yourself by typing "update.py -h". Also look at "testing.sh" to see some examples of past runs.
 
 ```
-usage: update.py input [input ...]
+usage: ./update.sh input [input ...]
                  [-h] [-o OUTPUT] [-t {MQ,PD}] [-v] [--include-contaminants]
                  [--include-decoys]
                  [--filter-retention-length FILTER_RETENTION_LENGTH]
