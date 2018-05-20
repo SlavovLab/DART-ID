@@ -16,7 +16,7 @@ from functools import reduce
 
 logger = logging.getLogger()
 
-def convert_mq(df, use_unmodified_sequence=False, filter_pep=0.5, filter_retention_length=-1, include_contaminants=False, include_decoys=False, exclusion_list=[]):
+def convert_mq(df, use_unmodified_sequence=False, filter_pep=0.5, filter_retention_length=-1, exclusion_list=[]):
   """
   Parameters
   ----------
@@ -27,7 +27,7 @@ def convert_mq(df, use_unmodified_sequence=False, filter_pep=0.5, filter_retenti
   use_unmodified_sequence: bool (Default: False)
     Use the modified peptide sequence instead of the canonical sequence.
     Assumes that TMT tags are excluded from modifications (modifications
-    are Oxidation, Methylation, etc.)
+    are Oxidation, Phosphorylation, etc.)
 
   filter_pep: float (Default: 0.5)
     Mark PSMs with PEP > filter_pep for filtering.
@@ -36,13 +36,6 @@ def convert_mq(df, use_unmodified_sequence=False, filter_pep=0.5, filter_retenti
   filter_retention_length: int (Default: -1 --> max(RT) / 60)
     Mark PSMs with retention length > filter_retention_length for filtering. 
     Set to None to ignore retention length
-
-  include_contaminants: bool (Default: Fakse)
-    Include contaminants (CON__ proteins).
-
-  include_decoys: bool (Default: False)
-    Include decoys (REV__ proteins). Don't know why this would
-    ever be set to true, but here's the option.
 
   exclusion_list: list|string (Default: [])
     Blacklist of UniProt protein IDs to mark for filtering.
@@ -94,56 +87,50 @@ def convert_mq(df, use_unmodified_sequence=False, filter_pep=0.5, filter_retenti
     exclusion_list = []
 
 
-  # see if the user even needs to filter the proteins out from the data
-  # if not, don't even bother pulling out the protein data
-  if len(exclusion_list) > 0 or not include_contaminants or not include_decoys:
+  # grab the leading razor protein for filtering
+  prots = []
+  if "leading_razor_protein" in df.columns:
+    prots = df["leading_razor_protein"]
+  elif "proteins" in df.columns:
+    # if the leading razor protein column does not exist, then take
+    # the first protein from the Proteins column
+    logger.info("No razor proteins column found. Extracting razor proteins from 'Proteins' column")
+    prots = [x.split(';')[0] if type(x) is str else "" for x in ev.Proteins]
+  else:
+    raise IOError("No protein column found. Please provide file with either \"Leading razor protein\", or \"Proteins\" as a column.")
+    return None
 
-    # grab the leading razor protein for filtering
-    prots = []
-    if "leading_razor_protein" in df.columns:
-      prots = df["leading_razor_protein"]
-    elif "proteins" in df.columns:
-      # if the leading razor protein column does not exist, then take
-      # the first protein from the Proteins column
-      logger.info("No razor proteins column found. Extracting razor proteins from 'Proteins' column")
-      prots = [x.split(';')[0] if type(x) is str else "" for x in ev.Proteins]
-    else:
-      raise IOError("No protein column found. Please provide file with either \"Leading razor protein\", or \"Proteins\" as a column.")
-      return None
+  # contaminant and decoy tags
+  # not sure if these will ever change between MaxQuant versions,
+  # but will leave them as vars if they do
+  CON_TAG = "CON*"
+  REV_TAG = "REV*"
 
-    # contaminant and decoy tags
-    # not sure if these will ever change between MaxQuant versions,
-    # but will leave them as vars if they do
-    CON_TAG = "CON*"
-    REV_TAG = "REV*"
+  # convert prots to series
+  prots = pd.Series(prots)
 
-    # convert prots to series
-    prots = pd.Series(prots)
+  # filter contaminants and decoys from the MaxQuant evidence file
+  logger.info("Filtering contaminants - with tag: {}".format(CON_TAG))
+  filter_con = prots.str.contains(CON_TAG)
+  filter_con[pd.isnull(filter_con)] = False
+  dfa["exclude"] = (dfa["exclude"] | filter_con)
 
-    # filter contaminants and decoys from the MaxQuant evidence file
-    # these should always be on
-    if not include_contaminants:
-      logger.info("Filtering contaminants - with tag: {}".format(CON_TAG))
-      filter_con = prots.str.contains(CON_TAG)
-      filter_con[pd.isnull(filter_con)] = False
-      dfa["exclude"] = (dfa["exclude"] | filter_con)
-    if not include_decoys:
-      logger.info("Filtering decoys - with tag: {}".format(REV_TAG))
-      filter_rev = prots.str.contains(REV_TAG)
-      filter_rev[pd.isnull(filter_rev)] = False
-      dfa["exclude"] = (dfa["exclude"] | filter_rev)
+  logger.info("Filtering decoys - with tag: {}".format(REV_TAG))
+  filter_rev = prots.str.contains(REV_TAG)
+  filter_rev[pd.isnull(filter_rev)] = False
+  dfa["exclude"] = (dfa["exclude"] | filter_rev)
 
-    # filter exclusion list
-    if len(exclusion_list) > 0:
-      logger.info("Filtering PSMs with proteins in exclusion list...")
-      
-      # we could only match the excluded IDs to the razor protein,
-      # but we can be more strict and match the blacklisted IDs to the entire protein
-      # string, containing all possible proteins
-      pat = reduce((lambda x, y: x + "|" + y), exclusion_list)
-      blacklist_filter = df["proteins"].str.contains(pat)
-      blacklist_filter[pd.isnull(blacklist_filter)] = False
-      dfa["exclude"] = (dfa["exclude"] | blacklist_filter)
+  # filter exclusion list
+  if len(exclusion_list) > 0:
+    logger.info("Filtering PSMs with proteins in exclusion list...")
+    
+    # we could only match the excluded IDs to the razor protein,
+    # but we can be more strict and match the blacklisted IDs to the entire protein
+    # string, containing all possible proteins
+    pat = reduce((lambda x, y: x + "|" + y), exclusion_list)
+    blacklist_filter = df["proteins"].str.contains(pat)
+    blacklist_filter[pd.isnull(blacklist_filter)] = False
+    dfa["exclude"] = (dfa["exclude"] | blacklist_filter)
 
 
   # filter for retention length, if specified
@@ -192,7 +179,7 @@ def process_files(args):
         raise IOError("Input file missing required columns. Did you forget to specify the input file type?")
         return df
     elif args.type == "MQ":
-      dfa = convert_mq(dfa, use_unmodified_sequence=args.use_unmodified_sequence, filter_retention_length=args.filter_retention_length, filter_pep=args.filter_pep, include_contaminants=args.include_contaminants, include_decoys=args.include_decoys, exclusion_list=args.exclusion_list)
+      dfa = convert_mq(dfa, use_unmodified_sequence=args.use_unmodified_sequence, filter_retention_length=args.filter_retention_length, filter_pep=args.filter_pep, exclusion_list=args.exclusion_list)
     elif args.type == "PD":
       raise NotImplementedError("ProteomeDiscoverer not supported yet.")
     else:
@@ -275,8 +262,6 @@ def add_converter_args(parser):
     Default: None (Input assumed to be already converted)
     """)
   parser.add_argument("-v", "--verbose", action="store_true", default=False)
-  parser.add_argument("--include-contaminants", action="store_true", default=False, help="Filter contaminant proteins, as marked so by the search engine. Default: False")
-  parser.add_argument("--include-decoys", action="store_true", default=False, help="Filter decoy matches. Default: False")
   parser.add_argument("--filter-retention-length", type=int, default=-1, help="Filter PSMs by retention time length (Peak width, in minutes). Default: max(RT) / 60")
   parser.add_argument("--filter-pep", type=float, default=0.5, help="Filter PSMs by PEP (Posterior Error Probability). Default: 0.5")
   parser.add_argument("--filter-num-exps", type=int, default=3, help="Filter by occurence of peptide in number of experiments. i.e., if a peptide is not observed in at least this number of experiments over the entire set, then it will be filtered out before alignment. Default: 3")
