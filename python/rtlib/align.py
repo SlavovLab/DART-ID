@@ -55,8 +55,6 @@ def align(dfa, filter_pep=0.5, mu_min=1, rt_distortion=10, prior_iters=10, stan_
 
   logger.info("{} peptide-experiment pairs.".format(num_pep_exp_pairs))
 
-  max_rts = np.reshape(dff.groupby(["exp_id"])[["retention_time"]].max().values, (1, num_experiments))
-
   # build dictionary of data to feed to STAN
   # revert all data to primitive types to avoid problems later
   # STAN code is all 1-indexed, so add 1 to all indexed forms of data

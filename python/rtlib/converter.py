@@ -162,14 +162,14 @@ def process_files(args):
   df_original = pd.DataFrame()
   df = pd.DataFrame()
   for i, f in enumerate(args.input):
-    logger.info("Reading in input file {} ...".format(f.name))
+    logger.info("Reading in input file #{} | {} ...".format(i, f.name))
     dfa = pd.read_csv(f, sep="\t", low_memory=False)
 
     # keep track of where observations came from
     dfa["input_id"] = i
     df_original = df_original.append(dfa)
 
-    logger.info("Converting " + f.name + " ...")
+    logger.info("Converting {} ({} PSMs)...".format(f.name, dfa.shape[0]))
     if args.type == None:
       logger.info("Using pre-converted input file for alignment...")
       # check if input file has the necessary columns
@@ -235,6 +235,25 @@ def process_files(args):
     exps_per_pep[np.isnan(exps_per_pep)] = 0
     df["exclude"] = (df["exclude"] | (exps_per_pep < args.filter_num_exps))
 
+  if args.filter_smear_threshold != 0:
+    # filter out "smears". even confidently identified PSMs can have bad chromatography,
+    # and in that case it is unproductive to include them into the alignment.
+    # 
+    # TODO: there might also be merit to excluding these observations from the PEP update
+    # process as well, given that the spectral PEP is below a very 
+    # conservative threshold (1% or maybe even lower)
+    logger.info("Determining RT spread of peptides within each experiment...")
+    # for each experiment-peptide pair, get the range of retention times
+    smears = df.groupby(["exp_id", "peptide_id"])["retention_time"].apply(lambda x: np.ptp(x))
+    # get the (exp_id, peptide_id) tuples for PSMs with a range above the threshold
+    max_rts = df.groupby("exp_id")["retention_time"].max().values
+    smears = smears[smears > max_rts[smears.index.to_frame()["exp_id"].values] * args.filter_smear_threshold].index.values
+
+    # map the tuples back to the original data frame, and set smears to be excluded
+    smears = pd.Series(list(zip(df["exp_id"], df["peptide_id"]))).isin(smears)
+    logger.info("Filtering {} PSMs with an intra-experiment RT spread of above max(exp_RT) / {} minutes".format(smears.sum(), args.filter_smear_threshold))
+    df["exclude"] = (df["exclude"] | (smears))
+
   # sort by peptide_id, exp_id
   df = df.sort_values(["peptide_id", "exp_id"])
 
@@ -265,6 +284,7 @@ def add_converter_args(parser):
   parser.add_argument("--filter-retention-length", type=int, default=-1, help="Filter PSMs by retention time length (Peak width, in minutes). Default: max(RT) / 60")
   parser.add_argument("--filter-pep", type=float, default=0.5, help="Filter PSMs by PEP (Posterior Error Probability). Default: 0.5")
   parser.add_argument("--filter-num-exps", type=int, default=3, help="Filter by occurence of peptide in number of experiments. i.e., if a peptide is not observed in at least this number of experiments over the entire set, then it will be filtered out before alignment. Default: 3")
+  parser.add_argument("--filter-smear-threshold", type=float, default=0.03, help="Filter out peptides that have a intra-experiment RT range of this number * max(experiment_RT). Set to 0 to skip this step.")
   parser.add_argument("-e", "--exclusion-list", type=argparse.FileType("r"), help="Path to exclusion list file - UniProt IDs separated by lines. Excluding contaminants that are missed by search engines can be crucial for alignment. If STAN is exceeding a reasonable iteration limit, or if the alignment residuals are unexpectedly large, consider filtering out proteins with peptides with inconsistent RTs.")
   parser.add_argument("--remove-exps", type=str, default=None, help="Regular expression of experiments (raw files) to remove from the data. Regular expression is case-sensitive. Default: None")
   parser.add_argument("-m", "--use-unmodified-sequence", action="store_true", default=False, help="Use unmodified sequence instead of modified peptide sequence. Default: False")
