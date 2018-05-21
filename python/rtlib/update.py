@@ -108,25 +108,33 @@ def update(dfa, params):
 
     # for PSMs for which we have alignment/update data
     exp_new = pd.DataFrame({
-        "rt_minus": exp_rt_minus.tolist(),
-        "rt_plus": exp_rt_plus.tolist(),
-        "mu": exp_f["mu"].values.tolist(),
-        "muij": exp_f["muij"].values.tolist(),
-        "sigmaij": exp_f["sigmaij"].values.tolist(),
-        "pep_new": pep_new.tolist(),
-        "id": exp_f["id"],
-        "input_id": exp_f["input_id"]
+        "rt_minus":          exp_rt_minus.tolist(),
+        "rt_plus":           exp_rt_plus.tolist(),
+        "mu":                exp_f["mu"].values.tolist(),
+        "muij":              exp_f["muij"].values.tolist(),
+        "sigmaij":           exp_f["sigmaij"].values.tolist(),
+        "pep_new":           pep_new.tolist(),
+
+        "id":                exp_f["id"],
+        "exp_id":            exp_f["exp_id"],
+        "peptide_id":        exp_f["peptide_id"],
+        "stan_peptide_id":   exp_f["stan_peptide_id"],
+        "input_id":          exp_f["input_id"]
     })
     # for PSMs without alignment/update data
     exp_new = exp_new.append(pd.DataFrame({
-        "rt_minus": np.nan,
-        "rt_plus": np.nan,
-        "mu": np.nan,
-        "muij": np.nan,
-        "sigmaij": np.nan,
-        "pep_new": np.nan,
-        "id": exp["id"][~(exp_matches)],
-        "input_id": exp["input_id"][~(exp_matches)]
+        "rt_minus":          np.nan,
+        "rt_plus":           np.nan,
+        "mu":                np.nan,
+        "muij":              np.nan,
+        "sigmaij":           np.nan,
+        "pep_new":           np.nan,
+
+        "id":                exp["id"][~(exp_matches)],
+        "exp_id":            exp["exp_id"][~(exp_matches)],
+        "peptide_id":        exp["peptide_id"][~(exp_matches)],
+        "stan_peptide_id":   np.nan,
+        "input_id":          exp["input_id"][~(exp_matches)]
     }))
     # append to master DataFrame and continue
     df_new = df_new.append(exp_new)
@@ -140,7 +148,7 @@ def update(dfa, params):
 def write_output(df, out_path, args):
   # remove diagnostic columns, unless they are specified to be kept
   if not args.add_diagnostic_cols:
-    df = df.drop(["input_exclude", "exclude", "mu", "muij", "rt_minus", "rt_plus", "sigmaij", "input_id"], axis=1)
+    df = df.drop(["input_exclude", "exclude", "mu", "muij", "rt_minus", "rt_plus", "sigmaij", "input_id", "exp_id", "peptide_id", "stan_peptide_id"], axis=1)
 
   df.to_csv(out_path, sep="\t", index=False)
 
