@@ -10,7 +10,7 @@ import sys
 import time
 
 from rtlib.align import add_alignment_args, align
-from rtlib.converter import add_converter_args, convert_pd, convert_mq, process_files
+from rtlib.converter import add_converter_args, process_files
 from rtlib.helper import load_params_from_file
 from scipy.stats import norm, lognorm, laplace
 
@@ -191,7 +191,7 @@ def main():
 
   df, df_original = process_files(args)
 
-  logger.info("Finished converting files")
+  logger.info("Finished converting files and filtering PSMs")
 
   # load params, either from a defined folder or from running the alignment
   params = {}

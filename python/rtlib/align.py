@@ -13,7 +13,7 @@ import re
 import sys
 import time
 
-from rtlib.converter import add_converter_args, convert_pd, convert_mq, process_files
+from rtlib.converter import add_converter_args, process_files
 from hashlib import md5
 from scipy.stats import norm, lognorm, laplace
 
@@ -439,7 +439,6 @@ def add_alignment_args(parser):
 
 def main():
   parser = argparse.ArgumentParser()
-  #parser.add_argument("input", help="Input file from search engine", type=str)
   parser.add_argument("input", type=argparse.FileType("r"), nargs="+", help="Input file(s) from search engine")
   parser.add_argument("-o", "--output", type=str, default="./alignment", help="Path to output data. Default: './alignment'")
 

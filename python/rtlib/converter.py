@@ -290,6 +290,7 @@ def process_files(args):
 
     dfa = convert(dfa, config, args)
 
+    dfa["input_id"] = i
     df = df.append(dfa)
 
   
@@ -421,7 +422,6 @@ def main():
   df, df_original = process_files(args)
   
   logger.info("{} / {} ({:.2%}) observations pass criteria and will be used for alignment".format(df.shape[0] - df["exclude"].sum(), df.shape[0], (df.shape[0] - df["exclude"].sum()) / df.shape[0]))
-  
   
   logger.info("Saving converted data to {} ...".format(args.output))
   df.to_csv(args.output, sep="\t", index=False)

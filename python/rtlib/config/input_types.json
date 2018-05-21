@@ -37,7 +37,7 @@
           "required_cols": ["proteins"]
         },
         "contaminant": {
-          "required_cols": ["leading_protein"],
+          "required_cols": ["proteins"],
           "tag": "CON*"
         },
         "decoy": {
@@ -69,7 +69,7 @@
           "required_cols": ["proteins"]
         },
         "contaminant": {
-          "required_cols": ["leading_protein"],
+          "required_cols": ["proteins"],
           "tag": "CON*"
         },
         "decoy": {
