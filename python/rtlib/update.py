@@ -11,6 +11,7 @@ import time
 
 from rtlib.align import add_alignment_args, align
 from rtlib.converter import add_converter_args, convert_pd, convert_mq, process_files
+from rtlib.helper import load_params_from_file
 from scipy.stats import norm, lognorm, laplace
 
 logger = logging.getLogger()
@@ -139,7 +140,7 @@ def update(dfa, params):
 def write_output(df, out_path, args):
   # remove diagnostic columns, unless they are specified to be kept
   if not args.add_diagnostic_cols:
-    df = df.drop(["exclude", "mu", "muij", "rt_minus", "rt_plus", "sigmaij", "input_id"], axis=1)
+    df = df.drop(["input_exclude", "exclude", "mu", "muij", "rt_minus", "rt_plus", "sigmaij", "input_id"], axis=1)
 
   df.to_csv(out_path, sep="\t", index=False)
 
@@ -149,10 +150,10 @@ def add_update_args(parser):
   parser.add_argument("--combined-name", type=str, default="ev_combined.txt", help="If combining inputs into one output file with --combine-output, then this is the name of that file. Default: ev_combined.txt")
   parser.add_argument("--output-suffix", type=str, default="_c", help="Suffix added to output file(s). Default: '_c'.")
   parser.add_argument("--add-diagnostic-cols", action="store_true", default=False, help="Add diagnostic columns to the output data frame. These include the canonical retention time, adjusted retention time, standard deviation of the RT for that peptide sequence, and other variables used in the bayesian update. Default: False")
+  #parser.add_argument("--save-converted-input")
 
 def main():
   parser = argparse.ArgumentParser()
-  #parser.add_argument("input", help="Input file from search engine", type=str)
   parser.add_argument("input", type=argparse.FileType("r"), nargs="+", help="Input file(s) from search engine")
   parser.add_argument("-o", "--output", type=str, default="./rt_update", help="Path to output data. Default: './rt_update'")
   
@@ -198,36 +199,26 @@ def main():
     logger.info("Running alignment...")
     params = align(df, filter_pep=args.filter_pep, mu_min=args.mu_min, rt_distortion=args.rt_distortion, prior_iters=args.prior_iters, stan_iters=args.stan_iters, stan_file=args.stan_file, save_params=args.save_params, print_figures=args.print_figures, output_path=args.output, verbose=args.verbose)
   else:
-    # load parameters if they are specified in the command line
-    logger.info("Using provided alignment parameters. Loading params...")
-    param_files = ["exp_params.txt", "pair_params.txt", "peptide_params.txt"]
-    for pf in param_files:
-      pfp = os.path.join(args.params_folder, pf)
-      if os.path.exists(pfp):
-        with open(pfp, "rb") as f:
-          try:
-            params[pf.split("_")[0]] = pd.read_csv(pfp, sep="\t")
-          except:
-            logger.error("Error loading param file")
+    params = load_params_from_file(args.params_folder)
 
   # now we have the params, run the update
   logger.info("Updating PEPs with alignment data...")
   df_new = update(df, params)
 
   # save the sparse combined input file?
-  #df_new.to_csv(os.path.join(args.output, "ev_new.txt"), sep="\t", index=False)
+  #df_new.to_csv(os.path.join(args.output, "df_converted.txt"), sep="\t", index=False)
 
   # add new columns to original DF, and remove the duplicate ID column
   logger.info("Concatenating results to original data...")
 
-  df_adjusted = pd.concat([df_original.loc[~df_original["exclude"]].reset_index(drop=True), df_new.drop(["id", "input_id"], axis=1).reset_index(drop=True)], axis=1)
+  df_adjusted = pd.concat([df_original.loc[~df_original["input_exclude"]].reset_index(drop=True), df_new.drop(["id", "input_id"], axis=1).reset_index(drop=True)], axis=1)
 
   # add rows of removed experiments (done with the --remove-exps options)
   if args.remove_exps is not None:
     # store a copy of the columns and their order for later
     df_cols = df_adjusted.columns
     # concatenate data frames
-    df_adjusted = pd.concat([df_adjusted, df_original.loc[df_original["exclude"]]], axis=0, ignore_index=True)
+    df_adjusted = pd.concat([df_adjusted, df_original.loc[df_original["input_exclude"]]], axis=0, ignore_index=True)
     # pd.concat reindexes the order of the columns, 
     # so just order it back to what it used to be
     df_adjusted = df_adjusted.reindex(df_cols, axis=1)

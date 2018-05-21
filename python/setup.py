@@ -59,7 +59,8 @@ setup(
   },
   package_data={
     "rtlib": [
-      "fits/*" # STAN fits
+      "fits/*",   # STAN fits
+      "config/*"  # configuration files
     ]
   },
   # data outside the package
