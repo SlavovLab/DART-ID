@@ -11,7 +11,8 @@ import time
 
 from rtlib.align import add_alignment_args, align
 from rtlib.converter import add_converter_args, process_files
-from rtlib.helper import load_params_from_file
+#from rtlib.helper import load_params_from_file, add_version_arg, add_config_file_arg
+from rtlib.helper import *
 from scipy.stats import norm, lognorm, laplace
 
 logger = logging.getLogger()
@@ -168,8 +169,11 @@ def main():
   add_converter_args(parser)
   add_alignment_args(parser)
   add_update_args(parser)
+  add_global_args(parser)
 
   args = parser.parse_args()
+  #args = get_args(parser)
+  #print(vars(args))
 
   # create output folder
   if args.output is None or len(args.output) < 1:
@@ -178,24 +182,7 @@ def main():
     os.makedirs(args.output)
 
   # set up logger
-  for handler in logging.root.handlers[:]:
-    logging.root.removeHandler(handler) 
-   
-  logFormatter = logging.Formatter("%(asctime)s [%(threadName)-12.12s] [%(levelname)-5.5s]  %(message)s")
-  logger = logging.getLogger()
-
-  if args.verbose: logger.setLevel(logging.DEBUG)
-  else: logger.setLevel(logging.WARNING)
-
-  fileHandler = logging.FileHandler(os.path.join(args.output, "update.log"), mode="w")
-  fileHandler.setFormatter(logFormatter)
-  logger.addHandler(fileHandler)
-
-  consoleHandler = logging.StreamHandler()
-  consoleHandler.setFormatter(logFormatter)
-  logger.addHandler(consoleHandler)
-
-  logger.info(" ".join(sys.argv[1:]))
+  logger = init_logger(args.verbose, os.path.join(args.output, "update.log"))
 
   df, df_original = process_files(args)
 

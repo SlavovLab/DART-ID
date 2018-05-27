@@ -15,7 +15,7 @@ import re
 import sys
 
 from functools import reduce
-from rtlib.helper import intersect
+from rtlib.helper import intersect, add_version_arg, add_config_file_arg
 
 logger = logging.getLogger()
 
@@ -400,6 +400,8 @@ def main():
   parser.add_argument("-o", "--output", help="Path to converted file. Default: prints to stdout")
 
   add_converter_args(parser)
+  add_version_arg(parser)
+  add_config_file_arg(parser)
 
   args = parser.parse_args()
 

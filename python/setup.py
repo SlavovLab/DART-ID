@@ -59,8 +59,10 @@ setup(
   },
   package_data={
     "rtlib": [
-      "fits/*",   # STAN fits
-      "config/*"  # configuration files
+      "fits/*",             # STAN fits
+      "config/*",           # configuration files
+      "figure_gen/*",       # figure generation scripts
+      "figure_resources/*"  # figure generation resources
     ]
   },
   # data outside the package

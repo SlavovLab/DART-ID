@@ -79,17 +79,13 @@ usage: rtlib_update input [input ...]
 
 Filters exclude PSMs from the alignment process and _do not_ remove them from the file entirely. Filtered-out PSMs will still appear in the output files, but they are not guaranteed to have an updated PEP (PEP_new)
 
---include-contaminants:  |
-
---include-decoys:        |-- Don't set these to true please
-
 --filter-retention-length: Filter out PSMs with a retention length greater than this value. Default: max(RT) / 60. For a 180-minute run, this filter is at 3 minutes.
 
 --filter-pep:              Filter out PSMs with a PEP greater than this value. Default: 0.5.
 
 --filter-num-exps:         Filter out PSMs that appear in less than this number of experiments (raw files) over the entire set. Default: 3
 
--e:                        Path to an exclusion list of UniProt IDs. PSMs belonging to any of these protein IDs will be excluded.
+-e, --exclusion-list:      Path to an exclusion list of UniProt IDs. PSMs belonging to any of these protein IDs will be excluded.
 
 --remove-exps:             Regular expression to exclude any raw files. For example, to exclude SQC_61A and SQC61B from alignment, set this to "--remove-exps 61A\|61B".
 

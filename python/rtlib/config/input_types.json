@@ -14,7 +14,8 @@
         "retention_length":  [],
         "exclude":            "exclude",
         "exp_id":             "exp_id",
-        "peptide_id":         "peptide_id"
+        "peptide_id":         "peptide_id",
+        "intensity":          []
       },
       "filters": [],
       "low_memory": true
@@ -30,7 +31,8 @@
         "pep":                "PEP",
         "leading_protein":   ["Leading razor protein", "Leading Razor Protein", "Leading.razor.protein", "Leading.Razor.Protein"],
         "proteins":           "Proteins",
-        "retention_length":  ["Retention length", "Retention Length", "Retention.length", "Retention.Length"]
+        "retention_length":  ["Retention length", "Retention Length", "Retention.length", "Retention.Length"],
+        "intensity":          "Intensity"
       },
       "filters": {
         "uniprot_exclusion": {
@@ -62,7 +64,8 @@
         "pep":                "PEP",
         "leading_protein":   ["Leading razor protein", "Leading Razor Protein", "Leading.razor.protein", "Leading.Razor.Protein"],
         "proteins":           "Proteins",
-        "retention_length":  ["Retention length", "Retention Length", "Retention.length", "Retention.Length"]
+        "retention_length":  ["Retention length", "Retention Length", "Retention.length", "Retention.Length"],
+        "intensity":         []
       },
       "filters": {
         "uniprot_exclusion": {

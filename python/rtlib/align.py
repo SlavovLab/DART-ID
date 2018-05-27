@@ -14,6 +14,7 @@ import sys
 import time
 
 from rtlib.converter import add_converter_args, process_files
+from rtlib.helper import add_version_arg, add_config_file_arg
 from hashlib import md5
 from scipy.stats import norm, lognorm, laplace
 
@@ -444,6 +445,8 @@ def main():
 
   add_converter_args(parser)
   add_alignment_args(parser)
+  add_version_arg(parser)
+  add_config_file_arg(parser)
 
   args = parser.parse_args()
 
@@ -454,30 +457,13 @@ def main():
     os.makedirs(args.output)
 
   # set up logger
-  for handler in logger.root.handlers[:]:
-    logging.root.removeHandler(handler) 
-   
-  logFormatter = logging.Formatter("%(asctime)s [%(threadName)-12.12s] [%(levelname)-5.5s]  %(message)s")
-  logger = logging.getLogger()
-
-  if args.verbose: logger.setLevel(logging.DEBUG)
-  else: logger.setLevel(logging.WARNING)
-
-  fileHandler = logging.FileHandler(os.path.join(args.output, "alignment.log"), mode="w")
-  fileHandler.setFormatter(logFormatter)
-  logger.addHandler(fileHandler)
-
-  consoleHandler = logging.StreamHandler()
-  consoleHandler.setFormatter(logFormatter)
-  logger.addHandler(consoleHandler)
-
-  logger.info(" ".join(sys.argv[1:]))
+  logger = init_logger(args.verbose, os.path.join(args.output, "align.log"))
 
   logger.info("Beginning alignment procedure.")
 
   df, df_original = process_files(args)
 
-  logger.info("Finished converting files")
+  logger.info("Finished converting files and filtering PSMs")
 
   align(df, filter_pep=args.filter_pep, mu_min=args.mu_min, rt_distortion=args.rt_distortion, prior_iters=args.prior_iters, stan_iters=args.stan_iters, stan_attempts=args.stan_attempts, stan_file=args.stan_file, print_figures=args.print_figures, save_params=args.save_params, output_path=args.output, verbose=args.verbose)
 

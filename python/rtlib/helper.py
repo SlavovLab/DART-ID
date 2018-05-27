@@ -1,8 +1,14 @@
 # coding: utf-8
 
+import argparse
+import json
 import logging
 import os
 import pandas as pd
+import pkg_resources
+import sys
+
+from rtlib.version import __version__
 
 logger = logging.getLogger()
 
@@ -19,6 +25,29 @@ def intersect(a, b):
 def union(a, b):
     """ return the union of two lists """
     return list(set(a) | set(b))
+
+def init_logger(verbose, log_file_path):
+  # set up logger
+  for handler in logging.root.handlers[:]:
+    logging.root.removeHandler(handler) 
+   
+  logFormatter = logging.Formatter("%(asctime)s [%(threadName)-12.12s] [%(levelname)-5.5s]  %(message)s")
+  logger = logging.getLogger()
+
+  if verbose: logger.setLevel(logging.DEBUG)
+  else: logger.setLevel(logging.WARNING)
+
+  fileHandler = logging.FileHandler(log_file_path, mode="w")
+  fileHandler.setFormatter(logFormatter)
+  logger.addHandler(fileHandler)
+
+  consoleHandler = logging.StreamHandler()
+  consoleHandler.setFormatter(logFormatter)
+  logger.addHandler(consoleHandler)
+
+  logger.info(" ".join(sys.argv[1:]))
+
+  return logger
 
 def create_fig_folder(output_path, fig_folder):
   figures_path = os.path.join(output_path, fig_folder)
@@ -42,3 +71,32 @@ def load_params_from_file(params_folder):
           logger.error("Error loading param file")
 
   return params
+
+def add_version_arg(parser):
+  parser.add_argument("--version", action="version", version="%(prog)s {version}".format(version=__version__), help="Display the program's version")
+
+def add_config_file_arg(parser):
+  parser.add_argument("--config-file", required=True, type=argparse.FileType('r', encoding='UTF-8'), help="Path to config file. See example/config_example.json")
+
+def add_global_args(parser):
+  add_version_arg(parser)
+  add_config_file_arg(parser)
+
+def read_default_config_file():
+  # load input file types
+  default_config = pkg_resources.resource_stream("rtlib", "/".join(("config", "default.json")))
+  default_config = json.load(default_config)
+  return default_config
+
+def read_config_file(args):
+  pass
+
+def get_args(parser):
+  args = parser.parse_args()
+
+  # check if config file exists
+  if args.config_file is not None:
+    # read default config file for comparison
+    pass
+
+  return args
