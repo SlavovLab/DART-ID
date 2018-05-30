@@ -9,7 +9,7 @@ import pandas as pd
 from rtlib.helper import *
 from scipy.stats import norm, lognorm, laplace
 
-logger = logging.getLogger()
+logger = logging.getLogger("root")
 
 def gen(df, config, params, output_path):
   figures_path = create_fig_folder(output_path, "figures")
@@ -39,15 +39,16 @@ def gen(df, config, params, output_path):
       #ax.violinplot(resi, showmedians=True, showextrema=True)
       ax.boxplot(resi, showfliers=False)
       ax.set_xticks(np.arange(1, plots_per_row + 1, 1))
-      #ax.set_ylim(np.min(dff["residual"])-5, np.max(dff["residual"])+5)
+      ax.set_xlabel("Experiment Number")
+      ax.set_ylabel("Residual RT (min)")
       
   plt.subplots_adjust(hspace=0.6, wspace=0.3)
   plt.tight_layout()
 
   # finalize and save figure
   f = plt.gcf()
-  f.text(0.5, 0, 'Experiment Number', fontsize=16, ha='center', va='center')
-  f.text(0.06, 0.5, 'Residual RT (min)', fontsize=16, ha='center', va='center', rotation='vertical')
+  #f.text(0.5, 0, 'Experiment Number', fontsize=16, ha='center', va='center')
+  #f.text(0.06, 0.5, 'Residual RT (min)', fontsize=16, ha='center', va='center', rotation='vertical')
   f.set_size_inches(7, num_rows * 2)
 
   fname = os.path.join(figures_path, "residuals_violin.png")

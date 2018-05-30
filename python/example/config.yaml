@@ -1,0 +1,186 @@
+### RTLib configuration
+### =========================
+
+verbose: true
+
+## Input
+## ==========================
+
+# List the input files here, or define them on the command line
+# when running the tool.
+input: ~
+
+# Use the modified peptide sequence instead of the peptide sequence
+# when grouping observations (PSMs) by peptide
+use_unmodified_sequence: false
+
+# The input data is loaded in with pandas, and it doesn't like
+# some columns being mostly empty. This needs to be set to false 
+# for input formats like MaxQuant
+low_memory: false
+
+# Instead of running a new STAN alignment, use a set of parameters
+# from a previous run. The folder needs to include the three files
+# outputted from a run with the "save_params" option on, and this run
+# needs to be run with the exact same filters as that previous run.
+# (exp_params.txt, peptide_params.txt, pair_params.txt)
+params_folder: ~/git/RTLib/Alignments/FP17_20180527_1
+
+## Alignment Options
+## ==========================
+
+# Number of iterations to run when generating priors
+# If the average error when generating priors is too high,
+# or prohibitive for STAN, then increase these to get more accurate priors
+prior_iters: 10
+
+# Number of iterations to run for STAN. If STAN is consistently hitting
+# its iteration limit without reaching an optima it is happy with,
+# then increase this number
+stan_iters: 20000
+
+# Sometimes STAN will error out due to bad RNG. This is the number of attempts
+# that will be made to run STAN with the same set of data and priors generated.
+stan_attempts: 3
+
+## Advanced Alignment Options
+
+# Minimum value for mu, a canonical retention time (RT) for a peptide
+mu_min: 1
+
+# Amount to distort RTs when calculating priors. If STAN is erroring out
+# because the priors are already too close to the optima, then consider
+# slowly increasing this value to give STAN more room to iterate.
+rt_distortion: 0
+
+
+## Output
+## ==========================
+
+# Folder to output to. The updated evidence file, as well as the
+# optional parameters files and figures will be deposited here
+output: ~
+
+# Print diagnostic figures, as well as an HTML file that allows
+# for the quick browing through them all
+print_figures: true
+
+# Save the parameters outputted by STAN into three text files.
+# Use the "params_folder" option in a future run to use these
+# parameters instead of running the alignment procedure again.
+save_params: true
+
+# Default behavior is to only append two columns, the new PEP
+# and the updated PEP. Set this to true to get many more columns
+# added on.
+add_diagnostic_cols: true
+
+# When providing multiple input files, default behavior is to 
+# keep the input files separate in the same way when outputting them as well.
+combine_output: true
+
+# If "combine_output" is true, then this is the name of
+# the combined output file.
+combined_output_name: ev_updated.txt
+
+# If "combine_output" is false, then this is the suffix of each of the
+# input files. For example, if one of the inputs was "evidence.txt", the
+# output would be "evidence_updated.txt"
+output_suffix: _updated
+
+## Input Type Options
+## ==========================
+
+# column names of the input file
+# as of now all input files have to be the same format
+# change these as the input file changes,
+# e.g., when a different search engine or search engine configuration is used
+col_names:
+
+  # these four columns are required. the library will not work without them
+  sequence: Sequence
+  raw_file: Raw file
+  retention_time: Retention time
+  pep: PEP
+
+  # optional columns, that would be used for filtering or figure generation
+  modified_sequence: Modified sequence
+  leading_protein: Leading razor protein
+  proteins: Proteins
+  leading_gene: ~
+  genes: ~
+  retention_length: Retention length
+  intensity: Intensity
+  exclude: ~
+  exp_id: ~
+  peptide_id: ~
+
+## Filters
+## ==========================
+
+# Filters are used to exclude certain observations (PSMs) from
+# the alignment process.
+# Remove filters from this list that you do not want to have.
+
+filters:
+  # Provide an exclusion list of UniProt IDs. Any PSM matching this
+  # list will be filtered out
+  # Either a file, with UniProt IDs separated by line breaks, can be
+  # specified with the "file" field, or
+  # a list of UniProt IDs can be provided in the "list" field
+  - name: uniprot_exclusion
+    file: ~/git/RTLib/pd_exclude.txt
+    list: ~
+
+  # Filter out contaminants as marked by the search engine
+  # The "tag" option is the pattern used to filter out PSMs
+  - name: contaminant
+    tag: CON__
+
+  # Filter out decoys as marked by the search engine
+  # The "tag" option is the pattern used to filter out PSMs
+  - name: decoy
+    tag: REV__
+
+  # Filter out PSMs by the retention length, which is defined
+  # by some search engines as the time at which this spectra is first
+  # observed, to the time this spectra is last observed
+  # 
+  # If "dynamic" is set to true, then the threshold is a fraction of
+  # the maximum RT for that raw file (i.e., the run-time). A value of 0.01
+  # denotes that the threshold will be 1% of the total run-time of the experiment.
+  #- name: retention_length
+  #  dynamic: true
+  #  value: 0.01667
+
+  # Filter out PSMs by PEP. The alignment model is built to accomodate for
+  # low-confidence PSMs, but a PEP filter of above 0.5 is not recommended.
+  - name: pep
+    value: 0.5
+
+  # Filter out PSMs by their RT ranges in each experiment. This behavior is
+  # similar but not exactly the same as the "retention_length" filter.
+  # 
+  # If "dynamic" is set to true, then the threshold is a fraction of
+  # the maximum RT for that raw file (i.e., the run-time). A value of 0.01
+  # denotes that the threshold will be 1% of the total run-time of the experiment.
+  - name: smears
+    dynamic: true
+    value: 0.03333
+
+  # Filter out PSMs by the number of raw files the peptide has been observed in.
+  # The alignment model will still work if the "value" is set to 1, but the
+  # alignment process might take longer and have higher residuals than if these
+  # observations were just filtered out.
+  # 
+  # NOTE: please put this last in the config file, as this step is designed
+  #       to be run last
+  - name: num_exps
+    value: 3
+
+
+# Filter out entire raw files, especially if they are of a different run-time,
+# or if the LC for that experiment was problematic. The "expr" field is a regular
+# expression that will be checked against all raw files in the input.
+exclude_exps: ~
+

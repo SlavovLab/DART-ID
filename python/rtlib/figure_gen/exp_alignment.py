@@ -7,9 +7,9 @@ import numpy as np
 import pandas as pd
 
 from rtlib.helper import *
-from scipy.stats import norm, lognorm, laplace
+from scipy.stats import norm, lognorm
 
-logger = logging.getLogger()
+logger = logging.getLogger("root")
 
 def gen(df, config, params, output_path):
   figures_path = create_fig_folder(output_path, "figures")

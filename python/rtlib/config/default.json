@@ -1,7 +1,0 @@
-{
-  "filter_retention_length": -1,
-  "filter_pep": 0.5,
-  "filter_num_exps": 3,
-  "exclusion_list": null,
-  "remove_exps": null
-}

@@ -9,7 +9,7 @@ import pandas as pd
 from rtlib.helper import *
 from scipy.stats import norm, lognorm, laplace, gaussian_kde
 
-logger = logging.getLogger()
+logger = logging.getLogger("root")
 
 def gen(df, config, params, output_path):
   figures_path = create_fig_folder(output_path, "figures")
@@ -94,7 +94,17 @@ def gen(df, config, params, output_path):
 
   # MS1 Intensity CV Validation
   prots = df[col_names["leading_protein"]]
-  prots = prots.loc[(~prots.str.contains(config["filters"]["contaminant"]["tag"])) & (~prots.str.contains(config["filters"]["decoy"]["tag"]))]
+
+  # get the contaminant and decoy filter tags, if they exist
+  filter_con = next((f for f in config["filters"] if f["name"] == "contaminant"))
+  if filter_con is not None: filter_con = filter_con["tag"]
+  else:                      filter_con = "!"
+  filter_rev = next((f for f in config["filters"] if f["name"] == "decoy"))
+  if filter_rev is not None: filter_rev = filter_rev["tag"]
+  else:                      filter_rev = "!"
+
+  prots = prots.loc[(~prots.str.contains(filter_con)) & 
+                    (~prots.str.contains(filter_rev))]
   prots.reset_index(drop=True)
 
   prot_list = prots.value_counts()
@@ -122,8 +132,8 @@ def gen(df, config, params, output_path):
       
       dfa = df.loc[(~pd.isnull(df[col_names["intensity"]])) & 
                    (df[col_names["pep"]] < pep_thresh) &
-                   (~df[col_names["leading_protein"]].str.contains(config["filters"]["contaminant"]["tag"])) & 
-                   (~df[col_names["leading_protein"]].str.contains(config["filters"]["decoy"]["tag"]))
+                   (~df[col_names["leading_protein"]].str.contains(filter_con)) & 
+                   (~df[col_names["leading_protein"]].str.contains(filter_rev))
                   ].sample(n=j)
       cvs[i][2] = np.std(dfa[col_names["intensity"]]) / np.mean(dfa[col_names["intensity"]])
       n_cvs[i][2] = dfa.shape[0]
@@ -134,7 +144,7 @@ def gen(df, config, params, output_path):
   cvs = cvs[~na_rows]
   n_cvs = n_cvs[~na_rows]
 
-  x = np.linspace(0, 5, 100)
+  x = np.linspace(0, 7.5, 1000)
   cvs_density = gaussian_kde(cvs[:,0])
   new_cvs_density = gaussian_kde(cvs[:,1])
   null_cvs_density = gaussian_kde(cvs[:,2])

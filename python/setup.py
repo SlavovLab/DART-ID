@@ -45,6 +45,7 @@ setup(
   #libraries=[],
   #setup_requires=[],
   install_requires=[
+    "pyyaml>=3.12",
     "pystan>=2.17.1.0",
     "numpy>=1.14.3",
     "scipy>=1.0.0",
@@ -60,7 +61,6 @@ setup(
   package_data={
     "rtlib": [
       "fits/*",             # STAN fits
-      "config/*",           # configuration files
       "figure_gen/*",       # figure generation scripts
       "figure_resources/*"  # figure generation resources
     ]
@@ -72,7 +72,8 @@ setup(
     "console_scripts": [
       ("rtlib_convert=rtlib.converter:main"),
       ("rtlib_align=rtlib.align:main"),
-      ("rtlib_update=rtlib.update:main")
+      ("rtlib_update=rtlib.update:main"),
+      ("rtlib_fiures=rtlib.figures:main")
     ]
   }
 

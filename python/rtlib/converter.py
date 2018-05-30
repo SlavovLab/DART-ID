@@ -5,7 +5,6 @@
 # for alignment and update
 
 import argparse
-import json
 import logging
 import numpy as np
 import os
@@ -13,219 +12,362 @@ import pandas as pd
 import pkg_resources
 import re
 import sys
+import yaml
 
 from functools import reduce
-from rtlib.helper import intersect, add_version_arg, add_config_file_arg
+from rtlib.helper import *
 
-logger = logging.getLogger()
+logger = logging.getLogger("root")
 
-# all filter functions take in the df, dfa, config object, and command line args
+# all filter funcs take in the df_original, df, config object, and the filter object
 # as inputs, and output the exclude vector (True/False), where True means
 # to exclude that particular row
 
-def filter_uniprot_exclusion_list(df, dfa, config, args):
+def filter_uniprot_exclusion_list(df_original, df, config, _filter):
   """
-  Filter proteins from exclusion list
+  Filter proteins from exclusion list using UniProt IDs
   """
-  prots_col = "proteins"
-  # if proteins column is not present, then use the leading protein instead
-  if "proteins" not in dfa.columns:
-    prots_col = "leading_protein"
 
-  exclusion_list = args.exclusion_list
+  exclusion_list = []
 
   # parse exclusion list
   # if exclusion_list param is a path, then load the IDs from that path
-  if exclusion_list is not None:
-    # account for being provided an IO object
-    if type(exclusion_list) is not str:
-      exclusion_list = exclusion_list.name
+  if "file" in _filter and _filter["file"] is not None:
     # load UniProt IDs from file line-by-line
-    logger.info("Loading UniProt IDs from exclusion list {} ...".format(exclusion_list))
-    exclusion_list = [line.rstrip('\n') for line in open(exclusion_list)]
-    logger.info("{} proteins loaded from exclusion list.".format(len(exclusion_list)))
+    # first expand user or any vars
+    _filter["file"] = os.path.expanduser(_filter["file"])
+    _filter["file"] = os.path.expandvars(_filter["file"])
+
+    # open the exclusion list file and read in the UniProt IDs, line by line
+    try:
+      with open(_filter["file"], "r") as f:
+        logger.info("Loading UniProt IDs from exclusion list file {} ...".format(_filter["file"]))
+        exclusion_list = [line.rstrip('\n') for line in f]
+        logger.info("Loaded {} proteins from exclusion list.".format(len(exclusion_list)))
+    except EnvironmentError:
+      logger.warning("Exclusion list file {} not found. Skipping UniProt ID exclusion list filter.".format(_filter["file"]))
+      return None
+
+  elif "list" in _filter and len(_filter["list"]) > 0:
+    # load UniProt IDs from the configuration file
+    exclusion_list = _filter["list"]
+    logger.info("Loading {} UniProt IDs from exclusion list as defined in config file".format(len(exclusion_list)))
   else:
-    exclusion_list = []
+    logger.warning("No exclusion list file or list of UniProt IDs provided. Skipping UniProt ID exclusion list filter.")
+    return None
 
   # filter exclusion list
-  if len(exclusion_list) > 0:    
+  if len(exclusion_list) > 0:
+    logger.info("UniProt IDs from exclusion list: {}".format(exclusion_list))
+
     # we could only match the excluded IDs to the razor protein,
     # but we can be more strict and match the blacklisted IDs to the entire protein
     # string, containing all possible proteins
     pat = reduce((lambda x, y: x + "|" + y), exclusion_list)
-    blacklist_filter = dfa["proteins"].str.contains(pat)
+    blacklist_filter = df["proteins"].str.contains(pat)
     blacklist_filter[pd.isnull(blacklist_filter)] = False
 
     logger.info("Filtering out {} PSMs from the exclusion list".format(np.sum(blacklist_filter)))
     return blacklist_filter
   else:
-    logger.warning("Exclusion list empty or has incorrect format. Please list UniProt IDs separated by line breaks. Skipping exclusion list filter...")
+    logger.warning("Exclusion list found and loaded, but no UniProt IDs found. Check the format of the file, or the list in the config file. Skipping UniProt ID exclusion list filter.")
     return None
 
-def filter_contaminant(df, dfa, config, args):
+def filter_contaminant(df_original, df, config, _filter):
   """
   Filter contaminants, as marked by the search engine
   Looking for a contaminant tag in the leading_protein column
   """
-  CON_TAG = config["filters"]["contaminant"]["tag"]
-  filter_con = dfa["proteins"].str.contains(CON_TAG)
+
+  # load the tag in from the config file
+  CON_TAG = _filter["tag"]
+  # search for the tag in the "proteins" column
+  filter_con = df["proteins"].str.contains(CON_TAG)
   filter_con[pd.isnull(filter_con)] = False
 
   logger.info("Filtering out {} PSMs as contaminants with tag \"{}\"".format(np.sum(filter_con), CON_TAG))
   return filter_con
 
-def filter_decoy(df, dfa, config, args):
+def filter_decoy(df_original, df, config, _filter):
   """
   Filter decoys, as marked by the search engine
   Looking for a decoy tag in the leading_protein column
   """
-  REV_TAG = config["filters"]["decoy"]["tag"]
-  filter_rev = dfa["leading_protein"].str.contains(REV_TAG)
+
+  # load the tag in from the config file
+  REV_TAG = _filter["tag"]
+  # search for the tag in the "leading protein" column
+  filter_rev = df["leading_protein"].str.contains(REV_TAG)
   filter_rev[pd.isnull(filter_rev)] = False
 
   logger.info("Filtering out {} PSMs as decoys with tag \"{}\"".format(np.sum(filter_rev), REV_TAG))
   return filter_rev
 
-def filter_retention_length(df, dfa, config, args):
+def filter_retention_length(df_original, df, config, _filter):
   """
   Filter by retention length, which is a measure of the peak width
   during chromatography.
   """
-  filter_retention_length = args.filter_retention_length
 
-  if filter_retention_length is None or filter_retention_length == 0:
-    logger.info("Retention length filter not defined. Skipping retention length filter...")
+  # input checks
+  if "value" not in _filter or _filter["value"] is None:
+    logger.warning("No value provided to the retention_length filter. Skipping this filter.")
     return None
-
-  if type(filter_retention_length) is not float or filter_retention_length < -1 or filter_retention_length > np.max(dfa["retention_time"]):
-    logger.warning("Retention length filter {} is not defined or incorrectly defined. Please provide a decimal number between 0.0 and max(RT). If set to 0, then this filter will be skipped. If set to -1, then this filter will be set to its default, max(RT) / 60. Skipping retention length filter...".format(filter_retention_length))
+  if "dynamic" not in _filter or type(_filter["dynamic"]) is not bool:
+    logger.warning("Incorrect value provided to the \"dynamic\" field of the retention_length filter. Please provide a bool, either true or false. Skipping this filter.")
     return None
+  
+  if _filter["dynamic"]:
+    # use the dynamic filter, where the value is a proportion
+    # of the max RT (the run-time) of that raw file
+    
+    # only allow values between 0 and 1 for the dynamic filter
+    if _filter["value"] > 1 or _filter["value"] <= 0:
+      logger.warning("Dynamic retention_length filter {} is above 1 or below 0. Please provide a number between 0 and 1, which is the fraction of the max RT for each experiment. e.g., 0.01 means that 1%% of the max RT will be used as the retention_length threshold.".format(_filter["value"]))
+      return None
 
-  # default is -1, which means that we will set it to max(RT) / 60
-  if filter_retention_length == -1.0:
-    filter_retention_length = np.max(dfa["retention_time"]) / 60
+    logger.info("Using dynamic retention length of {} * run-time (max RT) for each experiment".format(_filter["value"]))
 
-  filter_rtl = (df[config["col_names"]["retention_length"]] > filter_retention_length)
+    # get the max RT for each raw file, reindex to the same dimension as the
+    # retention_length column, and then multiply by the filter value
+    max_rts = df.groupby("exp_id")["retention_time"].max().values
+    filter_rtl = max_rts[df["exp_id"]] * _filter["value"]
 
-  logger.info("Filtering out {} PSMs with retention length greater than {:.2f}".format(np.sum(filter_rtl), filter_retention_length))
+    filter_rtl = (df["retention_length"] > filter_rtl)
+
+  else:
+    # use a constant filter for the retention length
+    logger.info("Using constant retention length (in RT) of {} for all raw files.".format(_filter["value"]))
+
+    # only allow values between 0 and max(RT)
+    if _filter["value"] <= 0 or _filter["value"] > np.max(df["retention_time"]):
+      logger.warning("retention_length filter {} is not defined or incorrectly defined. Please provide a decimal number between 0.0 and max(RT).".format(_filter["value"]))
+      return None
+    
+    filter_rtl = (df["retention_length"] > _filter["value"])
+
+  if _filter["dynamic"]:
+    logger.info("Filtering out {} PSMs with retention length greater than {:.2f} * max(exp_RT) of each raw file.".format(np.sum(filter_rtl), _filter["value"]))
+  else:
+    logger.info("Filtering out {} PSMs with retention length greater than {:.2f}".format(np.sum(filter_rtl), _filter["value"]))
   return filter_rtl
 
-def filter_pep(df, dfa, config, args):
+def filter_pep(df_original, df, config, _filter):
   """
   Filter by PEP (Posterior Error Probability), 
   measured from spectra and a search engine
   """
-  filter_pep = args.filter_pep
 
-  if filter_pep is None or filter_pep == -1:
-    logger.info("PEP filter not defined. Skipping PEP filter...")
+  # input checking
+  if "value" not in _filter or _filter["value"] is None:
+    logger.warning("PEP filter not defined. Skipping PEP filter...")
     return None
 
-  if type(filter_pep) is not float or filter_pep <= 0 or filter_pep > 1:
-    logger.warning("PEP filter {} is not defined or incorrectly defined. Please provide a decimal number between 0.0 and 1.0. Skipping PEP filter...".format(filter_pep))
+  # only allow values between 0 and 1
+  if _filter["value"] <= 0 or _filter["value"] > 1:
+    logger.warning("PEP filter {} is not defined or incorrectly defined. Please provide a decimal number between 0.0 and 1.0. Skipping PEP filter...".format(_filter["value"]))
     return None
 
-  filter_pep = (dfa["pep"] > args.filter_pep)
+  filter_pep = (df["pep"] > _filter["value"])
 
-  logger.info("Filtering out {} PSMs with PEP greater than {:.2f}".format(np.sum(filter_pep), args.filter_pep))
+  logger.info("Filtering out {} PSMs with PEP greater than {:.2f}".format(np.sum(filter_pep), _filter["value"]))
   return filter_pep
 
+def filter_num_exps(df_original, df, config, _filter):
+  """
+  Filter for occurence of PSM in number of experiments
+  i.e., filter out all PSMs of peptide, if that peptide has only been 
+  observed in less than n experiments
+  """
 
+  # input checking
+  if "value" not in _filter or _filter["value"] is None or _filter["value"] < 1:
+    logger.warning("Incorrect value provided to the filter for the number of raw files that a peptide must be observed in. Please provide a value greater than or equal to 1. Skipping this filter.")
+    return None
+  if _filter["value"] == 1:
+    logger.warning("Filter for number of raw files that a peptide must be observed in is set to 1. The alignment will proceed but this may result in non-informative canonical RTs and high residuals. It is recommended that this parameter is at least 3.")
+
+  # only want to do this operation on PSMs that aren't already marked to be filtered out
+  # first, take subset on remaining PSMs, then count number 
+  # of unique experiments for each of them
+  exps_per_pep = df[-(df["exclude"])].groupby("peptide_id")["exp_id"].unique().apply((lambda x: len(x)))
+  # map values to DataFrame. peptides without any value will get NaN,
+  # which will then be assigned to 0.
+  exps_per_pep = df["peptide_id"].map(exps_per_pep)
+  exps_per_pep[np.isnan(exps_per_pep)] = 0
+
+  filter_n_exps = (exps_per_pep < _filter["value"])
+
+  logger.info("Filtering out {} PSMs that have less than {} occurrences in different experiments.".format(filter_n_exps.sum(), _filter["value"]))
+  return filter_n_exps
+
+def filter_smears(df_original, df, config, _filter):
+  """
+  Filter out "smears". even confidently identified PSMs can have bad chromatography,
+  and in that case it is unproductive to include them into the alignment.
+  In theory, this should be made redundant by the retention length filter, but
+  some PSMs still slip through the cracks of that, possibly because the search engine
+  cannot adequately track the elution peak?
+  """
+
+  # input checking
+  if "value" not in _filter or _filter["value"] is None:
+    logger.warning("No value provided to the smears filter. Skipping this filter.")
+    return None
+  if "dynamic" not in _filter or type(_filter["dynamic"]) is not bool:
+    logger.warning("Incorrect value provided to the \"dynamic\" field of the smears filter. Please provide a bool, either true or false. Skipping this filter.")
+    return None
+
+  # TODO: there might also be merit to excluding these observations from the PEP update
+  # process as well, given that the spectral PEP is below a very 
+  # conservative threshold (1% or maybe even lower)
+  logger.info("Determining RT spread of peptides within each experiment...")
+  # for each experiment-peptide pair, get the range of retention times
+  # this is the step that could take a long time
+  # TODO: optimize this?
+  smears = df.groupby(["exp_id", "peptide_id"])["retention_time"].apply(np.ptp)
+  
+  if _filter["dynamic"]:
+    # use the dynamic filter, where the value is a proportion
+    # of the max RT (the run-time) of that raw file
+    
+    if _filter["value"] > 1 or _filter["value"] <= 0:
+      logger.warning("Dynamic smear filter {} is above 1 or below 0. Please provide a number between 0 and 1, which is the fraction of the max RT for each experiment. e.g., 0.01 means that 1%% of the max RT will be used as the smear threshold.".format(_filter["value"]))
+      return None
+
+    logger.info("Using dynamic smear length (in RT) of {} * run-time (max RT) for each experiment".format(_filter["value"]))
+
+    max_rts = df.groupby("exp_id")["retention_time"].max().values
+
+    # get the (exp_id, peptide_id) tuples for PSMs with a range above the threshold
+    smears = smears[smears > max_rts[smears.index.to_frame()["exp_id"].values] * _filter["value"]].index.values
+
+  else:
+    # use a constant filter for the retention length
+    logger.info("Using constant smear length (in RT) of {} for all raw files.".format(_filter["value"]))
+
+    if _filter["value"] <= 0:
+      logger.warning("smear filter {} is not defined or incorrectly defined. Please provide a decimal number between 0.0 and max(RT).".format(filter_retention_length))
+      return None
+
+    # get the (exp_id, peptide_id) tuples for PSMs with a range above the threshold
+    smears = smears[smears > _filter["value"]].index.values
+  
+  # map the tuples back to the original data frame, and set smears to be excluded
+  smears = pd.Series(list(zip(df["exp_id"], df["peptide_id"]))).isin(smears)
+
+  if _filter["dynamic"]:
+    logger.info("Filtering out {} PSMs with an intra-experiment RT spread greater than {:.2f} * max(exp_RT) for each raw file.".format(smears.sum(), _filter["value"]))
+  else:
+    logger.info("Filtering out {} PSMs with an intra-experiment RT spread greater than {:.2f}".format(smears.sum(), _filter["value"]))
+
+  return smears
+
+# dictionary of all filter functions
 filter_funcs = {
   "uniprot_exclusion":  filter_uniprot_exclusion_list,
   "contaminant":        filter_contaminant,
   "decoy":              filter_decoy,
   "retention_length":   filter_retention_length,
-  "pep":                filter_pep
+  "pep":                filter_pep,
+  "num_exps":           filter_num_exps,
+  "smears":             filter_smears
+}
+
+# columns required for each filter to run
+# will skip the filter if this column does not exist in the input file
+required_cols = {
+  "uniprot_exclusion":  ["proteins"],
+  "contaminant":        ["proteins"],
+  "decoy":              ["leading_protein"],
+  "retention_length":   ["retention_length"],
+  "pep":                [],
+  "num_exps":           [],
+  "smears":             []
 }
 
 
-def convert(df, config, args):
-
-  # first load the required sequence/modified sequence, raw file, retention time,
-  # and pep column into a new dataframe, dfa
-  col_names = config["col_names"]
-
+def convert(df, config):
   # use canonical sequence, or modified sequence?
   seq_column = "sequence"
   # make sure the modified sequence column exists as well
-  if not args.use_unmodified_sequence:
-    if type(col_names["modified_sequence"]) is str:
+  if not config["use_unmodified_sequence"]:
+    if type(config["col_names"]["modified_sequence"]) is str:
       seq_column = "modified_sequence"
     else:
-      raise ValueError("Modified Sequence selected but either input file type does not support modified sequences, or the input file type is missing the modified sequence column.")
+      raise Exception("Modified Sequence selected but either input file type does not support modified sequences, or the input file type is missing the modified sequence column.")
   else:
     logger.info("Using unmodified peptide sequence instead of modified peptide sequence")
 
-  # get the four required columns from the input config, and load into dfa
-  cols = [col_names[seq_column], col_names["raw_file"], col_names["retention_time"], col_names["pep"]]
-  dfa = df[cols]
-  # rename columns
-  dfa = dfa.rename(columns={dfa.columns[0]:"sequence", dfa.columns[1]:"raw_file", dfa.columns[2]:"retention_time", dfa.columns[3]:"pep"})
-
-  ## Begin Filtering ----------
-  
-  # by default, exclude nothing. we'll use binary ORs (|) to
-  # gradually add more and more observations to this exclude blacklist
-  exclude = np.repeat(False, df.shape[0])
-
-  # load the filtering functions specified by the input config
-  filters = list(config["filters"].keys())
-
-  # each filter has a specified required column from the dataframe
-  # make sure these columns exist before proceeding
-  for f in filters:
-    f_obj = config["filters"][f]
-    # the required_cols options is allowed to be empty or non-existent
-    if "required_cols" not in f_obj or (type(f_obj["required_cols"]) is list and len(f_obj["required_cols"]) == 0):
+  # load the sequence column first
+  cols = [config["col_names"][seq_column]]
+  col_names = ["sequence"]
+  # loop thru all columns listed in the config file
+  for col in list(config["col_names"].keys()):
+    # don't add this column if its the sequence column, or if
+    # it's not specified
+    if col in ["sequence", "modified_sequence"]: continue
+    if config["col_names"][col] is None: 
+      logger.info("Column \"{}\" is left empty in the config file. Skipping...".format(col))
       continue
-    for i in f_obj["required_cols"]:
-      if col_names[i] not in df.columns:
-        raise ValueError("Filter {} required a column {}, but this was not found in the input dataframe.".format(f, i))
 
-  # for some filters, we're going to need the leading protein or protein column
-  # if so, then pre-emptively load the protein into df. we'll remove it later
-  # after the filtering processes
-  filters_with_proteins = ["uniprot_exclusion", "contaminant", "decoy"]
-  if len(intersect(filters, filters_with_proteins)) > 0:
-    # grab the leading razor protein
-    if type(col_names["leading_protein"]) is str:
-      dfa["leading_protein"] = df[col_names["leading_protein"]]
-    # grab all proteins
-    if type(col_names["proteins"]) is str:
-      dfa["proteins"] = df[col_names["proteins"]]
-  
-  # run all the filters specified by the list in the input config file
-  # all filter functions are passed df, dfa, the input config, and command-line args
-  # after each filter, append it onto the exclusion master list with a bitwise OR
-  # if the filter function returns None, then just ignore it.
-  for f in filters:
-    e = filter_funcs[f](df, dfa, config, args)
-    if e is not None:
-      exclude = (exclude | e)
+    # check if the column specified in the config file exists in the df or not
+    if config["col_names"][col] not in df.columns:
+      # this is probably grounds to kill the program
+      raise Exception("Column {} of value {} not found in the input file. Please check that this column exists, or leave the field for {} empty in the config file.".format(col, config["col_names"][col], col))
 
-  dfa["exclude"] = exclude
+    # keep track of the column and the column name
+    cols.append(config["col_names"][col])
+    col_names.append(col)
+
+  # take the subset of the input file, and also rename the columns
+  dfa = df[cols]
+  dfa.columns = col_names
 
   return dfa
 
+def filter_psms(df_original, df, config):
+  logger.info("Filtering PSMs...")
 
-def process_files(args):
+  # load the filtering functions specified by the input config
+  filters = config["filters"]
 
-  # load input file types
-  input_types = pkg_resources.resource_stream("rtlib", "/".join(("config", "input_types.json")))
-  input_types = json.load(input_types)["input_types"]
-  
-  # get the input config of the specified file type
-  config = input_types[args.type]
-  logger.info("Parsing input files as the output from {}".format(config["name"]))
+  # each filter has a specified required column from the dataframe
+  # make sure these columns exist before proceeding
+  for i, f in enumerate(filters):
+    # for each required column in the filter, check if it exists
+    for j in required_cols[f["name"]]:
+      if j not in df.columns:
+        raise ValueError("Filter {} required a column {}, but this was not found in the input dataframe.".format(f["name"], j))
+
+  # by default, exclude nothing. we'll use binary ORs (|) to
+  # gradually add more and more observations to this exclude blacklist
+  df["exclude"] = np.repeat(False, df.shape[0])
+
+  # run all the filters specified by the list in the input config file
+  # all filter functions are passed df_original, df, and the run configuration
+  # after each filter, append it onto the exclusion master list with a bitwise OR
+  # if the filter function returns None, then just ignore it.
+  for i, f in enumerate(filters):
+    e = filter_funcs[f["name"]](df_original, df, config, f)
+    if e is not None:
+      df["exclude"] = (df["exclude"] | e)
+
+  return df, df_original
+
+def process_files(config):
 
   # create our output data frames
   df_original = pd.DataFrame()
   df = pd.DataFrame()
 
   # iterate through each input file provided.
-  for i, f in enumerate(args.input):
-    logger.info("Reading in input file #{} | {} ...".format(i, f.name))
+  for i, f in enumerate(config["input"]):
+    # first expand user or any vars
+    f = os.path.expanduser(f)
+    f = os.path.expandvars(f)
+
+    logger.info("Reading in input file #{} | {} ...".format(i, f))
 
     # load the input file with pandas
     # 
@@ -244,56 +386,16 @@ def process_files(args):
     # the new columns back onto it later.
     df_original = df_original.append(dfa)
 
-    # check whether the columns specified in the input types configuration
-    # are present in the loaded dataframe
-    col_names = config["col_names"]
-    for j in list(col_names.keys()):
-      col = col_names[j]
+    logger.info("Converting {} ({} PSMs)...".format(f, dfa.shape[0]))
 
-      # prep our not found error
-      not_found_error = ValueError("Column \"{}\" of column type \"{}\" not present in input file of type \"{}\". Please check that the input file is of the specified type. If column names are still not matching up, contact the package author.".format(col, j, config["name"]))
+    # convert - takes subset of columns and renames them
+    dfa = convert(dfa, config)
 
-      # each column can either be a:
-      # - string
-      # - list of strings
-      # - empty list
-      if type(col) is str:
-        # if the column name is a string, then there is only one possible
-        # column name in the dataframe for this column.
-        if col not in dfa.columns:
-          raise not_found_error
-
-      elif type(col) is list and len(col) >  0:
-        # if the column name is a list of strings, then check each one
-        # if one is found, then overwrite the config dict's col_name list
-        # with the found string
-        # not going to test if two or more match here. the first one will 
-        # be taken and that's it
-        found = False
-        for col_ in col:
-          if col_ in dfa.columns:
-            found = True
-            config["col_names"][j] = col_
-        if not found:
-          raise not_found_error
-
-      elif type(col) is list and len(col) == 0:
-        # if the column name is an empty list, then
-        # it doesn't exist in this input type. skip...
-        pass
-      
-      else:
-        # there's something wrong with the input types config file
-        raise ValueError("Unknown column configuration in input_types.json. Please contact the package author.")
-
-    logger.info("Converting {} ({} PSMs)...".format(f.name, dfa.shape[0]))
-
-    dfa = convert(dfa, config, args)
-
+    # need to reset the input_id after the conversion process
     dfa["input_id"] = i
+    # append to master dataframe
     df = df.append(dfa)
 
-  
   # create a unique ID for each PSM to help with stiching the final result together
   # after all of our operations
   df["id"] = range(0, df.shape[0])
@@ -302,19 +404,28 @@ def process_files(args):
   # remove experiments from blacklist
   # by default, exclude nothing from the original experiment
   df_original["input_exclude"] = np.repeat(False, df_original.shape[0])
-  if args.remove_exps is not None and len(args.remove_exps) > 0:
-    exclude_exps = list(filter(lambda x: re.search(r""+args.remove_exps+"", x), df["raw_file"].unique()))
-    logger.info("Filtering out {} observations matching \"{}\"".format(np.sum(df["raw_file"].isin(exclude_exps)), args.remove_exps))
+  if "exclude_exps" in config and config["exclude_exps"] is not None:
+    if len(config["exclude_exps"]) <= 0:
+      logger.warning("Experiment exclusion by raw file name provided, but expression is defined incorrectly. Skipping this filter.")
+    else:
+      # see if any raw file names match the user-provided expression
+      exclude_exps = list(filter(lambda x: re.search(r"" + config["exclude_exps"] + "", x), df["raw_file"].unique()))
 
-    # remove excluded rows from the sparse dataframe,
-    # but keep them in the original data frame, so that we can stitch together
-    # the final output later
-    exclude_exps = df["raw_file"].isin(exclude_exps).values
-    df = df[~exclude_exps]
+      logger.info("Filtering out {} observations matching \"{}\"".format(np.sum(df["raw_file"].isin(exclude_exps)), config["exclude_exps"]))
 
-    # keep track of which experiments were excluded in 
-    df_original["input_exclude"] = exclude_exps
-  
+      # remove excluded rows from the sparse dataframe,
+      # but keep them in the original data frame, so that we can stitch together
+      # the final output later
+      exclude_exps = df["raw_file"].isin(exclude_exps).values
+      df = df[~exclude_exps]
+
+      # keep track of which experiments were excluded in 
+      df_original["input_exclude"] = exclude_exps
+  else:
+    logger.info("No experiment exclusion list provided. Skipping this filter.")
+
+  # just a quick index reset, in case any observations were completely removed
+  # in the experiment blacklist step
   df = df.reset_index(drop=True)
 
   # map peptide and experiment IDs
@@ -323,113 +434,54 @@ def process_files(args):
   df["exp_id"] = df["raw_file"].map({ind: val for val, ind in enumerate(np.sort(df["raw_file"].unique()))})
   df["peptide_id"] = df["sequence"].map({ind: val for val, ind in enumerate(df["sequence"].unique())})
 
-  # filter for occurence in number of experiments
-  if args.filter_num_exps is not None and args.filter_num_exps >= 2:
-    # only want to do this operation on PSMs that aren't already marked to be filtered out
-    # first, take subset on remaining PSMs, then count number 
-    # of unique experiments for each of them
-    exps_per_pep = df[-(df["exclude"])].groupby("peptide_id")["exp_id"].unique().apply((lambda x: len(x)))
-    # map values to DataFrame. peptides without any value will get NaN,
-    # which will then be assigned to 0.
-    exps_per_pep = df["peptide_id"].map(exps_per_pep)
-    exps_per_pep[np.isnan(exps_per_pep)] = 0
+  # run filters for all PSMs
+  # filtered-out PSMs are not removed from the dataframe, but are instead flagged
+  # using the "exclude" column
+  # when the alignment is run later, then these PSMs will be removed
+  df, df_original = filter_psms(df_original, df, config)
 
-    logger.info("Filtering out {} PSMs that have less than {} occurrences in different experiments.".format((exps_per_pep < args.filter_num_exps).sum(), args.filter_num_exps))
-    df["exclude"] = (df["exclude"] | (exps_per_pep < args.filter_num_exps))
-
-  if args.filter_smear_threshold != 0:
-    # filter out "smears". even confidently identified PSMs can have bad chromatography,
-    # and in that case it is unproductive to include them into the alignment.
-    # 
-    # TODO: there might also be merit to excluding these observations from the PEP update
-    # process as well, given that the spectral PEP is below a very 
-    # conservative threshold (1% or maybe even lower)
-    logger.info("Determining RT spread of peptides within each experiment...")
-    # for each experiment-peptide pair, get the range of retention times
-    smears = df.groupby(["exp_id", "peptide_id"])["retention_time"].apply(lambda x: np.ptp(x))
-    # get the (exp_id, peptide_id) tuples for PSMs with a range above the threshold
-    max_rts = df.groupby("exp_id")["retention_time"].max().values
-    smears = smears[smears > max_rts[smears.index.to_frame()["exp_id"].values] * args.filter_smear_threshold].index.values
-
-    # map the tuples back to the original data frame, and set smears to be excluded
-    smears = pd.Series(list(zip(df["exp_id"], df["peptide_id"]))).isin(smears)
-    logger.info("Filtering out {} PSMs with an intra-experiment RT spread of above max(exp_RT) / {} minutes".format(smears.sum(), args.filter_smear_threshold))
-    df["exclude"] = (df["exclude"] | (smears))
+  # only take the four required columns (+ the IDs) with us
+  # the rest were only needed for filtering and can be removed
+  df = df[["sequence", "raw_file", "retention_time", "pep", "exp_id", "peptide_id", "input_id", "id", "exclude"]]
 
   # sort by peptide_id, exp_id
   df = df.sort_values(["peptide_id", "exp_id"])
 
   return df, df_original
-  
-
-def add_converter_args(parser):
-  """
-  Tack on arguments needed to parse search-engine input file
-
-  Parameters
-  ----------
-  parser: argparser object
-
-  Returns
-  -------
-  argparser object
-
-  """
-  parser.add_argument("-t", "--type", type=str, default="RTLib", 
-    choices=["MQ", "PD", "RTLib"],
-    help="""
-    Search engine type. e.g.:
-    MQ    (MaxQuant), 
-    PD    (ProteomeDiscoverer),
-    RTLib (RTLib format - from the "convert" command)
-    Default: RTLib
-    """)
-  parser.add_argument("-v", "--verbose", action="store_true", default=False)
-  parser.add_argument("--filter-retention-length", type=float, default=-1.0, help="Filter PSMs by retention time length (Peak width, in minutes). Default: max(RT) / 60")
-  parser.add_argument("--filter-pep", type=float, default=0.5, help="Filter PSMs by PEP (Posterior Error Probability). Default: 0.5")
-  parser.add_argument("--filter-num-exps", type=int, default=3, help="Filter by occurence of peptide in number of experiments. i.e., if a peptide is not observed in at least this number of experiments over the entire set, then it will be filtered out before alignment. Default: 3")
-  parser.add_argument("--filter-smear-threshold", type=float, default=0.03, help="Filter out peptides that have a intra-experiment RT range of this number * max(experiment_RT). Set to 0 to skip this step.")
-  parser.add_argument("-e", "--exclusion-list", type=argparse.FileType("r"), help="Path to exclusion list file - UniProt IDs separated by lines. Excluding contaminants that are missed by search engines can be crucial for alignment. If STAN is exceeding a reasonable iteration limit, or if the alignment residuals are unexpectedly large, consider filtering out proteins with peptides with inconsistent RTs.")
-  parser.add_argument("--remove-exps", type=str, default=None, help="Regular expression of experiments (raw files) to remove from the data. Regular expression is case-sensitive. Default: None")
-  parser.add_argument("-m", "--use-unmodified-sequence", action="store_true", default=False, help="Use unmodified sequence instead of modified peptide sequence. Default: False")
-
 
 def main():
-  parser = argparse.ArgumentParser()
-  parser.add_argument("input", type=argparse.FileType("r"), nargs="+", help="Input file(s) from search engine")
-  parser.add_argument("-o", "--output", help="Path to converted file. Default: prints to stdout")
-
-  add_converter_args(parser)
-  add_version_arg(parser)
-  add_config_file_arg(parser)
-
+  # load command-line args
+  parser = argparse.ArgumentParser()  
+  add_global_args(parser)
   args = parser.parse_args()
 
-  # set up logger
-  for handler in logging.root.handlers[:]:
-    logging.root.removeHandler(handler) 
-   
-  logFormatter = logging.Formatter("%(asctime)s [%(threadName)-12.12s] [%(levelname)-5.5s]  %(message)s")
-  logger = logging.getLogger()
+  # load config file
+  # this function also creates the output folder
+  config = read_config_file(args)
 
-  if args.verbose: logger.setLevel(logging.DEBUG)
-  else: logger.setLevel(logging.WARNING)
+  # initialize logger
+  init_logger(config["verbose"], os.path.join(config["output"], "converter.log"))
 
-  consoleHandler = logging.StreamHandler(sys.stdout)
-  consoleHandler.setFormatter(logFormatter)
-  logger.addHandler(consoleHandler)
-
-  logger.info(" ".join(sys.argv[1:]))
-
-  df, df_original = process_files(args)
+  # process all input files (converts and filters)
+  df, df_original = process_files(config)
   
   logger.info("{} / {} ({:.2%}) observations pass criteria and will be used for alignment".format(df.shape[0] - df["exclude"].sum(), df.shape[0], (df.shape[0] - df["exclude"].sum()) / df.shape[0]))
-  
-  logger.info("Saving converted data to {} ...".format(args.output))
-  df.to_csv(args.output, sep="\t", index=False)
+
+  # write to file
+  if config["combine_output"]:
+    # if combining input files, then write to one combined file
+    out_path = os.path.join(config["output"], config["combined_output_name"])
+    logger.info("Combining input file(s) and writing adjusted data file to {} ...".format(out_path))
+    df.to_csv(out_path, sep="\t", index=False)
+  else:
+    # if keeping input files separate, then use "input_id" to retain the
+    # order in which the input files were passed in
+    logger.info("Saving output to separate files...")
+    for i, f in enumerate(config["input"]):
+      out_path = os.path.join(config["output"], os.path.splitext(os.path.basename(f))[0] + config["output_suffix"] + "_" + str(i) + ".txt")
+      logger.info("Saving input file {} to {}".format(i, out_path))
+      df_a = df.loc[df["input_id"] == i]
+      df_a.to_csv(out_path, sep="\t", index=False)
 
 if __name__ == "__main__":
   main()
-
-
-

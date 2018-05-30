@@ -61,6 +61,10 @@
     <script>
       var data = $data
 
+      // jQuery calls need to be escaped with "$$"
+      // since the template file is passed as a string through python,
+      // and templating is done by replacing the dollar sign
+
       // set up carousel
       $$(".alignment-carousel").carousel({
         interval: false,
@@ -68,8 +72,10 @@
       })
 
       var num_experiments = data.alignment.length
+      var experiment_names = []
       for(var i = 0; i < num_experiments; i++) {
-        $$(".alignment-select").append(`<option value="${i}">${data.alignment[i].replace(/^.*[\\\/]/, '')}</option>`)
+        experiment_names.push(data.alignment[i].replace(/^.*[\\\/]/, ''))
+        $$(".alignment-select").append(`<option value="${i}">${experiment_names[i]}</option>`)
         $$(".alignment-carousel .carousel-inner").append(`<div class="carousel-item">
           <img class="d-block w-100" src="${data.alignment[i]}">
         </div>`)
@@ -82,6 +88,10 @@
         //$(".alignment-carousel").carousel()
         $$(".alignment-carousel").carousel(parseInt($(this)[0].value))
       })
+      /*$$(".alignment-carousel").on("slide.bs.carousel", function(e) {
+        console.log(e)
+        $$(".alignment-select").val(experiment_names[e.to])
+      })*/
 
       
     </script>

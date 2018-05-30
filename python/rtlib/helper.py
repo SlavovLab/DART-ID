@@ -1,16 +1,17 @@
 # coding: utf-8
 
 import argparse
-import json
 import logging
 import os
 import pandas as pd
 import pkg_resources
 import sys
+import yaml
 
 from rtlib.version import __version__
+from shutil import copyfile
 
-logger = logging.getLogger()
+logger = logging.getLogger("root")
 
 # set functions taken from https://www.saltycrane.com/blog/2008/01/how-to-find-intersection-and-union-of/
 
@@ -32,7 +33,7 @@ def init_logger(verbose, log_file_path):
     logging.root.removeHandler(handler) 
    
   logFormatter = logging.Formatter("%(asctime)s [%(threadName)-12.12s] [%(levelname)-5.5s]  %(message)s")
-  logger = logging.getLogger()
+  logger = logging.getLogger("root")
 
   if verbose: logger.setLevel(logging.DEBUG)
   else: logger.setLevel(logging.WARNING)
@@ -57,6 +58,10 @@ def create_fig_folder(output_path, fig_folder):
   return figures_path
 
 def load_params_from_file(params_folder):
+  # first expand user or any vars
+  params_folder = os.path.expanduser(params_folder)
+  params_folder = os.path.expandvars(params_folder)
+
   # load parameters if they are specified in the command line
   params = {}
   logger.info("Using provided alignment parameters. Loading params from {}...".format(params_folder))
@@ -72,31 +77,60 @@ def load_params_from_file(params_folder):
 
   return params
 
-def add_version_arg(parser):
-  parser.add_argument("--version", action="version", version="%(prog)s {version}".format(version=__version__), help="Display the program's version")
-
-def add_config_file_arg(parser):
-  parser.add_argument("--config-file", required=True, type=argparse.FileType('r', encoding='UTF-8'), help="Path to config file. See example/config_example.json")
-
 def add_global_args(parser):
-  add_version_arg(parser)
-  add_config_file_arg(parser)
+  parser.add_argument("-i", "--input", type=argparse.FileType("r"), nargs="+", default=None, help="Input file(s) from search engine")
+  #parser.add_argument("-o", "--output", help="Path to converted file. Default: prints to stdout")
+  parser.add_argument("-o", "--output", type=str, default=None, help="Path to output data. Default: None")
+  parser.add_argument("-v", "--verbose", action="store_true", default=False)
+  parser.add_argument("--version", action="version", version="%(prog)s {version}".format(version=__version__), help="Display the program's version")
+  parser.add_argument("--config-file", required=True, type=argparse.FileType("r", encoding="UTF-8"), help="Path to config file. See example/config_example.yaml")
 
 def read_default_config_file():
   # load input file types
-  default_config = pkg_resources.resource_stream("rtlib", "/".join(("config", "default.json")))
-  default_config = json.load(default_config)
+  default_config = pkg_resources.resource_stream("rtlib", "/".join(("config", "default.yaml")))
+  default_config = yaml.load(default_config)
   return default_config
 
 def read_config_file(args):
+  with open(args.config_file.name, "r") as f:
+    config = yaml.load(f)
+    
+  # override config file's input, output, and verbose options
+  # if they were specified on the command-line
+  if args.input is not None:
+    if config["input"] is not None:
+      logger.info("Input files specified in both the config file and the command line. Using command-line input files instead.")
+    config["input"] = [f.name for f in args.input]
+
+  if args.output is not None:
+    if config["output"] is not None:
+      logger.info("Output folder specified in both the config file and the command line. Using command-line output folder instead.")
+    config["output"] = args.output
+
+  if args.verbose:
+    if not config["verbose"]:
+      logger.info("Verbose specified in the command-line but not the config file. Setting verbose to true anyways.")
+      config["verbose"] = args.verbose
+
+  # make sure that we have inputs and outputs before continuing
+  if config["input"] is None:
+    raise Exception("No input files specified, in either the config file or the command line. Please provide input files.")
+
+  if config["output"] is None:
+    raise Exception("No output folder specified, in either the config file or the command line. Please provide output folder.")
+
+  # create output folder
+  if not os.path.exists(config["output"]):
+    logger.info("Output folder does not yet exist. Creating...")
+    os.makedirs(config["output"])
+
+  # copy config file to output folder
+  copyfile(args.config_file.name, os.path.join(config["output"], os.path.basename(args.config_file.name)))
+
+  return config
+
+# TODO: do this dumb input check every time the config file is loaded
+def check_config_inputs(config):
   pass
+    
 
-def get_args(parser):
-  args = parser.parse_args()
-
-  # check if config file exists
-  if args.config_file is not None:
-    # read default config file for comparison
-    pass
-
-  return args

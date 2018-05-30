@@ -69,12 +69,11 @@ pca_plots/*
 python/*.ipynb
 python/.ipynb_checkpoints/*
 python/alignment/**/*
-python/__pycache__/**/*
 python/rt_update/**/*
 python/cached-model*
-python/rtlib/__pycache__/**/*
 python/rtlib/cached_fits/**/*
 python/rtlib/fits/*.pkl
+__pycache__/
 
 Figures/**/*
 Alignments/**/*
