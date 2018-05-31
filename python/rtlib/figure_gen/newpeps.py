@@ -54,11 +54,13 @@ def gen(df, config, params, output_path):
   x = np.logspace(-5, 0, num=num_points)
   y = np.zeros(num_points)
   y2 = np.zeros(num_points)
+  y3 = np.zeros(num_points)
   inds = ~pd.isnull(df["pep_new"])
 
   for i, j in enumerate(x):
       y[i] = np.sum(df["pep_updated"] < j) / np.sum(df[col_names["pep"]] < j)
       y2[i] = np.sum(df[col_names["pep"]] < j) / df.shape[0]
+      y3[i] = np.sum(df["pep_updated"] < j) / df.shape[0]
 
   f, (ax1, ax2) = plt.subplots(2, 1)
 
@@ -68,17 +70,19 @@ def gen(df, config, params, output_path):
   ax1.set_xlim([1e-5, 1])
   ax1.set_ylim([-25, np.max(y)*100-50])
   ax1.set_xlabel("PEP Threshold", fontsize=16)
-  ax1.set_ylabel("Percent Increase in IDs", fontsize=16)
-  ax1.set_title("Relative Increase in PSM Identifications", fontsize=16)
+  ax1.set_ylabel("Increase (%)", fontsize=16)
+  ax1.set_title("Increase in confident PSMs\nas a function of confidence threshold", fontsize=16)
 
-  ax2.semilogx(x, y2, '-b', linewidth=1)
+  ax2.semilogx(x, y2, '-b', linewidth=1, label="Spectra PEP")
+  ax2.semilogx(x, y3, '-g', linewidth=1, label="Spectra+RT PEP")
   #ax2.fill_between(x, 0, y2)
   ax2.plot([1e-2, 1e-2], [-1000, 1000], '-k', linestyle="dashed")
   ax2.set_xlim([1e-5, 1])
   ax2.set_ylim([0, 1.05])
   ax2.set_xlabel("PEP Threshold", fontsize=16)
-  ax2.set_ylabel("Proportion of PSMs", fontsize=16)
-  ax2.set_title("Proportion of PSMs\nUnder PEP Threshold", fontsize=16)
+  ax2.set_ylabel("Fraction", fontsize=16)
+  ax2.set_title("Fraction of PSMs\nunder confidence threshold", fontsize=16)
+  ax2.legend(fontsize=16)
   plt.subplots_adjust(hspace=0.6, wspace=0.3)
 
   f.set_size_inches(5, 7)

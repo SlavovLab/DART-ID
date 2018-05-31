@@ -20,8 +20,6 @@ def update(dfa, params):
   dff = dfa[-(dfa["exclude"])]
   dff = dff.reset_index(drop=True)
 
-  logger.info("{} / {} ({:.2%}) confident, alignable observations (PSMs) after filtering.".format(dff.shape[0], dfa.shape[0], dff.shape[0] / dfa.shape[0]))
-
   # refactorize peptide id into stan_peptide_id, 
   # to preserve continuity when feeding data into STAN
   dff["stan_peptide_id"] = dff["sequence"].map({ind: val for val, ind in enumerate(dff["sequence"].unique())})

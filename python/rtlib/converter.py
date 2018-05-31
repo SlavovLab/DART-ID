@@ -257,9 +257,9 @@ def filter_smears(df_original, df, config, _filter):
   smears = pd.Series(list(zip(df["exp_id"], df["peptide_id"]))).isin(smears)
 
   if _filter["dynamic"]:
-    logger.info("Filtering out {} PSMs with an intra-experiment RT spread greater than {:.2f} * max(exp_RT) for each raw file.".format(smears.sum(), _filter["value"]))
+    logger.info("Filtering out {} PSMs with an intra-experiment RT spread greater than {} * max(exp_RT) for each raw file.".format(smears.sum(), _filter["value"]))
   else:
-    logger.info("Filtering out {} PSMs with an intra-experiment RT spread greater than {:.2f}".format(smears.sum(), _filter["value"]))
+    logger.info("Filtering out {} PSMs with an intra-experiment RT spread greater than {}".format(smears.sum(), _filter["value"]))
 
   return smears
 
@@ -423,6 +423,8 @@ def process_files(config):
       df_original["input_exclude"] = exclude_exps
   else:
     logger.info("No experiment exclusion list provided. Skipping this filter.")
+
+  logger.info("{} PSMs loaded from input file(s)".format(df.shape[0]))
 
   # just a quick index reset, in case any observations were completely removed
   # in the experiment blacklist step

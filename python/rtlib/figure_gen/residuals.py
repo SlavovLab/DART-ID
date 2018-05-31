@@ -31,13 +31,15 @@ def gen(df, config, params, output_path):
       
       if (i + 1) * plots_per_row > num_experiments:
           resi = [df["residual"][(df["exp_id"] == i) & (~pd.isnull(df["residual"]))] for i in range((i * plots_per_row), num_experiments)]
+          ax.boxplot(resi, showfliers=False)
           ax.set_xticklabels(np.arange((i * plots_per_row), num_experiments, 1))
       else:
           resi = [df["residual"][(df["exp_id"] == i) & (~pd.isnull(df["residual"]))] for i in range((i * plots_per_row), ((i + 1) * plots_per_row))]
+          ax.boxplot(resi, showfliers=False)
           ax.set_xticklabels(np.arange((i * plots_per_row), ((i + 1) * plots_per_row), 1))
           
       #ax.violinplot(resi, showmedians=True, showextrema=True)
-      ax.boxplot(resi, showfliers=False)
+      #ax.boxplot(resi, showfliers=False)
       ax.set_xticks(np.arange(1, plots_per_row + 1, 1))
       ax.set_xlabel("Experiment Number")
       ax.set_ylabel("Residual RT (min)")

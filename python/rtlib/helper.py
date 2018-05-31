@@ -119,6 +119,10 @@ def read_config_file(args):
   if config["output"] is None:
     raise Exception("No output folder specified, in either the config file or the command line. Please provide output folder.")
 
+  # expand user or any vars
+  config["output"] = os.path.expanduser(config["output"])
+  config["output"] = os.path.expandvars(config["output"])
+
   # create output folder
   if not os.path.exists(config["output"]):
     logger.info("Output folder does not yet exist. Creating...")
