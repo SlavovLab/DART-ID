@@ -70,17 +70,17 @@ clean.file.name <- function(name) {
 }
 
 theme_bert <- function() {
-  theme_bw(base_size=16, base_family="Helvetica") %+replace% 
+  theme_bw(base_size=10, base_family="Helvetica") %+replace% 
     theme(
       #panel.background  = element_rect(fill=NULL, color='black', size=0.5),
-      panel.background=element_blank(),
-      panel.border=element_blank(),
-      axis.line.x=element_line(color='black', size=0.25),
-      axis.line.y=element_line(color='black', size=0.25),
+      #panel.background=element_blank(),
+      #panel.border=element_blank(),
+      #axis.line.x=element_line(color='black', size=0.25),
+      #axis.line.y=element_line(color='black', size=0.25),
       legend.background = element_rect(fill="transparent", colour=NA),
       legend.key = element_rect(fill="transparent", colour=NA),
       #axis.line=element_line(size=0.5, color='#888888'),
-      #axis.line=element_blank(),
+      axis.line=element_blank(),
       axis.ticks=element_line(color='black', size=0.25),
       #axis.ticks=element_blank(),
       panel.grid=element_blank()
@@ -153,6 +153,8 @@ emptyPlot <- function() {
 }
 
 bHeatmap <- c('#710e0d', '#8b42df', '#4c94dc', '#40df91', '#fef245')
+vc <- c("#004358", "#1F8A70", "#BEDB39", "#FFE11A", "#FD7400")
+av <- c("#20B2CF", "#85DB86", "#F29F05", "#F25C05", "#D92525")
 
 #' Process Experiment Description Excel Sheet
 process.desc <- function() {
@@ -204,7 +206,7 @@ process.desc <- function() {
   return(desc)
 }
 
-fold.change.comp <- function(exps) {
+fold.change.comp <- function(exps, range=c(1e-3, 1)) {
   library(pracma)
   # only use the same raw files between all evidence files
   #common.exps <- Reduce(intersect, lapply(exps, function(exp) { exp$`Raw file` }))
@@ -213,18 +215,26 @@ fold.change.comp <- function(exps) {
   num.steps <- 100
   # equally spaced steps in log space
   #x <- logseq(1e-10, 1, n=num.steps)
-  x <- logseq(1e-5, 1, n=num.steps)
+  x <- logseq(range[1], range[2], n=num.steps)
   # frame to hold the results
   df <- data.frame()
   counter <- 0
   for(i in x) {
     ratios <- unlist(lapply(exps, function(exp) {
-      (sum(exp$PEP.new < i, na.rm=TRUE) / 
-         sum(exp$PEP < i & !is.na(exp$PEP.new)))
+      (sum(exp$PEP.updated < i) / 
+         sum(exp$PEP < i))
+    }))
+    identified_spectra <- unlist(lapply(exps, function(exp) {
+      (sum(exp$PEP < i)) / nrow(exp)
+    }))
+    identified_spectra_new <- unlist(lapply(exps, function(exp) {
+      (sum(exp$PEP.updated < i)) / nrow(exp)
     }))
     df <- rbind(df, data.frame(
       x=as.numeric(i),
       PEP=as.numeric(ratios),
+      ident=as.numeric(identified_spectra),
+      ident_new=as.numeric(identified_spectra_new),
       Method=as.character(names(exps))
     ))
   }

@@ -1,15 +1,23 @@
 validate.lib.2 <- function(
   ev, 
-  sparse.filter=0.5,          # filter out sparse observations. 
+  #sparse.filter=0.5,          # filter out sparse observations. 
                               # this is the fraction of columns in 
                               # the TMT data that is allowed to be NA
+  
   unique.only=FALSE,          # only take unique peptides
+  
   psm.freq.thresh=10,         # minimum number of PSMs per protein
-  alpha=0.05,                 # significance threshold that separates
+  
+  num.prots=NULL,             # OR, number of proteins to use, regardless of 
+                              # how many PSMs each protein has (will choose from the top)
+  
+  alpha=0.01,                 # significance threshold that separates
                               # Original and New sets (PEP < alpha)
+  
   cor.size.thresh=5,          # minimum number of PSMs per protein per group 
                               # (Original, New, Total)
                               # to build the correlation matrix
+  
   similarity='correlation'    # 'correlation' for pearson correlation
                               # 'cosine' for cosine similarity
 ) {
@@ -37,17 +45,24 @@ validate.lib.2 <- function(
   # ev$exp <- str_extract(ev$file, '[1-9][0-9][A-Z](\\d)?')
   # 
   # load excel description
-  desc <- process.desc()
-  desc.types <- dcast(desc, Exp~Type, value.var='Type', fun.aggregate=length)
-  desc.types$Exp <- as.character(desc.types$Exp)
+  #desc <- process.desc()
+  #desc.types <- dcast(desc, Exp~Type, value.var='Type', fun.aggregate=length)
+  #desc.types$Exp <- as.character(desc.types$Exp)
   
   # find out the indices of columns with reporter ion data
   # should be 10 columns, but the code doesn't rely on this number
-  data.cols <- grep('intensity', colnames(ev))
+  data.cols <- grep('Reporter intensity corrected', colnames(ev))
+  # ignore empty, carrier channels
+  data.cols <- data.cols[5:10]
+  
+  # remove CON proteins
+  # common contaminants, like Keratin, Albumin, etc.
+  ev <- ev[!grepl('CON*',ev$Proteins),]
   
   # remove peptides without a protein
   # this can happen, especially when searching with a restricted FASTA file
   ev <- ev[!is.na(ev$Proteins),]
+  
   # remove non-unique peptides
   # aka, peptides with only one entry in the proteins column
   if(unique.only) {
@@ -62,15 +77,22 @@ validate.lib.2 <- function(
   # peptide of interest
   ev <- ev[!grepl('REV*',ev$Proteins),]
   
-  # remove CON proteins
-  # common contaminants, like Keratin, Albumin, etc.
-  ev <- ev[!grepl('CON*',ev$Proteins),]
-  
   # load keratin protein IDs
   keratins <- read_lines('Keratins.txt')
   # this is slow for many observations. might be faster to do a
   # str_extract to get the uniprot ID, and then to do a match() call
   ev <- ev[!grepl(paste(keratins, collapse='|'), ev$Proteins),]
+  
+  # extract uniprot ID
+  ev$Proteins <- sapply(strsplit(ev$Proteins, "\\|"), function(p) {
+    if(length(unlist(p)) == 1) return(p[1])
+    else if(length(unlist(p)) == 3) return(p[2])
+    else return(p)
+  })
+  
+  for(col in data.cols) {
+    ev[,col] = as.numeric(ev %>% pull(col))
+  }
 
   # set zeroes to NA
   ev[,data.cols][ev[,data.cols]==0] <- NA
@@ -81,26 +103,29 @@ validate.lib.2 <- function(
   #exps <- str_extract(clean.file.name(unique(ev$`Raw file`)), '[1-9][0-9][A-Z]')
   
   # pull experiment number from raw file name
-  ev$exp <- str_extract(clean.file.name(ev$`Raw file`), '[1-9][0-9][A-Z]')
+  #ev$exp <- str_extract(clean.file.name(ev$`Raw file`), '[1-9][0-9][A-Z]')
   # remove rows that don't belong to a recognized experiment
-  ev <- ev[!is.na(ev$exp),]
+  #ev <- ev[!is.na(ev$exp),]
   
-  for(i in unique(ev$exp)) {
-    #if(sum(grepl(i,ev$exp)) <= 0) next
-    inds.remove <- desc[desc$Exp==i & (desc$Type=='MIXED' | desc$Type=='NA' | is.na(desc$Type)),'ch']
-
-    cat('Channel(s)',inds.remove,'from experiment',i,'are blanks or carrier channels. Removing...\n')
-    
-    # make relative to the ev data frame
-    inds.remove <- inds.remove + data.cols[1] - 1
-    # set to NA
-    ev[ev$exp==i,inds.remove] <- NA
-  }
+  # for(i in unique(ev$exp)) {
+  #   #if(sum(grepl(i,ev$exp)) <= 0) next
+  #   inds.remove <- desc[desc$Exp==i & (desc$Type=='MIXED' | desc$Type=='NA' | is.na(desc$Type)),'ch']
+  # 
+  #   cat('Channel(s)',inds.remove,'from experiment',i,'are blanks or carrier channels. Removing...\n')
+  #   
+  #   # make relative to the ev data frame
+  #   inds.remove <- inds.remove + data.cols[1] - 1
+  #   # set to NA
+  #   ev[ev$exp==i,inds.remove] <- NA
+  # }
   
   cat(nrow(ev), 'observations remaining after filtering\n')
   
+  # remove empty columns
+  #a <- apply(is.na(ev[,data.cols]), 2, sum) / nrow(ev)
+  
   # remove rows with more than (sparse.filter as fraction) NAs
-  ev <- ev[apply(!apply(ev[,data.cols], 1, is.na), 2, sum) >= length(data.cols) * sparse.filter,]
+  ev <- ev[apply(!apply(ev[,data.cols], 1, is.na), 2, sum) == length(data.cols),]
   
   ## normalize data
   
@@ -125,6 +150,10 @@ validate.lib.2 <- function(
   # pep.freq.thresh defaults to 10
   prots <- as.character(prot.map$Var1[prot.map$Freq >= psm.freq.thresh])
   
+  if(!is.null(num.prots)) {
+    prots <- prots[1:num.prots]
+  }
+  
   cat(length(prots), 'proteins selected to build correlation matrices\n')
   
   ## Correlate peptides within each protein
@@ -138,7 +167,8 @@ validate.lib.2 <- function(
   cors.new <- vector(mode='numeric')
   
   # significance threshold
-  alpha <- 0.05
+  #alpha <- 0.01
+  cat(alpha, "used as significance threshold")
   raw.files <- unique(ev$`Raw file`)
   
   for(i in 1:length(prots)) {
@@ -280,7 +310,7 @@ validate.lib.2 <- function(
   # lines(density(cors.new), col='blue')
   # lines(density(cors.null), col='red')
   
-  save(cors, cors.new, cors.null, file='cors.validation.2.mean.RData')
+  save(cors, cors.new, cors.null, file='cors.validation.SQC67_87.RData')
   
   # consolidate all groups into one dataframe
   cat('\nConsolidating correlation vectors...\n')

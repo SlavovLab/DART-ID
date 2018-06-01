@@ -32,7 +32,8 @@ for(exp in 1:num_experiments) {
 
 
 # python
-ev <- read_tsv("/gd/Slavov_Lab/Albert/RTLib_Alignments/FP17_20180506_mu_norm_1/ev_adjusted.txt")
+#ev <- read_tsv("/gd/Slavov_Lab/Albert/RTLib_Alignments/FP17_20180506_mu_norm_1/ev_adjusted.txt")
+ev <- read_tsv("~/git/RTLib/Alignments/FP17_20180507_2/ev_adjusted.txt")
 ev <- ev %>% rename(PEP.new=pep_new)
 # R
 ev <- read_tsv("FP17.ev.adj.txt")
