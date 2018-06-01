@@ -39,9 +39,7 @@ setup(
     "Tracker": "https://github.com/blahoink/RTLib/issues",
     "Lab Page": "https://web.northeastern.edu/slavovlab/"
   },
-  packages=find_packages(
-    package_dir={'':'python'},
-    exclude=["docs", "example", "__pycache__", ".ipynb_checkpoints"]),
+  packages=['rtlib'],
   #libraries=[],
   #setup_requires=[],
   install_requires=[

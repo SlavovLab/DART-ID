@@ -82,3 +82,6 @@ Alignments/**/*
 # sublime files
 *.sublime-project
 *.sublime-workspace
+
+# testing file
+testing.sh
