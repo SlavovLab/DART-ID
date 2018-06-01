@@ -12,10 +12,12 @@ from scipy.stats import norm, lognorm
 logger = logging.getLogger("root")
 
 def gen(df, config, params, output_path):
+  df = df[-(df["input_exclude"])]
+
   figures_path = create_fig_folder(output_path, "figures")
   fig_names = []
 
-  exp_names = df[config["col_names"]["raw_file"]].unique()
+  exp_names = np.sort(df[config["col_names"]["raw_file"]].unique())
   num_experiments = len(exp_names)
   # split PEP into 10 bins, for coloring points later
   pep_col_code = pd.cut(df[config["col_names"]["pep"]], 10)
