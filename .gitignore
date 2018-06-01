@@ -12,6 +12,7 @@ dat/*
 
 # notes
 notes.txt
+todo.txt
 
 # R project cache
 .Rproj.user/*
