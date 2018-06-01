@@ -100,6 +100,9 @@ def align(dfa, config):
   mu_init[mu_init > mu_max] = mu_max
 
   # take retention times and distort
+  if config["rt_distortion"] > 0:
+    logger.info("Distorting RTs by {} minutes for initial value generation".format(config["rt_distortion"]))
+
   rt_distorted = dff["retention_time"] + np.random.normal(0, config["rt_distortion"], len(dff["retention_time"]))
   # make sure distorted retention times stay within bounds of real ones
   rt_distorted[rt_distorted > dff["retention_time"].max()] = dff["retention_time"].max()
@@ -172,6 +175,8 @@ def align(dfa, config):
 
   # run STAN, store optimization parameters
   sm = StanModel_cache()
+
+  logger.info("Running STAN for {} iterations and {} attemps in case of failure".format(config["stan_iters"], config["stan_attempts"]))
 
   # sometimes STAN will error out due to bad RNG or bad priors
   # set a limit on how many times we will try this stan configuration 

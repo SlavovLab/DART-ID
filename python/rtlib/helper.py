@@ -129,6 +129,7 @@ def read_config_file(args):
     os.makedirs(config["output"])
 
   # copy config file to output folder
+  logger.info("Copying config file to output folder")
   copyfile(args.config_file.name, os.path.join(config["output"], os.path.basename(args.config_file.name)))
 
   return config
