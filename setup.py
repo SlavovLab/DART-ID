@@ -12,12 +12,10 @@ name = "rtlib"
 setup(
   name=name,
   version="1.0.0",
-  description="",
-  #long_description="""hey""",
-  #long_description_content_type="text/markdown",
-  url="github.com/asdfasdf",
-  author="",
-  author_email="",
+  description="RT Alignment and Updating for MS/MS Data",
+  url="https://github.com/blahoink/RTLib",
+  author="Albert Chen",
+  author_email="chen.alb@husky.neu.edu",
   license="MIT",
   classifiers=[
     "Development Status :: 3 - Alpha",
@@ -34,14 +32,16 @@ setup(
 
     "Topic :: Scientific/Engineering :: Bio-Informatics"
   ],
-  keywords="bayesian retention time psm peptide spectra",
+  keywords="bayesian retention time psm peptide spectra update",
   project_urls={
-    "Documentation": "",
-    "Source": "",
-    "Tracker": "",
-    "Lab Page": ""
+    "Documentation": "https://github.com/blahoink/RTLib",
+    "Source": "https://github.com/blahoink/RTLib",
+    "Tracker": "https://github.com/blahoink/RTLib/issues",
+    "Lab Page": "https://web.northeastern.edu/slavovlab/"
   },
-  packages=find_packages(exclude=["docs", "example", "__pycache__", ".ipynb_checkpoints"]),
+  packages=find_packages(
+    package_dir={'':'python'},
+    exclude=["docs", "example", "__pycache__", ".ipynb_checkpoints"]),
   #libraries=[],
   #setup_requires=[],
   install_requires=[
