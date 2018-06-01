@@ -17,7 +17,7 @@ from scipy.stats import norm, lognorm
 logger = logging.getLogger("root")
 
 def update(dfa, params):
-  dff = dfa[-(dfa["exclude"])]
+  dff = dfa[~(dfa["exclude"])]
   dff = dff.reset_index(drop=True)
 
   # refactorize peptide id into stan_peptide_id, 
@@ -38,7 +38,7 @@ def update(dfa, params):
 
   for i, e in enumerate(np.sort(dff["exp_id"].unique())):
     exp_name = exp_names[i]
-    logger.info("Experiment #{} - {}".format(i, exp_name))
+    logger.info("Updating PEPs for experiment #{} - {}".format(i, exp_name))
     
     exp = dfa[dfa["exp_id"]==e]
     exp = exp.reset_index(drop=True)
@@ -117,7 +117,8 @@ def update(dfa, params):
         "exp_id":            exp_f["exp_id"],
         "peptide_id":        exp_f["peptide_id"],
         "stan_peptide_id":   exp_f["stan_peptide_id"],
-        "input_id":          exp_f["input_id"]
+        "input_id":          exp_f["input_id"],
+        "exclude":           exp_f["exclude"]
     })
     # for PSMs without alignment/update data
     exp_new = exp_new.append(pd.DataFrame({
@@ -132,7 +133,8 @@ def update(dfa, params):
         "exp_id":            exp["exp_id"][~(exp_matches)],
         "peptide_id":        exp["peptide_id"][~(exp_matches)],
         "stan_peptide_id":   np.nan,
-        "input_id":          exp["input_id"][~(exp_matches)]
+        "input_id":          exp["input_id"][~(exp_matches)],
+        "exclude":           exp["exclude"][~(exp_matches)]
     }))
     # append to master DataFrame and continue
     df_new = df_new.append(exp_new)
@@ -153,6 +155,8 @@ def write_output(df, out_path, config):
   df.to_csv(out_path, sep="\t", index=False)
 
 def main():
+  start = time.time()
+
   # load command-line args
   parser = argparse.ArgumentParser()  
   add_global_args(parser)
@@ -232,7 +236,7 @@ def main():
       # other data formats might have a different separator, or have an index column
       write_output(df_a, out_path, config)
 
-  logger.info("Done!")
+  logger.info("Done! Process took {:.3f} seconds".format(time.time() - start))
 
 if __name__ == "__main__":
   main()
