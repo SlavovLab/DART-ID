@@ -24,7 +24,7 @@ low_memory: false
 # outputted from a run with the "save_params" option on, and this run
 # needs to be run with the exact same filters as that previous run.
 # (exp_params.txt, peptide_params.txt, pair_params.txt)
-params_folder: ~/git/RTLib/Alignments/FP17_20180527_1
+params_folder: ~
 
 ## Alignment Options
 ## ==========================
@@ -128,9 +128,9 @@ filters:
   # Either a file, with UniProt IDs separated by line breaks, can be
   # specified with the "file" field, or
   # a list of UniProt IDs can be provided in the "list" field
-  - name: uniprot_exclusion
-    file: ~/git/RTLib/pd_exclude.txt
-    list: ~
+  #- name: uniprot_exclusion
+  #  file: ~
+  #  list: ~
 
   # Filter out contaminants as marked by the search engine
   # The "tag" option is the pattern used to filter out PSMs
@@ -149,9 +149,9 @@ filters:
   # If "dynamic" is set to true, then the threshold is a fraction of
   # the maximum RT for that raw file (i.e., the run-time). A value of 0.01
   # denotes that the threshold will be 1% of the total run-time of the experiment.
-  #- name: retention_length
-  #  dynamic: true
-  #  value: 0.01667
+  - name: retention_length
+    dynamic: true
+    value: 0.01667
 
   # Filter out PSMs by PEP. The alignment model is built to accomodate for
   # low-confidence PSMs, but a PEP filter of above 0.5 is not recommended.
