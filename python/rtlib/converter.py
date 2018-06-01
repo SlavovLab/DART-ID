@@ -19,11 +19,11 @@ from rtlib.helper import *
 
 logger = logging.getLogger("root")
 
-# all filter funcs take in the df_original, df, config object, and the filter object
+# all filter funcs take in the df, config object, and the filter object
 # as inputs, and output the exclude vector (True/False), where True means
 # to exclude that particular row
 
-def filter_uniprot_exclusion_list(df_original, df, config, _filter):
+def filter_uniprot_exclusion_list(df, config, _filter):
   """
   Filter proteins from exclusion list using UniProt IDs
   """
@@ -73,7 +73,7 @@ def filter_uniprot_exclusion_list(df_original, df, config, _filter):
     logger.warning("Exclusion list found and loaded, but no UniProt IDs found. Check the format of the file, or the list in the config file. Skipping UniProt ID exclusion list filter.")
     return None
 
-def filter_contaminant(df_original, df, config, _filter):
+def filter_contaminant(df, config, _filter):
   """
   Filter contaminants, as marked by the search engine
   Looking for a contaminant tag in the leading_protein column
@@ -88,7 +88,7 @@ def filter_contaminant(df_original, df, config, _filter):
   logger.info("Filtering out {} PSMs as contaminants with tag \"{}\"".format(np.sum(filter_con), CON_TAG))
   return filter_con
 
-def filter_decoy(df_original, df, config, _filter):
+def filter_decoy(df, config, _filter):
   """
   Filter decoys, as marked by the search engine
   Looking for a decoy tag in the leading_protein column
@@ -103,7 +103,7 @@ def filter_decoy(df_original, df, config, _filter):
   logger.info("Filtering out {} PSMs as decoys with tag \"{}\"".format(np.sum(filter_rev), REV_TAG))
   return filter_rev
 
-def filter_retention_length(df_original, df, config, _filter):
+def filter_retention_length(df, config, _filter):
   """
   Filter by retention length, which is a measure of the peak width
   during chromatography.
@@ -152,7 +152,7 @@ def filter_retention_length(df_original, df, config, _filter):
     logger.info("Filtering out {} PSMs with retention length greater than {:.2f}".format(np.sum(filter_rtl), _filter["value"]))
   return filter_rtl
 
-def filter_pep(df_original, df, config, _filter):
+def filter_pep(df, config, _filter):
   """
   Filter by PEP (Posterior Error Probability), 
   measured from spectra and a search engine
@@ -173,7 +173,7 @@ def filter_pep(df_original, df, config, _filter):
   logger.info("Filtering out {} PSMs with PEP greater than {:.2f}".format(np.sum(filter_pep), _filter["value"]))
   return filter_pep
 
-def filter_num_exps(df_original, df, config, _filter):
+def filter_num_exps(df, config, _filter):
   """
   Filter for occurence of PSM in number of experiments
   i.e., filter out all PSMs of peptide, if that peptide has only been 
@@ -201,7 +201,7 @@ def filter_num_exps(df_original, df, config, _filter):
   logger.info("Filtering out {} PSMs that have less than {} occurrences in different experiments.".format(filter_n_exps.sum(), _filter["value"]))
   return filter_n_exps
 
-def filter_smears(df_original, df, config, _filter):
+def filter_smears(df, config, _filter):
   """
   Filter out "smears". even confidently identified PSMs can have bad chromatography,
   and in that case it is unproductive to include them into the alignment.
@@ -326,7 +326,7 @@ def convert(df, config):
 
   return dfa
 
-def filter_psms(df_original, df, config):
+def filter_psms(df, config):
   logger.info("Filtering PSMs...")
 
   # load the filtering functions specified by the input config
@@ -345,15 +345,15 @@ def filter_psms(df_original, df, config):
   df["exclude"] = np.repeat(False, df.shape[0])
 
   # run all the filters specified by the list in the input config file
-  # all filter functions are passed df_original, df, and the run configuration
+  # all filter functions are passed df, and the run configuration
   # after each filter, append it onto the exclusion master list with a bitwise OR
   # if the filter function returns None, then just ignore it.
   for i, f in enumerate(filters):
-    e = filter_funcs[f["name"]](df_original, df, config, f)
+    e = filter_funcs[f["name"]](df, config, f)
     if e is not None:
       df["exclude"] = (df["exclude"] | e)
 
-  return df, df_original
+  return df
 
 def process_files(config):
 
@@ -367,7 +367,7 @@ def process_files(config):
     f = os.path.expanduser(f)
     f = os.path.expandvars(f)
 
-    logger.info("Reading in input file #{} | {} ...".format(i, f))
+    logger.info("Reading in input file #{} | {} ...".format(i+1, f))
 
     # load the input file with pandas
     # 
@@ -384,7 +384,8 @@ def process_files(config):
     # append a copy of dfa into df_original, because the conversion process will heavily
     # modify dfa. we need to keep a copy of the original dataframe in order to append
     # the new columns back onto it later.
-    df_original = df_original.append(dfa)
+    # re-index columns with "[dfa.columns.tolist()]" to preserve the general column order
+    df_original = df_original.append(dfa)[dfa.columns.tolist()]
 
     logger.info("Converting {} ({} PSMs)...".format(f, dfa.shape[0]))
 
@@ -433,14 +434,24 @@ def process_files(config):
   # map peptide and experiment IDs
   # sort experiment IDs alphabetically - or else the order is by 
   # first occurrence of an observation of that raw file
-  df["exp_id"] = df["raw_file"].map({ind: val for val, ind in enumerate(np.sort(df["raw_file"].unique()))})
-  df["peptide_id"] = df["sequence"].map({ind: val for val, ind in enumerate(df["sequence"].unique())})
+  
+  # if experiment or peptide IDs are already provided, then skip this step
+  if "exp_id" not in config["col_names"] or config["col_names"]["exp_id"] is None:
+    df["exp_id"] = df["raw_file"].map({ind: val for val, ind in enumerate(np.sort(df["raw_file"].unique()))})
+
+  if "peptide_id" not in config["col_names"] or config["col_names"]["peptide_id"] is None:
+    df["peptide_id"] = df["sequence"].map({ind: val for val, ind in enumerate(df["sequence"].unique())})
 
   # run filters for all PSMs
   # filtered-out PSMs are not removed from the dataframe, but are instead flagged
   # using the "exclude" column
   # when the alignment is run later, then these PSMs will be removed
-  df, df_original = filter_psms(df_original, df, config)
+  
+  # if the input already has an "exclude" column, then skip this step
+  if "exclude" not in config["col_names"] or config["col_names"]["exclude"] is None:
+    df = filter_psms(df, config)
+  else:
+    df["exclude"] = df["exclude"].astype(bool)
 
   # only take the four required columns (+ the IDs) with us
   # the rest were only needed for filtering and can be removed
