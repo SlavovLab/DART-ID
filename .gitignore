@@ -78,3 +78,7 @@ __pycache__/
 
 Figures/**/*
 Alignments/**/*
+
+# sublime files
+*.sublime-project
+*.sublime-workspace
