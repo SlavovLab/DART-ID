@@ -68,6 +68,7 @@ setup(
   
   entry_points={
     "console_scripts": [
+      ("rtlib=rtlib.update:main"),
       ("rtlib_convert=rtlib.converter:main"),
       ("rtlib_align=rtlib.align:main"),
       ("rtlib_update=rtlib.update:main"),
