@@ -56,23 +56,11 @@ manuscript/*.pdf
 
 # misc fig folders
 papers/*
-validation_figs/*
-validation_figs_cosine/*
-tmp_figs/*
-exp_fits/*
-exp_fits_linear/*
-exp_fits_pd/*
-linear_v_segmented_figs/*
-pca_plots/*
 
 # python
 # ignore notebooks
-python/*.ipynb
-python/.ipynb_checkpoints/*
-python/alignment/**/*
-python/rt_update/**/*
-python/cached-model*
-python/rtlib/cached_fits/**/*
+*.ipynb
+.ipynb_checkpoints/**/*
 python/rtlib/fits/*.pkl
 __pycache__/
 
