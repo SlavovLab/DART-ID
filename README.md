@@ -9,27 +9,13 @@ The RTLib code goal is to make the process as simple as possible. Run ```rtlib_u
 # Installation
 
 ```
-# clone the git repo
-git clone https://github.com/blahoink/RTLib
-# install with pip
-cd RTLib/python
-pip install ./
-cd ../..
-rm -rf RTLib/python
+pip install git+https://github.com/blahoink/RTLib
 ```
 
-If there is an update in the codebase, then you can pull updates from the server with:
-
-```
-cd RTLib
-git pull origin master
-```
-
-Then uninstall and reinstall the package
+Uninstall the package with:
 
 ```
 pip uninstall rtlib
-pip install ./
 ```
 
 # Known bugs:
