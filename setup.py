@@ -72,7 +72,8 @@ setup(
       ("rtlib_convert=rtlib.converter:main"),
       ("rtlib_align=rtlib.align:main"),
       ("rtlib_update=rtlib.update:main"),
-      ("rtlib_fiures=rtlib.figures:main")
+      ("rtlib_fiures=rtlib.figures:main"),
+      ("rtlib_collate=rtlib.collate:main")
     ]
   }
 

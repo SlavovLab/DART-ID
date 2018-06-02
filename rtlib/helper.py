@@ -27,7 +27,7 @@ def union(a, b):
     """ return the union of two lists """
     return list(set(a) | set(b))
 
-def init_logger(verbose, log_file_path):
+def init_logger(verbose, log_file_path, log_to_file=True):
   # set up logger
   for handler in logging.root.handlers[:]:
     logging.root.removeHandler(handler) 
@@ -38,9 +38,10 @@ def init_logger(verbose, log_file_path):
   if verbose: logger.setLevel(logging.DEBUG)
   else: logger.setLevel(logging.WARNING)
 
-  fileHandler = logging.FileHandler(log_file_path, mode="w")
-  fileHandler.setFormatter(logFormatter)
-  logger.addHandler(fileHandler)
+  if log_to_file:
+    fileHandler = logging.FileHandler(log_file_path, mode="w")
+    fileHandler.setFormatter(logFormatter)
+    logger.addHandler(fileHandler)
 
   consoleHandler = logging.StreamHandler()
   consoleHandler.setFormatter(logFormatter)
@@ -77,13 +78,15 @@ def load_params_from_file(params_folder):
 
   return params
 
-def add_global_args(parser):
+def add_global_args(parser, add_config_file=True):
   parser.add_argument("-i", "--input", type=argparse.FileType("r"), nargs="+", default=None, help="Input file(s) from search engine")
   #parser.add_argument("-o", "--output", help="Path to converted file. Default: prints to stdout")
   parser.add_argument("-o", "--output", type=str, default=None, help="Path to output data. Default: None")
   parser.add_argument("-v", "--verbose", action="store_true", default=False)
   parser.add_argument("--version", action="version", version="%(prog)s {version}".format(version=__version__), help="Display the program's version")
-  parser.add_argument("--config-file", required=True, type=argparse.FileType("r", encoding="UTF-8"), help="Path to config file. See example/config_example.yaml")
+
+  if add_config_file:
+    parser.add_argument("--config-file", required=True, type=argparse.FileType("r", encoding="UTF-8"), help="Path to config file. See example/config_example.yaml")
 
 def read_default_config_file():
   # load input file types
