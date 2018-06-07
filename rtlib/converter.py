@@ -453,9 +453,18 @@ def process_files(config):
   else:
     df["exclude"] = df["exclude"].astype(bool)
 
+  # check that every experiment has PSMs that have passed the filter
+  num_exclude = df.groupby("exp_id")["exclude"].agg(["sum", "count"])
+  if np.any(num_exclude["sum"].astype(int) == num_exclude["count"]):
+    exp_names = np.sort(df["raw_file"].unique())
+    no_psm_exps = exp_names[num_exclude["sum"].astype(int) == num_exclude["count"]]
+    raise Exception("Experiments " + np.array_str(no_psm_exps) + " have no PSMs left for alignment after filtering. Exclude these experiments using the \"exclude_exps\" expression in the config file, or loosen the PSM filters.")
+
+
   # only take the four required columns (+ the IDs) with us
   # the rest were only needed for filtering and can be removed
-  df = df[["sequence", "raw_file", "retention_time", "pep", "exp_id", "peptide_id", "input_id", "id", "exclude"]]
+  df = df[["sequence", "raw_file", "retention_time", "pep", 
+           "exp_id", "peptide_id", "input_id", "id", "exclude"]]
 
   # sort by peptide_id, exp_id
   df = df.sort_values(["peptide_id", "exp_id"])

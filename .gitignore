@@ -28,6 +28,7 @@ todo.txt
 #figures/*
 #*.pdf
 #*.png
+manuscript/Figs/*.pdf
 
 # notes
 *.doc

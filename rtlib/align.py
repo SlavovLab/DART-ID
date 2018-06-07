@@ -111,18 +111,24 @@ def align(dfa, config):
   # initialize priors for the segmented linear regression
   # first element of vector is beta_0, or the intercept
   # second element is beta_1 and beta_2, the slopes of the two segments
-  beta_init = np.array((np.repeat(10, num_experiments), np.repeat(1, num_experiments)), dtype=float)
+  beta_init = np.array((
+    np.repeat(10, num_experiments), 
+    np.repeat(1, num_experiments)), dtype=float)
 
   logger.info("Optimizing priors with linear approximation for {} iterations.".format(config["prior_iters"]))
 
   mu_pred = np.zeros(num_peptides)
   # temporary data frame to quickly map over in the loop
-  dft = pd.DataFrame(dict(stan_peptide_id=dff["stan_peptide_id"], exp_id=dff["exp_id"], pep=dff["pep"], retention_time=mu_init[dff["stan_peptide_id"]]))
+  dft = pd.DataFrame(dict(
+    stan_peptide_id=dff["stan_peptide_id"], 
+    exp_id=dff["exp_id"], 
+    pep=dff["pep"], 
+    retention_time=mu_init[dff["stan_peptide_id"]]))
 
   for i in range(0, config["prior_iters"]):
     # for each experiment, fit a simple linear regression
     # between the distorted RTs and the initial canonical retention times
-    for j in np.sort(dff["exp_id"].unique()):
+    for j in range(0, num_experiments):
         idx     = (dff["exp_id"] == j)
         rt_cur  = rt_distorted[idx]
         mu_cur  = mu_init[dff["stan_peptide_id"][idx]]
