@@ -109,7 +109,7 @@ model {
   for (i in 1:num_total_observations) {
     target += log_mix(pep[i],
                       normal_lpdf(retention_times[i] | mean_rt, sd_rt),
-                      normal_lpdf(retention_times[i] | muij[muij_map[i]], sigma_ij[peptide_id[i]]));
+                      normal_lpdf(retention_times[i] | muij[muij_map[i]], sigma_ij[muij_map[i]]));
                       
 
   }
