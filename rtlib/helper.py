@@ -94,7 +94,7 @@ def read_default_config_file():
   default_config = yaml.load(default_config)
   return default_config
 
-def read_config_file(args):
+def read_config_file(args, create_output_folder=True):
   with open(args.config_file.name, "r") as f:
     config = yaml.load(f)
     
@@ -127,13 +127,14 @@ def read_config_file(args):
   config["output"] = os.path.expandvars(config["output"])
 
   # create output folder
-  if not os.path.exists(config["output"]):
+  if not os.path.exists(config["output"]) and create_output_folder:
     logger.info("Output folder does not yet exist. Creating...")
     os.makedirs(config["output"])
 
   # copy config file to output folder
-  logger.info("Copying config file to output folder")
-  copyfile(args.config_file.name, os.path.join(config["output"], os.path.basename(args.config_file.name)))
+  if create_output_folder:
+    logger.info("Copying config file to output folder")
+    copyfile(args.config_file.name, os.path.join(config["output"], os.path.basename(args.config_file.name)))
 
   return config
 
