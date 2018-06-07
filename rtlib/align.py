@@ -72,8 +72,8 @@ def align(dfa, config):
     "retention_times": dff["retention_time"].tolist(),
     "mean_log_rt": np.mean(np.log(dff["retention_time"])),
     "sd_log_rt": np.std(np.log(dff["retention_time"])),
-    "mean_rt": np.mean(dff["retention_time"]),
-    "sd_rt": np.std(dff["retention_time"]),
+    "rt_mean": np.mean(dff["retention_time"]),
+    "rt_std": np.std(dff["retention_time"]),
     "pep": dff["pep"].tolist(),
     "max_retention_time": dff["retention_time"].max()
   }
@@ -168,9 +168,20 @@ def align(dfa, config):
   # apply upper bound to prior canonical RTs
   mu_init[mu_init >= dff["retention_time"].max()] = 0.95 * dff["retention_time"].max()
 
+  # init sigmas (spread) for each peptide
+  sigma_init = np.zeros(num_peptides)
+  muijs = beta_init[0][dff["exp_id"]] + (beta_init[1][dff["exp_id"]] * mu_init[dff["stan_peptide_id"]])
+  for i in range(0, num_peptides):
+    sigma_init[i] = np.std(muijs[dff["stan_peptide_id"]==i])
+
+  # add sigma statistics to data list, to build sampling dist off of
+  stan_data["sigma_mean"] = np.mean(sigma_init)
+  stan_data["sigma_std"] = np.std(sigma_init)
+
   # create prior list for STAN
   init_list = {
     "mu": mu_init,
+    "sigma": sigma_init,
     "beta_0": beta_0,
     "beta_1": beta_1,
     "beta_2": beta_2,
