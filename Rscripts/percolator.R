@@ -5,7 +5,12 @@ library(tidyverse)
 #library(pIR)
 
 #msms <- read_tsv('dat/msms.txt')
-ev <- read_tsv('dat/evidence.txt')
+#ev <- read_tsv('dat/evidence.txt')
+pin <- read_tsv("pin.tab")
+pin2 <- read_tsv("SQCpin.tab")
+ev <- read_tsv("~/git/RTLib/Alignments/SQC67-87_20180531_4/ev_updated.txt")
+#ev <- read_tsv("/gd/MS/SCoPE/SQC/SQC67/evidence.txt")
+#ev <- read_tsv("~/git/RTLib/Alignments/SQC87_20180602_1/ev_updated.txt")
 
 a <- ev[1:1e3,]
 
@@ -92,7 +97,8 @@ write_tsv(pin, 'dat/pin.txt', col_names=F, append=T, na='')
 
 # append percolator results to original evidence file
 #pout <- read_tsv('dat/percolator_181217/pout-psms.txt')
-pout <- read_tsv('dat/percolator_181217_nodoc/pout-psms.txt')
+#pout <- read_tsv('dat/percolator_181217_nodoc/pout-psms.txt')
+pout <- read_tsv("SQCpout.tab")
 
 ev.out <- ev %>%
   # alias the modified peptide ID as the peptide ID

@@ -1,9 +1,16 @@
 library(tidyverse)
-source('lib.R')
+source('Rscripts/lib.R')
 source('Figures/Fig1.R')
 source('Figures/Fig2.R')
 
-ev <- read_tsv("~/git/RTLib/Alignments/SQC67-87_20180531_2/ev_updated.txt")
+#ev <- read_tsv("~/git/RTLib/Alignments/SQC_1000cell_20180602_1/ev_updated.txt")
+#ev <- read_tsv("~/git/RTLib/Alignments/SQC_1000cell_20180605_2/ev_updated.txt")
+ev <- read_tsv("/gd/Slavov_Lab/Albert/RTLib_Alignments/SQC_1000cell_20180607_6/ev_updated.txt")
+
+# remove excluded raw files to boost numbers
+#ev <- ev %>% filter(!grepl("SQC72A|SQC72C|SQC72D|SQC74M|SQC67C16|SQC67C17|SQC67C18|SQC65|SQC95A9|SQC95A10|IFN6[H-K]-Trg|SQC67[AB]6", `Raw file`))
+
+ev <- ev %>% filter(!grepl("IFN6[H-K]-Trg|SQC67[A-B]6|SQC67C1[3-9]|SQC72D", `Raw file`))
 
 ev <- ev %>% mutate(PEP.new=pep_new, PEP.updated=pep_updated)
 
@@ -31,12 +38,223 @@ dev.off()
 
 ## ------
 
-fig2d <- f2.tmt.validation(ev)
+#fig2d <- f2.tmt.validation(ev)
+fig2d <- f2.tmt.validation.3(ev)
 
 fig2ef <- f2.protein.quant(ev)
 
-gs <- list(fig2d, fig2ef[1], fig2ef[2])
+gs <- list(ggplotGrob(fig2d), fig2ef[[1]], fig2ef[[2]])
 lay <- rbind(c(1, 1, 1, 1, 2, 2, 2, 2, 2, 3, 3))
 pdf(file='manuscript/Figs/Fig2DEF.pdf', width=7, height=2.75)
 grid.arrange(grobs=gs, layout_matrix=lay)
 dev.off()
+
+## run with 1000 cells, and recent runs w/ trapping col
+
+ev <- read_tsv("~/git/RTLib/Alignments/SQC_1000cell_20180602_1/ev_updated.txt")
+
+ev.f <- ev %>% 
+  filter(!is.na(pep_new)) %>%
+  mutate(residual=muij-`Retention time`) %>%
+  mutate(`With Trapping`=grepl("SQC95|SQC97", `Raw file`)) %>%
+  mutate(`1000 cell`=grepl("FP18|IFN", `Raw file`))
+  
+ev.f %>% filter(abs(residual) < 2) %>% 
+  #ggplot(aes(color=`With Trapping`)) +
+  ggplot(aes(color=`1000 cell`)) +
+  geom_freqpoly(aes(x=residual, y=..density..), size=1, position='identity', bins=100) +
+  scale_x_continuous(limits=c(-2, 2)) + 
+  labs(x="Residual RT (min)", y="Density",
+       title=paste0("Residual RT\n", "n=", nrow(ev.f))) +
+  guides(color=guide_legend(nrow=2)) +
+  theme_bert() + theme(
+    legend.position='bottom'
+  )
+
+
+## percolator analysis
+
+pout <- read_tsv("SQCpout.tab")
+
+# line up IDs
+pout <- pout %>% arrange(PSMId)
+
+#pout$PSMId %in% ev.f$id
+ev <- cbind(ev, pout[match(ev$id, pout$PSMId),c("posterior_error_prob","q-value")])
+
+ev <- ev %>%
+  mutate(pep_perc=posterior_error_prob,
+         fdr_perc=`q-value`)
+ev$pep_perc_updated = ev$pep_perc
+ev$pep_perc_updated[is.na(ev$pep_perc)] = ev$PEP[is.na(ev$pep_perc)]
+
+ev %>% filter(!is.na(pep_perc)) %>% sample_n(1e4) %>%
+ggplot() +
+  geom_point(aes(x=PEP, y=pep_perc, color='Percolator PEP'), alpha=0.5, size=0.2) +
+  geom_point(aes(x=PEP, y=pep_new, color='Spectra+RT PEP'), alpha=0.5, size=0.2)+
+  geom_abline(aes(intercept=0, slope=1), color='black', size=1) +
+  scale_x_log10(limits=c(1e-5, 1), expand=c(0,0)) +
+  scale_y_log10(limits=c(1e-5, 1), expand=c(0,0)) +
+  scale_color_manual(values=c('blue', 'red')) +
+  guides(color=guide_legend(nrow=2, override.aes=list(size=5))) +
+  labs(x="PEP", y="Updated PEP",
+       title="PEP Update | RTLib vs. Percolator") +
+  theme_bert() + theme(
+    legend.position='bottom'
+  )
+
+ev %>% filter(!is.na(pep_perc)) %>% sample_n(1e4) %>%
+  ggplot() +
+  geom_point(aes(x=pep_perc, y=pep_new), color='blue', alpha=0.5, size=0.1) +
+  geom_abline(aes(intercept=0, slope=1), color='black', size=1) +
+  scale_x_log10(limits=c(1e-5, 1), expand=c(0,0)) +
+  scale_y_log10(limits=c(1e-5, 1), expand=c(0,0)) +
+  theme_bert()
+
+## fig2abc -----
+
+fig2a <- f2.pep.scatter(ev, bins=50)
+ggsave(plot=fig2a, file='manuscript/Figs/Fig_2A_v1.pdf', width=2.32, height=2.25)
+
+fig2bc <- f2.fold.change(ev)
+fig2b <- fig2bc[[1]]
+ggsave(plot=fig2b, file='manuscript/Figs/Fig_2B_v1.pdf', width=2.32, height=2.25)
+fig2c <- fig2bc[[2]]
+ggsave(plot=fig2c, file='manuscript/Figs/Fig_2C_v1.pdf', width=2.32, height=2.25)
+
+# gs <- list(ggplotGrob(fig2a), ggplotGrob(fig2b), ggplotGrob(fig2c))
+# lay <- rbind(c(1, 1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3))
+# pdf(file='manuscript/Figs/Fig2ABC.pdf', width=7, height=2.25)
+# grid.arrange(grobs=gs, layout_matrix=lay)
+# dev.off()
+
+## fig2def -------
+
+#fig2d <- ggplotGrob(f2.tmt.validation.3(ev))
+#fig2d <- ggplotGrob(f2.tmt.validation.3(ev, cvs_all))
+fig2d <- f2.tmt.validation.3(ev, cvs_all)
+ggsave(plot=fig2d, file='manuscript/Figs/Fig_2D_v1.pdf', width=2.25, height=2.75)
+
+
+fig2ef <- f2.protein.quant(ev)
+
+ggsave(plot=fig2e, file='manuscript/Figs/Fig_2E_v1.pdf', width=3.5, height=2.75)
+ggsave(plot=fig2f, file='manuscript/Figs/Fig_2F_v1.pdf', width=1.25, height=2.75)
+
+
+#gs <- list(fig2d, ggplotGrob(fig2ef[[1]]), ggplotGrob(fig2ef[[2]]))
+gs <- list(ggplotGrob(fig2d), ggplotGrob(fig2e), ggplotGrob(fig2f))
+lay <- rbind(c(1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 2, 3, 3, 3))
+pdf(file='manuscript/Figs/Fig2DEF.pdf', width=7, height=2.75)
+grid.arrange(grobs=gs, layout_matrix=lay)
+dev.off()
+
+
+## two-piece alignment, examples -------
+
+exps <- c(2, 3, 62)
+betas <- c(4.390156572, 0.705147925, 0.79694858, 37.84193815, #2
+           6.991690633, 0.864736612, 0.734386652, 26.73425284, #3
+           -0.521905334, 0.998603863, 1.070621396, 37.30914361) #62
+betas <- matrix(betas, nrow=3, byrow=T)
+
+ev.f <- ev %>%
+  filter(exp_id %in% exps) %>%
+  filter(!is.na(muij))
+
+seqs <- ev.f %>% 
+  group_by(Sequence) %>% 
+  summarise(n=length(unique(`Raw file`))) %>% 
+  filter(n==length(exps)) %>%
+  pull(Sequence)
+
+#seqs <- seqs[1:75]
+set.seed(1)
+seqs <- seqs[sample.int(length(seqs), 75)]
+
+ev.f <- ev.f %>%
+  filter(Sequence %in% seqs)
+
+## -------
+
+pdf(file='manuscript/Figs/SFig_6.pdf', width=3, height=3)
+par(mgp=c(1.2, 0.5, 0),
+    mar=c(2.5,2,0.5,0.2),
+    pin=c(2, 2),
+    cex.lab=0.8, cex.axis=0.8, cex.main=0.8,
+    #xaxs='i', yaxs='i',
+    pty='s')
+
+plot(0, 0, col='white', xlim=c(10, 50), ylim=c(10, 50),
+     xlab="Canonical RT (min)", ylab="Observed RT (min)",
+     xaxt='n', yaxt='n')
+for(i in 1:length(exps)) {
+  exp <- exps[i]
+  points(ev.f$mu[ev.f$exp_id==exp], ev.f$`Retention time`[ev.f$exp_id==exp], pch='x', cex=0.75)
+  segments(x0=0, x1=betas[i, 4], 
+           y0=betas[i, 1], y1=betas[i, 1] + (betas[i, 2] * betas[i, 4]),
+           col='red', lwd=1.5)
+  segments(x0=betas[i, 4], x1=100, 
+           y0=betas[i, 1] + (betas[i, 2] * betas[i, 4]), 
+           y1=betas[i, 1] + (betas[i, 2] * betas[i, 4]) + ((100 - betas[i, 4]) * betas[i, 3]),
+           col='green', lwd=1.5)
+  abline(v=betas[i, 4], col='blue', lty=2, lwd=1.5)
+}
+
+axis(side=1, tck=-0.02, padj=-0.6)
+axis(side=2, tck=-0.02, padj=0.2)
+
+legend('topleft', c("First Segment", "Second Segment", "Inflection Point"), 
+       pch=c(NA, NA, NA), col=c('red', 'green', 'blue'), lty=c(1, 1, 2),
+       lwd=c(2, 2, 2), pt.cex=1.5, 
+       bty='o', box.lwd=0, box.col='white', bg='white',
+       cex=0.8, y.intersp=1.1, inset=c(0.02, 0.01))
+
+dev.off()
+
+## observed vs. predicted --------
+
+pdf(file='manuscript/Figs/SFig_7.pdf', width=3, height=3)
+par(mgp=c(1.2, 0.5, 0),
+    mar=c(2.5,2,0.5,0.2),
+    pin=c(2, 2),
+    cex.lab=0.8, cex.axis=0.8, cex.main=0.8,
+    #xaxs='i', yaxs='i',
+    pty='s')
+
+plot(0, 0, col='white', xlim=c(10, 50), ylim=c(10, 50),
+     xlab="Inferred RT (min)", ylab="Observed RT (min)",
+     xaxt='n', yaxt='n')
+for(i in 1:length(exps)) {
+  exp <- exps[i]
+  points(ev.f$muij[ev.f$exp_id==exp], ev.f$`Retention time`[ev.f$exp_id==exp], pch='x', cex=0.75)
+}
+abline(a=0, b=1, col='blue', lwd=1.5)
+
+axis(side=1, tck=-0.02, padj=-0.6)
+axis(side=2, tck=-0.02, padj=0.2)
+
+dev.off()
+
+
+## FDR ------
+
+ev$PEP[ev$PEP > 1] <- 1
+ev$pep_updated[ev$pep_updated > 1] <- 1
+#ev.f <- ev %>% filter(!is.na(pep_new))
+fdr <- cumsum(ev$PEP[order(ev$PEP)]) / nrow(ev)
+fdr_new <- cumsum(ev$pep_updated[order(ev$pep_updated)]) / nrow(ev)
+
+x <- floor(seq(1, nrow(ev), length.out=1e4))
+plot(1:length(x), fdr[x], type='l', col='blue', log='y',
+     ylim=c(1e-10, 1))
+lines(1:length(x), fdr_new[x], col='green')
+
+## ------------
+
+ev %>%
+  mutate_at('pep_updated', funs(ifelse(. > 1, 1, .))) %>%
+  mutate_at('PEP', funs(ifelse(. > 1, 1, .))) %>%
+  mutate(qval=(cumsum(PEP[order(PEP)]) / seq(1, nrow(ev)))[order(order(PEP))],
+         qval=(cumsum(pep_updated[order(pep_updated)]) / seq(1, nrow(ev)))[order(order(pep_updated))],
+         dPEP=log10(PEP/pep_updated))
