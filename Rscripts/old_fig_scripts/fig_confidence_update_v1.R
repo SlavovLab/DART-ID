@@ -5,7 +5,7 @@ library(gtable)
 
 ## Peptide Update ------
 
-pdf(file='manuscript/Figs/Fig_1C_v1.pdf', width=2.75, height=3)
+pdf(file='manuscript/Figs/confidence_update_v1.pdf', width=2.75, height=3)
 par(mgp=c(1.2, 0.5, 0),
     mar=c(2.5,2,1.5,0.2),
     pin=c(2,2),

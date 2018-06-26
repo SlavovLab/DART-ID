@@ -1,31 +1,12 @@
 library(tidyverse)
 source('Rscripts/lib.R')
 
-bins <- 50
-
-ev.f <- ev %>%
-  select(c('Sequence', 'PEP', 'pep_new')) %>%
-  filter(!is.na(pep_new)) %>%
-  filter(PEP > 0 & pep_new > 0) %>%
-  filter(PEP > 1e-5 & pep_new > 1e-5) %>%
-  mutate_at('PEP', funs(ifelse(. > 1, 1, .))) %>%
-  mutate_at('pep_new', funs(ifelse(. > 1, 1, .))) %>%
-  mutate(dPEP=log2(abs(PEP-pep_new))) %>%
-  mutate(dPEP=ifelse(is.infinite(dPEP), 0, dPEP)) %>%
-  arrange(desc(PEP)) %>%
-  mutate(bin=cut(PEP, breaks=c(0, 1e-3, 1e-2, 5e-2, 1e-1, 1)))
-
-# ev.f %>%
-#   sample_n(1e5) %>%
-#   ggplot(aes(x=PEP, y=PEP.new)) +
-#   geom_point(alpha=0.1) +
-#   scale_x_log10(limits=c(1e-10, 1)) +
-#   scale_y_log10(limits=c(1e-10, 1))
+ev <- read_tsv("/gd/Slavov_Lab/Albert/RTLib_Alignments/SQC_20180621_2/ev_updated.txt")
 
 ## New scatter ----------
 
-scatter <- 
-  ggplot(ev.f, aes(x=PEP, y=pep_new)) +
+#scatter <- 
+ggplot(ev.f, aes(x=PEP, y=pep_new)) +
   stat_bin2d(bins=bins, drop=TRUE, geom='tile', aes(fill=..density..)) +
   geom_abline(slope=1, intercept=0, color='black', size=0.5) +
   #geom_segment(aes(x=5e-4, xend=1, y=1e-2, yend=1e-2),

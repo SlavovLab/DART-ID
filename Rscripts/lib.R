@@ -384,6 +384,41 @@ resetPar <- function() {
   op
 }
 
+normalize_ri_data <- function(dmat) {
+  dmat[dmat==0] <- NA
+  
+  ## normalize data
+  
+  # first normalize by column, by median
+  dmat <- t(t(dmat) / apply(dmat, 2, median, na.rm=T))
+  # now normalize across rows, by mean
+  dmat <- dmat / apply(dmat, 1, mean, na.rm=T)
+  # remove rows without quant
+  dmat <- dmat[!apply(apply(dmat, 1, is.na), 2, sum) > 0,]
+  dmat
+}
+normalize_ri_data_table <- function(ev, dcols) {
+  ev[,dcols][ev[,dcols]==0] <- NA
+  
+  ## normalize data
+  
+  # first normalize by column, by median
+  ev[,dcols] <- t(t(ev[,dcols]) / apply(ev[,dcols], 2, median, na.rm=T))
+  # now normalize across rows, by mean
+  ev[,dcols] <- ev[,dcols] / apply(ev[,dcols], 1, mean, na.rm=T)
+  # remove rows without quant
+  ev <- ev[!apply(apply(ev[,dcols], 1, is.na), 2, sum) > 0,]
+  ev
+}
+
+extract_uniprot_id <- function(leading_protein) {
+  sapply(strsplit(leading_protein, "\\|"), function(p) {
+    if(length(unlist(p)) == 1) return(p[1])
+    else if(length(unlist(p)) == 3) return(p[2])
+    else return(p[1])
+  })
+}
+
 # FROM APLPACK LIBRARY ------
 faces<-function(xy,which.row,fill=FALSE,face.type=1,
                 nrow.plot,ncol.plot,scale=TRUE,byrow=FALSE,main,

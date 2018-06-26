@@ -1,6 +1,6 @@
 ## ----------
 
-pdf(file='manuscript/Figs/alignment_demo_v2.pdf', width=3.5, height=3)
+pdf(file='manuscript/Figs/alignment_demo_v2.pdf', width=3, height=3)
 par(mgp=c(1.2, 0.5, 0),
     mar=c(2.5,2,1.5,0.2),
     pin=c(2, 2),

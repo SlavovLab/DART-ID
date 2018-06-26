@@ -22,7 +22,7 @@ validate.lib.3 <- function(ev, exclude.cols=c(1:4, 7:11)) {
     filter(!grepl("REV__", Protein)) %>%
     filter(!grepl("CON__", Proteins)) %>%
     # only take SQC experiments
-    filter(grepl("SQC", `Raw file`))
+    filter(grepl("SQC", `Raw file`)) %>%
     filter(!is.na(Protein))
   
   cat("Removing proteins without single-cell RI data\n")
@@ -93,7 +93,7 @@ validate.lib.3 <- function(ev, exclude.cols=c(1:4, 7:11)) {
     prot_cvs_null[i,] <- apply(dmat, 2, sd) / apply(dmat, 2, mean)
   }
   
-  cat("Collecing results...\n")
+  cat("\nCollecing results...\n")
   cvs_all <- data.frame()
   cvs_all <- rbind(cvs_all, melt(prot_cvs_orig)  %>% mutate(Method="Spectra"))
   cvs_all <- rbind(cvs_all, melt(prot_cvs_new)   %>% mutate(Method="Spectra+RT"))
