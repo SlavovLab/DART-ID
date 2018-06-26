@@ -1,0 +1,53 @@
+### mq2pin configuration
+### =========================
+
+verbose: true
+
+## Input
+## ==========================
+
+input: 
+  - /gd/MS/SCoPE/SQC/SQC67_hiFDR/evidence.txt
+  - /gd/MS/SCoPE/SQC/SQC69/evidence.txt
+  - /gd/MS/SCoPE/SQC/SQC70/evidence.txt
+  - /gd/MS/SCoPE/SQC/SQC71/evidence.txt
+  - /gd/MS/SCoPE/SQC/SQC72/evidence.txt
+  - /gd/MS/SCoPE/SQC/SQC74/evidence.txt
+  - /gd/MS/SCoPE/SQC/SQC75/evidence.txt
+  - /gd/MS/SCoPE/SQC/SQC76/evidence.txt
+  - /gd/MS/SCoPE/SQC/SQC77/evidence.txt
+  - /gd/MS/SCoPE/SQC/SQC79/evidence.txt
+  - /gd/MS/SCoPE/SQC/SQC80/evidence.txt
+  - /gd/MS/SCoPE/SQC/SQC81/evidence.txt
+  - /gd/MS/SCoPE/SQC/SQC82/evidence.txt
+  - /gd/MS/SCoPE/SQC/SQC83/evidence.txt
+  - /gd/MS/SCoPE/SQC/SQC84/evidence.txt
+  - /gd/MS/SCoPE/SQC/SQC85/evidence.txt
+  - /gd/MS/SCoPE/SQC/SQC86/evidence.txt
+  - /gd/MS/SCoPE/SQC/SQC87/evidence.txt
+  # with trapping col
+  - /gd/MS/SCoPE/SQC/SQC95A/evidence.txt
+  - /gd/MS/SCoPE/SQC/SQC97B/evidence.txt
+  # 1000 cell sets
+  - /gd/MS/Ribo/IFN/dat/IFN6H_K_hiFDR/evidence.txt
+  - /gd/MS/SCoPE/SingleCell_Data/FP18/evidence.txt
+
+output: ~
+
+mq2pin_cols:
+  raw_file: Raw file
+  sequence: Sequence
+  length: Length
+  missed_cleavages: Missed cleavages
+  protein: Leading razor protein
+  charge: Charge
+  mz: m/z
+  mass: Mass
+  mass_calibration: Uncalibrated - Calibrated m/z [Da]
+  mass_error: Mass error [Da]
+  retention_time: Retention time
+  retention_length: Retention length
+  pif: PIF
+  scan_num: MS/MS scan number
+  score: Score
+  delta_score: Delta score

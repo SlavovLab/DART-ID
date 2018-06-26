@@ -1,0 +1,86 @@
+### RTLib configuration
+### =========================
+
+verbose: true
+
+## Input
+## ==========================
+
+input:
+  - /gd/MS/SCoPE/SingleCell_Data/FP18/evidence.txt
+
+use_unmodified_sequence: false
+low_memory: false
+params_folder: ~
+
+## Alignment Options
+## ==========================
+
+prior_iters: 10
+stan_iters: 5000
+stan_attempts: 5
+mu_min: 1
+rt_distortion: 0
+
+## Output
+## ==========================
+
+#output: ~/git/RTLib/Alignments/SQC80_87_20180530_2
+output: ~
+print_figures: true
+save_params: true
+add_diagnostic_cols: true
+combine_output: true
+combined_output_name: ev_updated.txt
+output_suffix: _updated
+
+## Input Type Options
+## ==========================
+
+col_names:
+
+  sequence: Sequence
+  raw_file: Raw file
+  retention_time: Retention time
+  pep: PEP
+
+  modified_sequence: Modified sequence
+  leading_protein: Leading razor protein
+  proteins: Proteins
+  #leading_gene: ~
+  #genes: ~
+  retention_length: Retention length
+  intensity: Intensity
+  #exclude: exclude
+  #exp_id: exp_id
+  #peptide_id: peptide_id
+
+## Filters
+## ==========================
+
+filters:
+  - name: uniprot_exclusion
+    file: ~/git/RTLib/pd_exclude.txt
+    list: ~
+
+  - name: contaminant
+    tag: CON__
+
+  - name: decoy
+    tag: REV__
+
+  - name: pep
+    value: 0.5
+
+  - name: retention_length
+    dynamic: true
+    value: 0.01667
+
+  - name: smears
+    dynamic: true
+    value: 0.03333
+
+  - name: num_exps
+    value: 3
+
+exclude_exps: ~

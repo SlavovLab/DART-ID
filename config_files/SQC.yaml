@@ -1,0 +1,115 @@
+### RTLib configuration
+### =========================
+
+verbose: true
+
+## Input
+## ==========================
+
+input: 
+  - /gd/MS/SCoPE/SQC/SQC67_hiFDR/evidence.txt
+  - /gd/MS/SCoPE/SQC/SQC68/evidence.txt
+  - /gd/MS/SCoPE/SQC/SQC69/evidence.txt
+  - /gd/MS/SCoPE/SQC/SQC70/evidence.txt
+  - /gd/MS/SCoPE/SQC/SQC71/evidence.txt
+  - /gd/MS/SCoPE/SQC/SQC72/evidence.txt
+  - /gd/MS/SCoPE/SQC/SQC73/evidence.txt
+  - /gd/MS/SCoPE/SQC/SQC74/evidence.txt
+  - /gd/MS/SCoPE/SQC/SQC75/evidence.txt
+  - /gd/MS/SCoPE/SQC/SQC76/evidence.txt
+  - /gd/MS/SCoPE/SQC/SQC77/evidence.txt
+  - /gd/MS/SCoPE/SQC/SQC78/evidence.txt
+  - /gd/MS/SCoPE/SQC/SQC79/evidence.txt
+  - /gd/MS/SCoPE/SQC/SQC80/evidence.txt
+  - /gd/MS/SCoPE/SQC/SQC81/evidence.txt
+  - /gd/MS/SCoPE/SQC/SQC82/evidence.txt
+  - /gd/MS/SCoPE/SQC/SQC83/evidence.txt
+  - /gd/MS/SCoPE/SQC/SQC84/evidence.txt
+  - /gd/MS/SCoPE/SQC/SQC85/evidence.txt
+  - /gd/MS/SCoPE/SQC/SQC86/evidence.txt
+  - /gd/MS/SCoPE/SQC/SQC87/evidence.txt
+  # with trapping col
+  - /gd/MS/SCoPE/SQC/SQC95A/evidence.txt
+  - /gd/MS/SCoPE/SQC/SQC97/evidence.txt
+  - /gd/MS/SCoPE/SQC/SQC98/evidence.txt
+  - /gd/MS/SCoPE/SQC/SQC99/evidence.txt
+  # 1000 cell sets
+  - /gd/MS/Ribo/IFN/dat/IFN6H_K_hiFDR/evidence.txt
+  - /gd/MS/SCoPE/SingleCell_Data/FP18/evidence.txt
+
+include: ~
+exclude: SQC67[AB][16]|SQC67C1[3-9]|SQC67[CD]5|SQC68[DE]|IFN6[H-K]-Trg|SQC72D|SQC73[CD]|SQC74M|180416S_QC_SQC78A2
+
+use_unmodified_sequence: false
+low_memory: false
+params_folder: ~
+
+## Alignment Options
+## ==========================
+
+prior_iters: 10
+stan_iters: 20000
+stan_attempts: 3
+mu_min: 1
+rt_distortion: 0
+
+## Output
+## ==========================
+
+#output: ~/git/RTLib/Alignments/SQC80_87_20180530_2
+output: ~
+print_figures: true
+save_params: true
+add_diagnostic_cols: true
+combine_output: true
+combined_output_name: ev_updated.txt
+output_suffix: _updated
+
+## Input Type Options
+## ==========================
+
+col_names:
+
+  sequence: Sequence
+  raw_file: Raw file
+  retention_time: Retention time
+  pep: PEP
+
+  modified_sequence: Modified sequence
+  leading_protein: Leading razor protein
+  proteins: Proteins
+  #leading_gene: ~
+  #genes: ~
+  retention_length: Retention length
+  intensity: Intensity
+  #exclude: exclude
+  #exp_id: exp_id
+  #peptide_id: peptide_id
+
+## Filters
+## ==========================
+
+filters:
+  - name: uniprot_exclusion
+    file: ~/git/RTLib/pd_exclude.txt
+    list: ~
+
+  - name: contaminant
+    tag: CON__
+
+  - name: decoy
+    tag: REV__
+
+  - name: pep
+    value: 0.5
+
+  - name: retention_length
+    dynamic: true
+    value: 0.01667
+
+  - name: smears
+    dynamic: true
+    value: 0.03333
+
+  - name: num_exps
+    value: 10
