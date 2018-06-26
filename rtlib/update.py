@@ -50,19 +50,28 @@ def update(dfa, params):
     exp_f = exp_f.reset_index(drop=True)
 
     # convert peptide_id to stan_peptide_id
-    exp_f['stan_peptide_id'] = exp_f['peptide_id'].map({ind: val for val, ind in enumerate(pep_id_list)})
+    exp_f['stan_peptide_id'] = exp_f['peptide_id'].map({
+      ind: val for val, ind in enumerate(pep_id_list)
+    })
     exp_peptides = exp_f['stan_peptide_id'].unique()
     exp_f['mu'] = params['peptide']['mu'].values[exp_f['stan_peptide_id']]
 
     # get mu from muij, using the linear regression parameters from this experiment
     exp_f['muij'] = 0
     # if the mu is before the split point, only account for the first segment
-    exp_f['muij'][exp_f['mu'] < params['exp']['split_point'][i]] = params['exp']['beta_0'][i] + (params['exp']['beta_1'][i] * exp_f['mu'])
+    exp_f['muij'][exp_f['mu'] < params['exp']['split_point'][i]] = 
+      params['exp']['beta_0'][i] + 
+      (params['exp']['beta_1'][i] * exp_f['mu'])
     # if the mu is after the split point, account for both segments
-    exp_f['muij'][exp_f['mu'] >= params['exp']['split_point'][i]] = params['exp']['beta_0'][i] + (params['exp']['beta_1'][i] * params['exp']['split_point'][i]) + (params['exp']['beta_2'][i] * (exp_f['mu'] - params['exp']['split_point'][i]))
+    exp_f['muij'][exp_f['mu'] >= params['exp']['split_point'][i]] = 
+      params['exp']['beta_0'][i] + 
+      (params['exp']['beta_1'][i] * params['exp']['split_point'][i]) + 
+      (params['exp']['beta_2'][i] * (exp_f['mu'] - params['exp']['split_point'][i]))
 
     # get sigmaij from the sigma_intercept and sigma_slope parameters for this experiment
-    exp_f['sigmaij'] = params['exp']['sigma_intercept'][i] + params['exp']['sigma_slope'][i] / 100 * exp_f['mu']
+    exp_f['sigmaij'] = 
+      params['exp']['sigma_intercept'][i] + 
+      params['exp']['sigma_slope'][i] / 100 * exp_f['mu']
 
 
     # PEP.new = P(-|RT) = P(RT|-)*P(-) / (P(RT|-)*P(-) + P(RT|+)*P(+)
@@ -76,7 +85,7 @@ def update(dfa, params):
     # Fit3d, normal density over all retention times
     rt_mean = np.mean(exp_f['retention_time'])
     rt_std = np.std(exp_f['retention_time'])
-    exp_rt_minus = norm.pdf(exp_f['retention_time'], loc=rt_mean, scale=rt_std)
+    rt_minus = norm.pdf(exp_f['retention_time'], loc=rt_mean, scale=rt_std)
 
     # P(-) = probability that PSM is incorrect (PEP)
     # P(+) = probability that PSM is correct (1-PEP)
@@ -89,25 +98,28 @@ def update(dfa, params):
     # and the other distribution for all RTs is weighted by PEP
     # -- summing to a total density of 1
     
-    # ensure that pep does not exceed 1
+    # ensure that PEP does not exceed 1
     # will result in incorrect negative densities when applying mixture model
     exp_f['pep'][exp_f['pep'] > 1] = 1
 
     # Fit3d - mixture between two normal densities
-    comp1 = exp_f['pep'] * norm.pdf(exp_f['retention_time'], loc=rt_mean, scale=rt_std)
-    comp2 = (1 - exp_f['pep']) * norm.pdf(exp_f['retention_time'], loc=exp_f['muij'], scale=exp_f['sigmaij'])
-    exp_rt_plus = comp1 + comp2
+    comp1 = exp_f['pep'] * 
+      norm.pdf(exp_f['retention_time'], loc=rt_mean, scale=rt_std)
+    comp2 = (1 - exp_f['pep']) * 
+      norm.pdf(exp_f['retention_time'], loc=exp_f['muij'], scale=exp_f['sigmaij'])
+    rt_plus = comp1 + comp2
 
     # now we can update the PEP
     # PEP.new = P(-|RT) = P(RT|-)*P(-) / (P(RT|-)*P(-) + P(RT|+)*P(+)
     # + | PSM = Correct
     # - | PSM = Incorrect
-    pep_new = (exp_rt_minus * exp_f['pep']) / ((exp_rt_minus * exp_f['pep']) + (exp_rt_plus * (1 - exp_f['pep'])))
+    pep_new = (rt_minus * exp_f['pep']) / 
+      ((rt_minus * exp_f['pep']) + (rt_plus * (1 - exp_f['pep'])))
 
     # for PSMs for which we have alignment/update data
     exp_new = pd.DataFrame({
-        'rt_minus':          exp_rt_minus.tolist(),
-        'rt_plus':           exp_rt_plus.tolist(),
+        'rt_minus':          rt_minus.tolist(),
+        'rt_plus':           rt_plus.tolist(),
         'mu':                exp_f['mu'].values.tolist(),
         'muij':              exp_f['muij'].values.tolist(),
         'sigmaij':           exp_f['sigmaij'].values.tolist(),
