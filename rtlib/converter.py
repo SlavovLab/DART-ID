@@ -288,25 +288,12 @@ required_cols = {
 
 
 def convert(df, config):
-  # use canonical sequence, or modified sequence?
-  seq_column = 'sequence'
-  # make sure the modified sequence column exists as well
-  if not config['use_unmodified_sequence']:
-    if type(config['col_names']['modified_sequence']) is str:
-      seq_column = 'modified_sequence'
-    else:
-      raise Exception('Modified Sequence selected but either input file type does not support modified sequences, or the input file type is missing the modified sequence column.')
-  else:
-    logger.info('Using unmodified peptide sequence instead of modified peptide sequence')
 
-  # load the sequence column first
-  cols = [config['col_names'][seq_column]]
-  col_names = ['sequence']
+  cols = []
+  col_names = []
+  
   # loop thru all columns listed in the config file
   for col in list(config['col_names'].keys()):
-    # don't add this column if its the sequence column, or if
-    # it's not specified
-    if col in ['sequence', 'modified_sequence']: continue
     if config['col_names'][col] is None: 
       logger.info('Column \"{}\" is left empty in the config file. Skipping...'.format(col))
       continue
@@ -452,9 +439,11 @@ def process_files(config):
   # if experiment or peptide IDs are already provided, then skip this step
   if 'exp_id' not in config['col_names'] or config['col_names']['exp_id'] is None:
     df['exp_id'] = df['raw_file'].map({ind: val for val, ind in enumerate(np.sort(df['raw_file'].unique()))})
+  logger.info('{} experiments (raw files) loaded'.format(np.max(df['exp_id'])))
 
   if 'peptide_id' not in config['col_names'] or config['col_names']['peptide_id'] is None:
     df['peptide_id'] = df['sequence'].map({ind: val for val, ind in enumerate(df['sequence'].unique())})
+  logger.info('{} peptide sequences loaded'.format(np.max(df['peptide_id'])))
 
   # run filters for all PSMs
   # filtered-out PSMs are not removed from the dataframe, but are instead flagged
