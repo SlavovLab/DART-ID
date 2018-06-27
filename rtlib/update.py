@@ -59,18 +59,18 @@ def update(dfa, params):
     # get mu from muij, using the linear regression parameters from this experiment
     exp_f['muij'] = 0
     # if the mu is before the split point, only account for the first segment
-    exp_f['muij'][exp_f['mu'] < params['exp']['split_point'][i]] = 
-      params['exp']['beta_0'][i] + 
+    exp_f['muij'][exp_f['mu'] < params['exp']['split_point'][i]] = \
+      params['exp']['beta_0'][i] + \
       (params['exp']['beta_1'][i] * exp_f['mu'])
     # if the mu is after the split point, account for both segments
-    exp_f['muij'][exp_f['mu'] >= params['exp']['split_point'][i]] = 
-      params['exp']['beta_0'][i] + 
-      (params['exp']['beta_1'][i] * params['exp']['split_point'][i]) + 
+    exp_f['muij'][exp_f['mu'] >= params['exp']['split_point'][i]] = \
+      params['exp']['beta_0'][i] + \
+      (params['exp']['beta_1'][i] * params['exp']['split_point'][i]) + \
       (params['exp']['beta_2'][i] * (exp_f['mu'] - params['exp']['split_point'][i]))
 
     # get sigmaij from the sigma_intercept and sigma_slope parameters for this experiment
-    exp_f['sigmaij'] = 
-      params['exp']['sigma_intercept'][i] + 
+    exp_f['sigmaij'] = \
+      params['exp']['sigma_intercept'][i] + \
       params['exp']['sigma_slope'][i] / 100 * exp_f['mu']
 
 
@@ -103,9 +103,9 @@ def update(dfa, params):
     exp_f['pep'][exp_f['pep'] > 1] = 1
 
     # Fit3d - mixture between two normal densities
-    comp1 = exp_f['pep'] * 
+    comp1 = exp_f['pep'] * \
       norm.pdf(exp_f['retention_time'], loc=rt_mean, scale=rt_std)
-    comp2 = (1 - exp_f['pep']) * 
+    comp2 = (1 - exp_f['pep']) * \
       norm.pdf(exp_f['retention_time'], loc=exp_f['muij'], scale=exp_f['sigmaij'])
     rt_plus = comp1 + comp2
 
@@ -113,7 +113,7 @@ def update(dfa, params):
     # PEP.new = P(-|RT) = P(RT|-)*P(-) / (P(RT|-)*P(-) + P(RT|+)*P(+)
     # + | PSM = Correct
     # - | PSM = Incorrect
-    pep_new = (rt_minus * exp_f['pep']) / 
+    pep_new = (rt_minus * exp_f['pep']) / \
       ((rt_minus * exp_f['pep']) + (rt_plus * (1 - exp_f['pep'])))
 
     # for PSMs for which we have alignment/update data
@@ -160,10 +160,10 @@ def update(dfa, params):
 def write_output(df, out_path, config):
   # remove diagnostic columns, unless they are specified to be kept
   if not config['add_diagnostic_cols']:
-    df = df.drop(['input_exclude', 'exclude', 'mu', 'muij', 'rt_minus', 'rt_plus', 'sigmaij', 'input_id', 'exp_id', 'peptide_id', 'stan_peptide_id'], axis=1)
-  else:
-    logger.info('Adding diagnostic columns to output')
-
+    df = df.drop(['input_exclude', 'exclude', 'mu', 'muij', 
+      'rt_minus', 'rt_plus', 'sigmaij', 
+      'input_id', 'exp_id', 'peptide_id', 'stan_peptide_id'], axis=1)
+    
   df.to_csv(out_path, sep='\t', index=False)
 
 def main():
@@ -230,18 +230,53 @@ def main():
   if config['print_figures']:
     figures(df_adjusted, config, params)
 
+  # overwrite PEP?
+  # if true, then store old PEP in "Spectra PEP" column,
+  # and put the updated PEP in "PEP" column.
+  # then drop the pep_new and pep_updated columns
+  if config['overwrite_pep']:
+    logger.info('Overwriting PEP column with new PEP. Saving old PEP in \"Spectra PEP\" column.')
+    df_adjusted['Spectra PEP'] = df_adjusted[config['col_names']['pep']]
+    df_adjusted[config['col_names']['pep']] = df_adjusted['pep_updated']
+    df_adjusted = df_adjusted.drop(['pep_new', 'pep_updated'], axis=1)
+
+  # tell the user whether or not to expect diagnostic columns
+  if config['add_diagnostic_cols']:
+    logger.info('Adding diagnostic columns to output')
+
   # write to file
-  if config['combine_output']:
+  if config['save_combined_output']:
     # if combining input files, then write to one combined file
     out_path = os.path.join(config['output'], config['combined_output_name'])
     logger.info('Combining input file(s) and writing adjusted data file to {} ...'.format(out_path))
     write_output(df_adjusted, out_path, config)
-  else:
+  
+  if config['save_separate_output']:
     # if keeping input files separate, then use 'input_id' to retain the
     # order in which the input files were passed in
     logger.info('Saving output to separate files...')
     for i, f in enumerate(config['input']):
-      out_path = os.path.join(config['output'], os.path.splitext(os.path.basename(f))[0] + config['output_suffix'] + '_' + str(i) + '.txt')
+
+      # get output extension
+      # default to the same extension as the input
+      # if one in the config file exists, use that instead
+      out_ext = os.path.splitext(os.path.basename(f))[1]
+      if config['output_ext'] is not None:
+        out_ext = config['output_ext']
+
+      # contruct output path based on which input file it was
+      out_path = os.path.join(config['output'], 
+        os.path.splitext(os.path.basename(f))[0] + \
+        config['output_suffix'] + '_' + str(i) + out_ext)
+
+      # if saving back to the original input folder,
+      # then base the output file name on the input file name instead.
+      # no need to number these.
+      if config['save_in_input_folder']:
+        out_path = os.path.join(os.path.dirname(f),
+          os.path.splitext(os.path.basename(f))[0] + \
+          config['output_suffix'] + out_ext)
+
       logger.info('Saving input file {} to {}'.format(i, out_path))
       df_a = df_adjusted.loc[df_adjusted['input_id'] == i]
       # save to file
