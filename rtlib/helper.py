@@ -75,6 +75,10 @@ def load_params_from_file(params_folder):
           params[pf.split('_')[0]] = pd.read_csv(pfp, sep='\t')
         except:
           logger.error('Error loading param file')
+    else:
+      raise Exception('Params file {} does not exist'.format(pfp))
+
+    logger.info('Loaded \"{}\" params file.'.format(pf.split('_')[0]))
 
   return params
 
