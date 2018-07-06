@@ -19,6 +19,8 @@ def gen(df, config, params, output_path):
 
   exp_names = np.sort(df[config['col_names']['raw_file']].unique())
   num_experiments = len(exp_names)
+  # ceil PEP to 1
+  df[config['col_names']['pep']][df[config['col_names']['pep']] > 1] = 1
   # split PEP into 10 bins, for coloring points later
   pep_col_code = pd.cut(df[config['col_names']['pep']], 10)
 
