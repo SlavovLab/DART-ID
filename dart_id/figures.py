@@ -11,10 +11,10 @@ import pkg_resources
 import sys
 import time
 
-from rtlib.align import align
-from rtlib.converter import process_files
-from rtlib.figure_gen import *
-from rtlib.helper import *
+from dart_id.align import align
+from dart_id.converter import process_files
+from dart_id.figure_gen import *
+from dart_id.helper import *
 from shutil import copyfile
 from string import Template
 

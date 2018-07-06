@@ -1,21 +1,21 @@
-RTLib Project
+DART-ID
 =============
 
 Intro
 -----
 
-The RTLib code goal is to make the process as simple as possible. Run ```rtlib```, point it at the inputs, and expect an additional PEP_new column at the end. There are still some parameters that you will need to tweak manually as the default settings have not been fully generalized yet.
+The DART-ID code goal is to make the process as simple as possible. Run ```dart_id```, point it at the inputs, and expect an additional PEP_new column at the end. There are still some parameters that you will need to tweak manually as the default settings have not been fully generalized yet.
 
 # Installation
 
 ```
-pip install git+https://github.com/blahoink/RTLib
+pip install git+https://github.com/blahoink/DART-ID
 ```
 
 Uninstall the package with:
 
 ```
-pip uninstall rtlib
+pip uninstall dart_id
 ```
 
 # Known bugs:
@@ -25,14 +25,14 @@ pip uninstall rtlib
 Usage
 ----------
 
-View parameters anytime yourself by typing "rtlib -h".
+View parameters anytime yourself by typing "dart_id -h".
 
 Input and output files are optional in the command line, and can be specified in the config file instead, if that's what you prefer.
 
-An example annotated config file can be found at ```example/config.yaml```
+An example config file, annotated and unannotated, can be found at ```example/config.yaml```
 
 ```
-usage: rtlib [-h] [-i INPUT [INPUT ...]] [-o OUTPUT] [-v] [--version]
+usage: dart_id [-h] [-i INPUT [INPUT ...]] [-o OUTPUT] [-v] [--version]
                  --config-file CONFIG_FILE
 
 optional arguments:
@@ -51,5 +51,5 @@ Example runs
 ============
 
 ```
-rtlib -i /gd/SingleCell_Data/FP17/evidence.txt -o ~/git/RTLib/Alignments/FP17_20180527_1 -v --config-file path_to_config_file.yaml
+dart_id -i /gd/SingleCell_Data/FP17/evidence.txt -o ~/git/RTLib/Alignments/FP17_20180527_1 -v --config-file path_to_config_file.yaml
 ```

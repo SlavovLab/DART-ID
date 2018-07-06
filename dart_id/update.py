@@ -8,10 +8,10 @@ import os
 import pandas as pd
 import time
 
-from rtlib.align import align
-from rtlib.converter import process_files
-from rtlib.figures import figures
-from rtlib.helper import *
+from dart_id.align import align
+from dart_id.converter import process_files
+from dart_id.figures import figures
+from dart_id.helper import *
 from scipy.stats import norm, lognorm
 
 logger = logging.getLogger('root')

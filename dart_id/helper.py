@@ -8,7 +8,7 @@ import pkg_resources
 import sys
 import yaml
 
-from rtlib.version import __version__
+from dart_id.version import __version__
 from shutil import copyfile
 
 logger = logging.getLogger('root')

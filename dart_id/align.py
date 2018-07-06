@@ -12,8 +12,8 @@ import pystan
 import re
 import time
 
-from rtlib.converter import process_files
-from rtlib.helper import *
+from dart_id.converter import process_files
+from dart_id.helper import *
 from hashlib import md5
 from scipy.stats import norm, lognorm
 
@@ -21,7 +21,6 @@ pd.options.mode.chained_assignment = None
 logger = logging.getLogger('root')
 
 dirname = os.path.dirname(__file__)
-print(dirname)
 
 def align(dfa, config):
 
