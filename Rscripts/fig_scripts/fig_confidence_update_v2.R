@@ -76,7 +76,7 @@ barplot(-log10(c(5e-2, 0.3)), width=1, space=0.25, add=T,
         col=c(av[1], av[2]),
         xaxt='n', yaxt='n')
 
-mtext('PSM 1', 3, line=0.2, cex=0.8)
+mtext('PSM 1', 3, line=0.1, cex=0.8)
 mtext('ID Confidence', 2, line=0.5, cex=1, at=-0.5, las=3)
 
 par(mar=c(4, 1, 1, 0.5),
@@ -94,9 +94,9 @@ barplot(-log10(c(5e-2, 1e-3)), width=1, space=0.25, add=T,
 
 par(xpd=T)
 legend(x=-0.5, y=0, c('Spectra', 'DART-ID'), 
-       pch=15, pt.cex=2, cex=1.1, col=c(av[1], av[2]),
+       pch=22, pt.cex=2, pt.bg=c(av[1], av[2]), cex=1.1, col='black',
        y.intersp=1, bty='n')
 
-mtext('PSM 2', 3, line=0.2, cex=0.8)
+mtext('PSM 2', 3, line=0.1, cex=0.8)
 
 dev.off()
