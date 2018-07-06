@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
 
-from rtlib.collator import main
+from dart_id.collator import main
 
 main()

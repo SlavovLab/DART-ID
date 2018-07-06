@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
 
-from rtlib.update import main
+from dart_id.update import main
 
 main()

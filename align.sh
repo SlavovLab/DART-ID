@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
 
-from rtlib.align import main
+from dart_id.align import main
 
 main()
