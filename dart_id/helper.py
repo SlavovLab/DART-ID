@@ -8,6 +8,7 @@ import pkg_resources
 import sys
 import yaml
 
+from dart_id.exceptions import *
 from dart_id.version import __version__
 from shutil import copyfile
 
@@ -76,7 +77,7 @@ def load_params_from_file(params_folder):
         except:
           logger.error('Error loading param file')
     else:
-      raise Exception('Params file {} does not exist'.format(pfp))
+      raise ConfigFileError('Params file {} does not exist'.format(pfp))
 
     logger.info('Loaded \"{}\" params file.'.format(pf.split('_')[0]))
 
@@ -121,10 +122,10 @@ def read_config_file(args, create_output_folder=True):
 
   # make sure that we have inputs and outputs before continuing
   if config['input'] is None:
-    raise Exception('No input files specified, in either the config file or the command line. Please provide input files.')
+    raise ConfigFileError('No input files specified, in either the config file or the command line. Please provide input files.')
 
   if config['output'] is None:
-    raise Exception('No output folder specified, in either the config file or the command line. Please provide output folder.')
+    raise ConfigFileError('No output folder specified, in either the config file or the command line. Please provide output folder.')
 
   # expand user or any vars
   config['output'] = os.path.expanduser(config['output'])
