@@ -11,18 +11,22 @@ import time
 from dart_id.align import align
 from dart_id.converter import process_files
 from dart_id.figures import figures
+from dart_id.models import models, get_model_from_config
 from dart_id.helper import *
 from scipy.stats import norm, lognorm
 
 logger = logging.getLogger('root')
 
-def update(dfa, params):
+def update(dfa, params, config):
   dff = dfa[~(dfa['exclude'])]
   dff = dff.reset_index(drop=True)
 
+  logger.info('{} / {} ({:.2%}) confident, alignable observations (PSMs) after filtering.'.format(dff.shape[0], dfa.shape[0], dff.shape[0] / dfa.shape[0]))
+
   # refactorize peptide id into stan_peptide_id, 
   # to preserve continuity when feeding data into STAN
-  dff['stan_peptide_id'] = dff['sequence'].map({ind: val for val, ind in enumerate(dff['sequence'].unique())})
+  dff['stan_peptide_id'] = dff['sequence'].map({
+    ind: val for val, ind in enumerate(dff['sequence'].unique())})
 
   num_experiments = dff['exp_id'].max() + 1
   num_observations = dff.shape[0]
@@ -33,6 +37,8 @@ def update(dfa, params):
   max_rt = dff['retention_time'].max()
   pep_id_list = dff['peptide_id'].unique()
 
+  model = get_model_from_config(config)
+
   # output table
   df_new = pd.DataFrame()
 
@@ -40,7 +46,7 @@ def update(dfa, params):
     exp_name = exp_names[i]
     logger.info('Updating PEPs for experiment #{} - {}'.format(i+1, exp_name))
     
-    exp = dfa[dfa['exp_id']==e]
+    exp = dfa[dfa['exp_id'] == e]
     exp = exp.reset_index(drop=True)
     
     # not all peptides in this experiment have data from the model
@@ -49,6 +55,10 @@ def update(dfa, params):
     exp_f = exp[exp_matches]
     exp_f = exp_f.reset_index(drop=True)
 
+    # ensure that PEP does not exceed 1
+    # will result in incorrect negative densities when applying mixture model
+    exp_f['pep'][exp_f['pep'] > 1] = 1
+
     # convert peptide_id to stan_peptide_id
     exp_f['stan_peptide_id'] = exp_f['peptide_id'].map({
       ind: val for val, ind in enumerate(pep_id_list)
@@ -56,61 +66,40 @@ def update(dfa, params):
     exp_peptides = exp_f['stan_peptide_id'].unique()
     exp_f['mu'] = params['peptide']['mu'].values[exp_f['stan_peptide_id']]
 
-    # get mu from muij, using the linear regression parameters from this experiment
-    exp_f['muij'] = 0
-    # if the mu is before the split point, only account for the first segment
-    exp_f['muij'][exp_f['mu'] < params['exp']['split_point'][i]] = \
-      params['exp']['beta_0'][i] + \
-      (params['exp']['beta_1'][i] * exp_f['mu'])
-    # if the mu is after the split point, account for both segments
-    exp_f['muij'][exp_f['mu'] >= params['exp']['split_point'][i]] = \
-      params['exp']['beta_0'][i] + \
-      (params['exp']['beta_1'][i] * params['exp']['split_point'][i]) + \
-      (params['exp']['beta_2'][i] * (exp_f['mu'] - params['exp']['split_point'][i]))
+    # get muij from mu, using the monotone transformation parameters from this experiment
+    exp_f['muij'] = models[model]['muij_func'](exp_f, i, params)
+    # get sigmaij from data and parameters
+    exp_f['sigmaij'] = models[model]['sigmaij_func'](exp_f, i, params)
 
-    # get sigmaij from the sigma_intercept and sigma_slope parameters for this experiment
-    exp_f['sigmaij'] = \
-      params['exp']['sigma_intercept'][i] + \
-      params['exp']['sigma_slope'][i] / 100 * exp_f['mu']
-
-
-    # PEP.new = P(-|RT) = P(RT|-)*P(-) / (P(RT|-)*P(-) + P(RT|+)*P(+)
-    # + <- PSM=Correct
-    # - <- PSM=Incorrect
+    #                                    P(RT|PSM-)*P(PSM-)
+    # PEP.new = P(PSM-|RT) =  ---------------------------------------
+    #                         P(RT|PSM-)*P(PSM-) + P(RT|PSM+)*P(PSM+)
+    #                         
+    # PSM+ <- PSM is Correct
+    # PSM- <- PSM is Incorrect
     
-    # P(RT|-) = probability of peptides RT, given that PSM is incorrect
-    #           calculated from the uniform density from 0 to max(RT)
-    #exp.rt.minus <- 1 / max(exp.f$`Retention time`) #experiment-specific
+    # P(RT|PSM-) = probability of peptides RT, given that PSM is incorrect
+    #           estimate empirical density of RTs over the experiment
     
-    # Fit3d, normal density over all retention times
-    rt_mean = np.mean(exp_f['retention_time'])
-    rt_std = np.std(exp_f['retention_time'])
-    rt_minus = norm.pdf(exp_f['retention_time'], loc=rt_mean, scale=rt_std)
+    rt_minus = models[model]['rt_minus_func'](exp_f)
 
-    # P(-) = probability that PSM is incorrect (PEP)
-    # P(+) = probability that PSM is correct (1-PEP)
+    # P(PSM-) = probability that PSM is incorrect (PEP)
+    # P(PSM+) = probability that PSM is correct (1-PEP)
     
-    # P(RT|+) = probability that given the correct ID, the RT falls in the
+    # P(RT|PSM+) = probability that given the correct ID, the RT falls in the
     #           normal distribution of RTs for that peptide, for that experiment
     #
-    # this is defined in fit_RT3.stan as a mixture between 2 normal distributions
+    # this is defined in fit_RT3d.stan as a mixture between 2 normal distributions
     # where one distribution for the peptide RT is weighted by 1-PEP
     # and the other distribution for all RTs is weighted by PEP
     # -- summing to a total density of 1
-    
-    # ensure that PEP does not exceed 1
-    # will result in incorrect negative densities when applying mixture model
-    exp_f['pep'][exp_f['pep'] > 1] = 1
 
-    # Fit3d - mixture between two normal densities
-    comp1 = exp_f['pep'] * \
-      norm.pdf(exp_f['retention_time'], loc=rt_mean, scale=rt_std)
-    comp2 = (1 - exp_f['pep']) * \
-      norm.pdf(exp_f['retention_time'], loc=exp_f['muij'], scale=exp_f['sigmaij'])
-    rt_plus = comp1 + comp2
+    rt_plus = models[model]['rt_plus_func'](exp_f)
 
     # now we can update the PEP
-    # PEP.new = P(-|RT) = P(RT|-)*P(-) / (P(RT|-)*P(-) + P(RT|+)*P(+)
+    #                                    P(RT|PSM-)*P(PSM-)
+    # PEP.new = P(PSM-|RT) =  ---------------------------------------
+    #                         P(RT|PSM-)*P(PSM-) + P(RT|PSM+)*P(PSM+)
     # + | PSM = Correct
     # - | PSM = Incorrect
     pep_new = (rt_minus * exp_f['pep']) / \
@@ -179,7 +168,7 @@ def main():
   config = read_config_file(args)
 
   # initialize logger
-  init_logger(config['verbose'], os.path.join(config['output'], 'align.log'))
+  init_logger(config['verbose'], os.path.join(config['output'], 'align.log'), config['log_file'])
 
   logger.info('Converting files and filtering PSMs')
   df, df_original = process_files(config)
@@ -196,7 +185,7 @@ def main():
 
   # now we have the params, run the update
   logger.info('Updating PEPs with alignment data...')
-  df_new = update(df, params)
+  df_new = update(df, params, config)
 
   # save the sparse combined input file?
   #df_new.to_csv(os.path.join(args.output, 'df_converted.txt'), sep='\t', index=False)
@@ -208,7 +197,8 @@ def main():
 
   # add rows of removed experiments (done with the --remove-exps options)
   if config['exclude'] is not None or config['include'] is not None:
-    logger.info('Reattaching {} PSMs excluded with the experiment blacklist'.format(df_original['input_exclude'].sum()))
+    logger.info('Reattaching {} PSMs excluded with the \
+      experiment blacklist'.format(df_original['input_exclude'].sum()))
     # store a copy of the columns and their order for later
     df_cols = df_adjusted.columns
     # concatenate data frames
@@ -224,7 +214,8 @@ def main():
   # add pep_updated column - which is pep_new, with the NaNs filled in
   # with the old PEPs.
   df_adjusted['pep_updated'] = df_adjusted['pep_new']
-  df_adjusted['pep_updated'][pd.isnull(df_adjusted['pep_new'])] = df_adjusted[config['col_names']['pep']][pd.isnull(df_adjusted['pep_new'])]
+  df_adjusted['pep_updated'][pd.isnull(df_adjusted['pep_new'])] = \
+    df_adjusted[config['col_names']['pep']][pd.isnull(df_adjusted['pep_new'])]
 
   # print figures?
   if config['print_figures']:

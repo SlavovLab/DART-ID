@@ -1,4 +1,4 @@
-### RTLib configuration
+### DART-ID configuration
 ### =========================
 
 verbose: true
@@ -7,21 +7,21 @@ verbose: true
 ## ==========================
 
 input: 
-  - /gd/MS/SCoPE/SQC/SQC67_hiFDR/evidence.txt
-  - /gd/MS/SCoPE/SQC/SQC68/evidence.txt
-  - /gd/MS/SCoPE/SQC/SQC69/evidence.txt
-  - /gd/MS/SCoPE/SQC/SQC70/evidence.txt
-  - /gd/MS/SCoPE/SQC/SQC71/evidence.txt
-  - /gd/MS/SCoPE/SQC/SQC72/evidence.txt
-  - /gd/MS/SCoPE/SQC/SQC73/evidence.txt
-  - /gd/MS/SCoPE/SQC/SQC74/evidence.txt
-  - /gd/MS/SCoPE/SQC/SQC75/evidence.txt
-  - /gd/MS/SCoPE/SQC/SQC76/evidence.txt
-  - /gd/MS/SCoPE/SQC/SQC77/evidence.txt
-  - /gd/MS/SCoPE/SQC/SQC78/evidence.txt
-  - /gd/MS/SCoPE/SQC/SQC79/evidence.txt
-  - /gd/MS/SCoPE/SQC/SQC80/evidence.txt
-  - /gd/MS/SCoPE/SQC/SQC81/evidence.txt
+  #- /gd/MS/SCoPE/SQC/SQC67_hiFDR/evidence.txt
+  #- /gd/MS/SCoPE/SQC/SQC68/evidence.txt
+  #- /gd/MS/SCoPE/SQC/SQC69/evidence.txt
+  #- /gd/MS/SCoPE/SQC/SQC70/evidence.txt
+  #- /gd/MS/SCoPE/SQC/SQC71/evidence.txt
+  #- /gd/MS/SCoPE/SQC/SQC72/evidence.txt
+  #- /gd/MS/SCoPE/SQC/SQC73/evidence.txt
+  #- /gd/MS/SCoPE/SQC/SQC74/evidence.txt
+  #- /gd/MS/SCoPE/SQC/SQC75/evidence.txt
+  #- /gd/MS/SCoPE/SQC/SQC76/evidence.txt
+  #- /gd/MS/SCoPE/SQC/SQC77/evidence.txt
+  #- /gd/MS/SCoPE/SQC/SQC78/evidence.txt
+  #- /gd/MS/SCoPE/SQC/SQC79/evidence.txt
+  #- /gd/MS/SCoPE/SQC/SQC80/evidence.txt
+  #- /gd/MS/SCoPE/SQC/SQC81/evidence.txt
   - /gd/MS/SCoPE/SQC/SQC82/evidence.txt
   - /gd/MS/SCoPE/SQC/SQC83/evidence.txt
   - /gd/MS/SCoPE/SQC/SQC84/evidence.txt
@@ -37,18 +37,21 @@ input:
   - /gd/MS/Ribo/IFN/dat/IFN6H_K_hiFDR/evidence.txt
   - /gd/MS/SCoPE/SingleCell_Data/FP18/evidence.txt
 
+sep: \t
 include: ~
 exclude: SQC67[AB][16]|SQC67C1[3-9]|SQC67[CD]5|SQC68[DE]|IFN6[H-K]-Trg|SQC72D|SQC73[CD]|SQC74M|180416S_QC_SQC78A2
 
-use_unmodified_sequence: false
 low_memory: false
 params_folder: ~
 
 ## Alignment Options
 ## ==========================
 
+# models: 'linear', 'two_piece_linear'
+model: 'two_piece_linear'
+
 prior_iters: 10
-stan_iters: 20000
+stan_iters: 10000
 stan_attempts: 3
 mu_min: 1
 rt_distortion: 0
@@ -56,26 +59,32 @@ rt_distortion: 0
 ## Output
 ## ==========================
 
-#output: ~/git/RTLib/Alignments/SQC80_87_20180530_2
 output: ~
 print_figures: true
 save_params: true
 add_diagnostic_cols: true
-combine_output: true
+overwrite_pep: false
+
+save_combined_output: true
 combined_output_name: ev_updated.txt
+
+save_separate_output: false
+save_in_input_folder: false
 output_suffix: _updated
+output_ext: .txt
+
+log_file: true
 
 ## Input Type Options
 ## ==========================
 
 col_names:
 
-  sequence: Sequence
+  sequence: Modified sequence
   raw_file: Raw file
   retention_time: Retention time
   pep: PEP
 
-  modified_sequence: Modified sequence
   leading_protein: Leading razor protein
   proteins: Proteins
   #leading_gene: ~
@@ -112,4 +121,4 @@ filters:
     value: 0.03333
 
   - name: num_exps
-    value: 10
+    value: 3

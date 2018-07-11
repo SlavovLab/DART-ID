@@ -36,13 +36,11 @@ input:
   - /gd/MS/SCoPE/SingleCell_Data/FP18/evidence.txt
 
 sep: \t
+low_memory: false
+params_folder: ~/git/RTLib/Alignments/SQC_varied_20180705_2
 
 exclude: ~
-include: 180320S_QC_SQC67A1|180324S_QC_SQC67C10|180324S_QC_SQC68[AB]1|180324S_QC_SQC69[AB]|180324S_QC_SQC70[AB]|180324S_QC_SQC71[AB]|180402S_QC_SQC72[AB]1(?![0-9])|180402S_QC_SQC73A[12]|180406S_QC_SQC74[AB](?![0-9])|180408S_QC_SQC75[AB]|180409S_QC_SQC76[AB]|180411S_QC_SQC77[AB](?![0-9])|180413S_X_FP18[IJK]|180416S_QC_SQC78A[12]|180420S_QC_SQC79[AB](?!_)|180420S_QC_SQC80[AB]|180424S_QC_SQC81[AB]|180424S_X_IFN6[H-K](?!-Trg)|180502S_QC_SQC82[AB](?![0-9])|180503S_QC_SQC83[AB]|180503S_QC_SQC84[AB](?![0-9])|180503S_QC_SQC85[AB]1|180503S_QC_SQC86[AB]|180514S_QC_SQC95A|180524S_X_SQC95A3|180528S_QC_SQC97A|180528S_QC_SQC97B
-
-low_memory: false
-params_folder: ~
-
+include: 180324S_QC_SQC67C10|180324S_QC_SQC68[AB]1|180324S_QC_SQC69[AB]|180324S_QC_SQC70[AB]|180324S_QC_SQC71[AB]|180402S_QC_SQC72[AB]1(?![0-9])|180402S_QC_SQC73A[12]|180406S_QC_SQC74[AB](?![0-9])|180408S_QC_SQC75[AB]|180409S_QC_SQC76[AB]|180411S_QC_SQC77[AB](?![0-9])|180413S_X_FP18[IJK]|180416S_QC_SQC78A[1]|180420S_QC_SQC79[AB](?!_)|180420S_QC_SQC80[AB]|180424S_QC_SQC81[AB]|180502S_QC_SQC82[AB](?![0-9])|180503S_QC_SQC83[AB]|180503S_QC_SQC84[AB](?![0-9])|180503S_QC_SQC85[AB]1|180503S_QC_SQC86[AB]|180514S_QC_SQC95A|180524S_X_SQC95A3|180528S_QC_SQC97A|180528S_QC_SQC97B
 
 ## Alignment Options
 ## ==========================
@@ -50,7 +48,7 @@ params_folder: ~
 model: 'two_piece_linear'
 
 prior_iters: 10
-stan_iters: 20000
+stan_iters: 50000
 stan_attempts: 3
 mu_min: 5
 rt_distortion: 0
@@ -74,18 +72,16 @@ output_ext: .txt
 
 log_file: true
 
-
 ## Input Type Options
 ## ==========================
 
 col_names:
 
-  sequence: Sequence
+  sequence: Modified sequence
   raw_file: Raw file
   retention_time: Retention time
   pep: PEP
 
-  modified_sequence: Modified sequence
   leading_protein: Leading razor protein
   proteins: Proteins
   #leading_gene: ~

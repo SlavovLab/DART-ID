@@ -32,12 +32,18 @@ input:
   #- /gd/MS/Ribo/IFN/dat/IFN6H_K_hiFDR/evidence.txt
   #- /gd/MS/SCoPE/SingleCell_Data/FP18/evidence.txt
 
-use_unmodified_sequence: false
+sep: \t
+
+include: ~
+exclude: ~
+
 low_memory: false
 params_folder: ~
 
 ## Alignment Options
 ## ==========================
+
+model: 'two_piece_linear'
 
 prior_iters: 10
 stan_iters: 10000
@@ -48,26 +54,33 @@ rt_distortion: 0
 ## Output
 ## ==========================
 
-#output: ~/git/RTLib/Alignments/SQC80_87_20180530_2
 output: ~
 print_figures: true
 save_params: true
 add_diagnostic_cols: true
-combine_output: true
+overwrite_pep: false
+
+save_combined_output: true
 combined_output_name: ev_updated.txt
+
+save_separate_output: false
+save_in_input_folder: false
 output_suffix: _updated
+output_ext: .txt
+
+log_file: true
+
 
 ## Input Type Options
 ## ==========================
 
 col_names:
 
-  sequence: Sequence
+  sequence: Modified sequence
   raw_file: Raw file
   retention_time: Retention time
   pep: PEP
 
-  modified_sequence: Modified sequence
   leading_protein: Leading razor protein
   proteins: Proteins
   #leading_gene: ~
@@ -105,8 +118,3 @@ filters:
 
   - name: num_exps
     value: 5
-
-#exclude_exps: SQC72A|SQC72C|SQC72D|SQC74M|SQC67C16|SQC67C17|SQC67C18|SQC65|SQC95A9|SQC95A10|IFN6[H-K]-Trg|SQC67[AB]6
-#exclude_exps: IFN6[H-K]-Trg
-#exclude_exps: IFN6[H-K]-Trg|SQC67[A-B]6|SQC67C1[3-9]|SQC72D
-exclude_exps: ~

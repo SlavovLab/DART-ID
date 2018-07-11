@@ -13,6 +13,7 @@ import re
 import time
 
 from dart_id.converter import process_files
+from dart_id.models import models, get_model_from_config
 from dart_id.helper import *
 from hashlib import md5
 from scipy.stats import norm, lognorm
@@ -32,7 +33,8 @@ def align(dfa, config):
 
   # refactorize peptide id into stan_peptide_id, 
   # to preserve continuity when feeding data into STAN
-  dff['stan_peptide_id'] = dff['sequence'].map({ind: val for val, ind in enumerate(dff['sequence'].unique())})
+  dff['stan_peptide_id'] = dff['sequence'].map({
+    ind: val for val, ind in enumerate(dff['sequence'].unique())})
 
   exp_names = np.sort(dff['raw_file'].unique())
   num_experiments = len(exp_names)
@@ -79,121 +81,26 @@ def align(dfa, config):
 
   logger.info('Initializing fit priors for {} peptides...'.format(num_peptides))
 
-  # get the PEP filter, if it exists
-  filter_pep = next((f for f in config['filters'] if f['name'] == 'pep'))
-  if filter_pep is not None: filter_pep = filter_pep['value']
-  else:                      filter_pep = np.max(df['pep'])
+  model = get_model_from_config(config)
 
-  # get the average retention time for a peptide, weighting by PEP
-  def get_mu(x):
-      weights = ((1 - x['pep'].values) - (1 - filter_pep)) / filter_pep
-      return np.sum(x['retention_time'].values * weights) / np.sum(weights)
-  
-  # apply the get_mu function on all peptides and add some distortion
-  mu_init = dff.groupby('stan_peptide_id')[['pep', 'retention_time']].apply(get_mu).values + np.random.normal(0, config['rt_distortion'], num_peptides)
+  logger.info('Aligning RTs using the \"{}\" model'.format(model))
 
-  # negative or very low retention times not allowed. floor at 5 minutes
-  mu_init[mu_init <= config['mu_min']] = config['mu_min']
-  # canonical retention time shouldn't be bigger than largest real RT
-  mu_max = dff['retention_time'].max()
-  mu_init[mu_init > mu_max] = mu_max
-
-  # take retention times and distort
-  if config['rt_distortion'] > 0:
-    logger.info('Distorting RTs by {} minutes for initial value generation'.format(config['rt_distortion']))
-
-  rt_distorted = dff['retention_time'] + np.random.normal(0, config['rt_distortion'], len(dff['retention_time']))
-  # make sure distorted retention times stay within bounds of real ones
-  rt_distorted[rt_distorted > dff['retention_time'].max()] = dff['retention_time'].max()
-  rt_distorted[rt_distorted < dff['retention_time'].min()] = dff['retention_time'].min()
-
-  # initialize priors for the segmented linear regression
-  # first element of vector is beta_0, or the intercept
-  # second element is beta_1 and beta_2, the slopes of the two segments
-  beta_init = np.array((
-    np.repeat(10, num_experiments), 
-    np.repeat(1, num_experiments)), dtype=float)
-
-  logger.info('Optimizing priors with linear approximation for {} iterations.'.format(config['prior_iters']))
-
-  mu_pred = np.zeros(num_peptides)
-  # temporary data frame to quickly map over in the loop
-  dft = pd.DataFrame(dict(
-    stan_peptide_id=dff['stan_peptide_id'], 
-    exp_id=dff['exp_id'], 
-    pep=dff['pep'], 
-    retention_time=mu_init[dff['stan_peptide_id']]))
-
-  for i in range(0, config['prior_iters']):
-    # for each experiment, fit a simple linear regression
-    # between the distorted RTs and the initial canonical retention times
-    for j in range(0, num_experiments):
-        idx     = (dff['exp_id'] == j)
-        rt_cur  = rt_distorted[idx]
-        mu_cur  = mu_init[dff['stan_peptide_id'][idx]]
-        pep_cur = dff['pep'][idx]
-
-        # for this experiment, run a linear regression (1 degree polyfit)
-        # of the mus and the distorted RTs. store the linear regression params
-        m, c = np.polyfit(mu_cur, rt_cur, 1, w=(1 - pep_cur))
-        beta_init[(0,1), j] = [c, m]
-
-    # calculate new set of canonical RTs based on linear regression params
-    mu_pred = (rt_distorted - beta_init[0][dff['exp_id']]) / beta_init[1][dff['exp_id']] 
-    # make sure new canonical RTs are within same range as distorted RTs
-    mu_pred[mu_pred <= 0] = rt_distorted.min()
-    mu_pred[mu_pred >= rt_distorted.max()] = rt_distorted.max()
-    dft['retention_time'] = np.copy(mu_pred)
-
-    mu_prev = np.copy(mu_init)
-
-    # new set of priors for canonical RTs based on weighted combination of
-    # this set of predicted canonical RTs
-    mu_init = dft.groupby('stan_peptide_id')[['pep', 'retention_time']].apply(get_mu).values
-
-    logger.info('Iter {} | Avg. canonical RT shift: {:.5f}'.format(i + 1, pow(np.sum(mu_prev - mu_init), 2) / len(mu_init)))
-
-  # grab linear regression params
-  # set beta_2 (slope of second segment) to the same as the slope of the 1st segment
-  beta_0 = beta_init[0]
-  beta_1 = beta_init[1]
-  beta_2 = np.copy(beta_1)
-
-  # apply lower bound of (-1.0 * min(beta_1) * min(muInit)) to beta_0
-  # where (-1.0 * min(beta_1) * min(muInit)) is the lowest possible intercept
-  # given the lowest possible mu and lowest possible beta_1
-  beta_0[beta_0 <= (-1 * beta_1.min() * mu_init.min())] = (-1 * beta_1.min() * mu_init.min()) + 1e-3
-  # apply lower bound of 0 to beta_1 and beta_2
-  beta_1[beta_1 <= 0] = 1e-3
-  beta_2[beta_2 <= 0] = 1e-3
-
-  # apply upper bound to prior canonical RTs
-  mu_init[mu_init >= dff['retention_time'].max()] = 0.95 * dff['retention_time'].max()
+  # generate initial values with the given function in models.py
+  init_list = models[model]['init_func'](dff, config)
 
   # init sigmas (spread) for each peptide
-  sigma_init = np.zeros(num_peptides)
-  muijs = beta_init[0][dff['exp_id']] + (beta_init[1][dff['exp_id']] * mu_init[dff['stan_peptide_id']])
-  for i in range(0, num_peptides):
-    sigma_init[i] = np.std(muijs[dff['stan_peptide_id']==i])
+  #sigma_init = np.zeros(num_peptides)
+  #muijs = init_list['beta_0'][dff['exp_id']] + \
+  #  (init_list['beta_1'][dff['exp_id']] * init_list['mu'][dff['stan_peptide_id']])
+  #for i in range(0, num_peptides):
+  #  sigma_init[i] = np.std(muijs[dff['stan_peptide_id']==i])
 
   # add sigma statistics to data list, to build sampling dist off of
-  stan_data['sigma_mean'] = np.mean(sigma_init)
-  stan_data['sigma_std'] = np.std(sigma_init)
-
-  # create prior list for STAN
-  init_list = {
-    'mu': mu_init,
-    'sigma': sigma_init,
-    'beta_0': beta_0,
-    'beta_1': beta_1,
-    'beta_2': beta_2,
-    'sigma_slope': np.repeat(0.1, num_experiments),
-    'sigma_intercept': np.repeat(0.1, num_experiments),
-    'split_point': np.repeat(np.median(mu_init), num_experiments)
-  }
+  #stan_data['sigma_mean'] = np.mean(sigma_init)
+  #stan_data['sigma_std'] = np.std(sigma_init)
 
   # run STAN, store optimization parameters
-  sm = StanModel_cache()
+  sm = StanModel_cache(model)
 
   logger.info('Running STAN for {} iterations and {} attempts in case of failure'.format(config['stan_iters'], config['stan_attempts']))
 
@@ -207,8 +114,10 @@ def align(dfa, config):
       # run STAN and time it
       logger.info('Starting STAN Model | Attempt #{} ...'.format(counter))
       start = time.time()
-      op = sm.optimizing(data=stan_data, init=init_list, iter=config['stan_iters'], verbose=config['verbose'])
-      logger.info('STAN Model Finished. Run time: {:.3f} seconds.'.format(time.time() - start))
+      op = sm.optimizing(data=stan_data, init=init_list, 
+        iter=config['stan_iters'], verbose=config['verbose'])
+      logger.info('STAN Model Finished. Run time: {:.3f} seconds.'.format(
+        time.time() - start))
     except RuntimeError as e:
       logger.error(str(e))
       counter = counter + 1
@@ -223,9 +132,10 @@ def align(dfa, config):
   #               not exactly necessary as these can be extrapolated from 
   #               exp_params and peptide_params
   # 
-  exp_params = pd.DataFrame({ key: op[key] for key in ['beta_0', 'beta_1', 'beta_2', 'split_point', 'sigma_slope', 'sigma_intercept']})
-  peptide_params = pd.DataFrame({ key: op[key] for key in ['mu']})
-  pair_params = pd.DataFrame({ key: op[key] for key in ['muij', 'sigma_ij']})
+  exp_params = pd.DataFrame({ 
+    key: op[key] for key in models[model]['exp_keys']})
+  peptide_params = pd.DataFrame({ key: op[key] for key in models[model]['peptide_keys']})
+  pair_params = pd.DataFrame({ key: op[key] for key in models[model]['pair_keys']})
 
   # add exp_id to exp_params
   exp_params['exp_id'] = np.sort(dff['exp_id'].unique())
@@ -238,9 +148,12 @@ def align(dfa, config):
     # write parameters to file, so operations can be done on alignment data without
     # the entire alignment to run again
     logger.info('Writing STAN parameters to file...')
-    exp_params.to_csv(os.path.join(config['output'], 'exp_params.txt'), sep='\t', index=False)
-    pair_params.to_csv(os.path.join(config['output'], 'pair_params.txt'), sep='\t', index=True, index_label='pair_id')
-    peptide_params.to_csv(os.path.join(config['output'], 'peptide_params.txt'), sep='\t', index=True, index_label='peptide_id')
+    exp_params.to_csv(os.path.join(config['output'], 'exp_params.txt'), 
+      sep='\t', index=False)
+    pair_params.to_csv(os.path.join(config['output'], 'pair_params.txt'), 
+      sep='\t', index=True, index_label='pair_id')
+    peptide_params.to_csv(os.path.join(config['output'], 'peptide_params.txt'), 
+      sep='\t', index=True, index_label='peptide_id')
 
   # write parameters to dict for further operations
   params = {}
@@ -250,18 +163,21 @@ def align(dfa, config):
 
   return params
 
-# taken from: https://pystan.readthedocs.io/en/latest/avoiding_recompilation.html#automatically-reusing-models
-def StanModel_cache():
+# taken from: https://pystan.readthedocs.io/en/latest/avoiding_recompilation.html
+# #automatically-reusing-models
+def StanModel_cache(model):
 
-  model_name = 'FitRT3D'
-  model_code = pkg_resources.resource_string('rtlib', '/'.join(('fits', 'fit_RT3d.stan')))
-
+  model_name = models[model]['model_name']
+  model_code = pkg_resources.resource_string('dart_id', '/'.join((
+    'models', models[model]['stan_file'])))
+   
   # convert from bytes to a string
   model_code = model_code.decode('utf-8')
 
   # Use just as you would `stan`
   code_hash = md5(model_code.encode('ascii')).hexdigest()
-  cache_fn = os.path.join(dirname, 'fits/cached-model-{}-{}.pkl'.format(model_name, code_hash))
+  cache_fn = os.path.join(dirname, 'models/cached-model-{}-{}.pkl'.format(
+    model_name, code_hash))
 
   try:
       # load cached model from file
@@ -290,7 +206,7 @@ def main():
   config = read_config_file(args)
 
   # initialize logger
-  init_logger(config['verbose'], os.path.join(config['output'], 'align.log'))
+  init_logger(config['verbose'], os.path.join(config['output'], 'align.log'), config['log_file'])
 
   logger.info('Converting files and filtering PSMs')
   df, df_original = process_files(config)

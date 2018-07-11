@@ -1,4 +1,4 @@
-### RTLib configuration
+### DART-ID configuration
 ### =========================
 
 verbose: true
@@ -8,7 +8,7 @@ verbose: true
 
 # List the input files here, or define them on the command line
 # when running the tool.
-# for example, rtlib -i /path/to/input1.txt /path/to/input2.txt
+# for example, dart_id -i /path/to/input1.txt /path/to/input2.txt
 input:
   - /path/to/dat/PS061A/evidence.txt
   - /path/to/dat/PS062ABCD/evidence.txt
@@ -80,8 +80,15 @@ save_in_input_folder: true
 output_suffix: _updated
 output_ext: .txt
 
+# Save logging messages to file?
+log_file: true
+
 ## Alignment Options
 ## ==========================
+
+# Which alignment model to use
+# Options: 'linear', 'two_piece_linear'
+model: 'two_piece_linear'
 
 # Number of iterations to run when generating priors
 # If the average error when generating priors is too high,

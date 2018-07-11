@@ -7,47 +7,47 @@ verbose: true
 ## ==========================
 
 input:
-  - /path/to/dat/PS061A/evidence.txt
-  - /path/to/dat/PS062ABCD/evidence.txt
-  - /path/to/dat/PS063/evidence.txt
-  - /path/to/dat/PS064AG/evidence.txt
+  - /gd/MS/SCoPE/SingleCell_Data/FP18/evidence.txt
 
-exclude: PS06[1-3][AB]|PS064F
+exclude: ~
+#include: FP18[A-E]
+#include: FP18[F-K]
+include: ~
+
+sep: \t
 
 low_memory: false
-params_folder: /path/to/output_folder_from_prev_run
-
-## Output
-## ==========================
-
-output: /path/to/output/folder
-print_figures: true
-save_params: true
-add_diagnostic_cols: true
-overwrite_pep: true
-
-save_combined_output: true
-combined_output_name: ev_updated.txt
-
-save_separate_output: true
-save_in_input_folder: true
-output_suffix: _updated
-output_ext: .txt
-
-log_file: true
+params_folder: ~
 
 ## Alignment Options
 ## ==========================
 
-
 model: 'two_piece_linear'
 
-prior_iters: 10
-stan_iters: 20000
+prior_iters: 5
+stan_iters: 50000
 stan_attempts: 3
 mu_min: 1
-rt_distortion: 0
+rt_distortion: 1
 
+## Output
+## ==========================
+
+output: ~
+print_figures: true
+save_params: true
+add_diagnostic_cols: true
+overwrite_pep: false
+
+save_combined_output: true
+combined_output_name: ev_updated.txt
+
+save_separate_output: false
+save_in_input_folder: false
+output_suffix: _updated
+output_ext: .txt
+
+log_file: true
 
 ## Input Type Options
 ## ==========================
@@ -59,28 +59,23 @@ col_names:
   retention_time: Retention time
   pep: PEP
 
-  # optional columns
   leading_protein: Leading razor protein
   proteins: Proteins
-  leading_gene: ~
-  genes: ~
+  #leading_gene: ~
+  #genes: ~
   retention_length: Retention length
   intensity: Intensity
-  exclude: ~
-  exp_id: ~
-  peptide_id: ~
+  #exclude: exclude
+  #exp_id: exp_id
+  #peptide_id: peptide_id
 
 ## Filters
 ## ==========================
 
 filters:
   - name: uniprot_exclusion
-    file: /path/to/list_of_uniprot_ids.txt
-    list:
-      - or_you_could
-      - list_uniprot_ids_here
-      - P36578
-      - Q99797
+    file: ~/git/RTLib/pd_exclude.txt
+    list: ~
 
   - name: contaminant
     tag: CON__
@@ -88,17 +83,16 @@ filters:
   - name: decoy
     tag: REV__
 
+  - name: pep
+    value: 0.5
+
   - name: retention_length
     dynamic: true
     value: 0.01667
-
-  - name: pep
-    value: 0.5
 
   - name: smears
     dynamic: true
     value: 0.03333
 
   - name: num_exps
-    value: 3
-
+    value: 2

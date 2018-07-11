@@ -6,8 +6,19 @@ verbose: true
 ## Input
 ## ==========================
 
-input:
-  - /gd/MS/SCoPE/SingleCell_Data/FP18/evidence.txt
+input: 
+  - /gd/MS/SCoPE/phospho/dat/PS059HIJKL/evidence.txt
+  - /gd/MS/SCoPE/phospho/dat/PS059MN/evidence.txt
+  - /gd/MS/SCoPE/phospho/dat/PS060/evidence.txt
+  - /gd/MS/SCoPE/phospho/dat/PS061A/evidence.txt
+  - /gd/MS/SCoPE/phospho/dat/PS061B/evidence.txt
+  - /gd/MS/SCoPE/phospho/dat/PS061C/evidence.txt
+  - /gd/MS/SCoPE/phospho/dat/PS062ABCD/evidence.txt
+  - /gd/MS/SCoPE/phospho/dat/PS062EFGH/evidence.txt
+  - /gd/MS/SCoPE/phospho/dat/PS062IJKL/evidence.txt
+  - /gd/MS/SCoPE/phospho/dat/PS062MNOPQR/evidence.txt
+  - /gd/MS/SCoPE/phospho/dat/PS063/evidence.txt
+  - /gd/MS/SCoPE/phospho/dat/PS064/evidence.txt
 
 sep: \t
 
@@ -15,7 +26,7 @@ include: ~
 exclude: ~
 
 low_memory: false
-params_folder: ~
+params_folder: ~/git/RTLib/Alignments/PS_60min_20160627_2
 
 ## Alignment Options
 ## ==========================
@@ -23,26 +34,26 @@ params_folder: ~
 model: 'two_piece_linear'
 
 prior_iters: 10
-stan_iters: 5000
-stan_attempts: 5
+stan_iters: 20000
+stan_attempts: 3
 mu_min: 1
 rt_distortion: 0
 
 ## Output
 ## ==========================
 
-output: ~
+output: ~/git/RTLib/Alignments/PS_60min_20160627_2
 print_figures: true
 save_params: true
 add_diagnostic_cols: false
-overwrite_pep: false
+overwrite_pep: true
 
 save_combined_output: true
 combined_output_name: ev_updated.txt
 
 save_separate_output: true
-save_in_input_folder: false
-output_suffix: _dart
+save_in_input_folder: true
+output_suffix: _updated
 output_ext: .txt
 
 log_file: true
@@ -51,7 +62,6 @@ log_file: true
 ## ==========================
 
 col_names:
-
   sequence: Modified sequence
   raw_file: Raw file
   retention_time: Retention time
@@ -93,4 +103,4 @@ filters:
     value: 0.03333
 
   - name: num_exps
-    value: 3
+    value: 5

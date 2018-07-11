@@ -168,9 +168,9 @@ def filter_pep(df, config, _filter):
     logger.warning('PEP filter {} is not defined or incorrectly defined. Please provide a decimal number between 0.0 and 1.0. Skipping PEP filter...'.format(_filter['value']))
     return None
 
-  filter_pep = (df['pep'] > _filter['value'])
+  filter_pep = ((df['pep'] > _filter['value']) | pd.isnull(df['pep']))
 
-  logger.info('Filtering out {} PSMs with PEP greater than {:.2f}'.format(np.sum(filter_pep), _filter['value']))
+  logger.info('Filtering out {} PSMs with PEP greater than {:.2f} or null PEP'.format(np.sum(filter_pep), _filter['value']))
   return filter_pep
 
 def filter_num_exps(df, config, _filter):
@@ -295,7 +295,8 @@ def convert(df, config):
   # loop thru all columns listed in the config file
   for col in list(config['col_names'].keys()):
     if config['col_names'][col] is None: 
-      logger.info('Column \"{}\" is left empty in the config file. Skipping...'.format(col))
+      logger.info('Column \"{}\" is left empty in the config file. \
+        Skipping...'.format(col))
       continue
 
     # check if the column specified in the config file exists in the df or not
@@ -402,7 +403,9 @@ def process_files(config):
       # only keep rows that are in these raw file matches
       include_exps = df['raw_file'].isin(include_exps).values
       df = df[include_exps]
-      logger.info('Keeping {} observations out of {} matching inclusion expression \"{}\"'.format(np.sum(include_exps), df_original.shape[0], config['include']))
+      logger.info('Keeping {} observations out of {} matching \
+        inclusion expression \"{}\"'.format(np.sum(include_exps), 
+          df_original.shape[0], config['include']))
 
       # keep track of excluded experiments
       df_original['input_exclude'][~include_exps] = True
@@ -413,13 +416,15 @@ def process_files(config):
       logger.warning('Experiment exclusion by raw file name provided, but exclusion expression is defined incorrectly. Skipping this filter...')
     else:
       # see if any raw file names match the user-provided expression
-      exclude_exps = list(filter(lambda x: re.search(r'' + config['exclude'] + '', x), df['raw_file'].unique()))
+      exclude_exps = list(filter(lambda x: re.search(r'' + config['exclude'] + '', x), 
+        df['raw_file'].unique()))
       # remove excluded rows from the sparse dataframe,
       # but keep them in the original data frame, so that we can stitch together
       # the final output later
       exclude_exps = df['raw_file'].isin(exclude_exps).values
       df = df[~exclude_exps]
-      logger.info('Filtering out {} observations matching \"{}\"'.format(np.sum(exclude_exps), config['exclude']))
+      logger.info('Filtering out {} observations \
+        matching \"{}\"'.format(np.sum(exclude_exps), config['exclude']))
 
       # keep track of which experiments were excluded in 
       df_original['input_exclude'][exclude_exps] = True
@@ -438,11 +443,13 @@ def process_files(config):
   
   # if experiment or peptide IDs are already provided, then skip this step
   if 'exp_id' not in config['col_names'] or config['col_names']['exp_id'] is None:
-    df['exp_id'] = df['raw_file'].map({ind: val for val, ind in enumerate(np.sort(df['raw_file'].unique()))})
+    df['exp_id'] = df['raw_file'].map({
+      ind: val for val, ind in enumerate(np.sort(df['raw_file'].unique()))})
   logger.info('{} experiments (raw files) loaded'.format(np.max(df['exp_id'])))
 
   if 'peptide_id' not in config['col_names'] or config['col_names']['peptide_id'] is None:
-    df['peptide_id'] = df['sequence'].map({ind: val for val, ind in enumerate(df['sequence'].unique())})
+    df['peptide_id'] = df['sequence'].map({
+      ind: val for val, ind in enumerate(df['sequence'].unique())})
   logger.info('{} peptide sequences loaded'.format(np.max(df['peptide_id'])))
 
   # run filters for all PSMs
@@ -462,7 +469,6 @@ def process_files(config):
     exp_names = np.sort(df['raw_file'].unique())
     no_psm_exps = exp_names[num_exclude['sum'].astype(int) == num_exclude['count']]
     raise Exception('Experiments ' + np.array_str(no_psm_exps) + ' have no PSMs left for alignment after filtering. Exclude these experiments using the \"exclude_exps\" expression in the config file, or loosen the PSM filters.')
-
 
   # only take the four required columns (+ the IDs) with us
   # the rest were only needed for filtering and can be removed
@@ -485,12 +491,13 @@ def main():
   config = read_config_file(args)
 
   # initialize logger
-  init_logger(config['verbose'], os.path.join(config['output'], 'converter.log'))
+  init_logger(config['verbose'], os.path.join(config['output'], 'converter.log'), config['log_file'])
 
   # process all input files (converts and filters)
   df, df_original = process_files(config)
   
-  logger.info('{} / {} ({:.2%}) observations pass criteria and will be used for alignment'.format(df.shape[0] - df['exclude'].sum(), df.shape[0], (df.shape[0] - df['exclude'].sum()) / df.shape[0]))
+  logger.info('{} / {} ({:.2%}) observations pass criteria and will be used for alignment'.format(df.shape[0] - df['exclude'].sum(), 
+      df.shape[0], (df.shape[0] - df['exclude'].sum()) / df.shape[0]))
 
   # write to file
   if config['combine_output']:
@@ -503,7 +510,9 @@ def main():
     # order in which the input files were passed in
     logger.info('Saving output to separate files...')
     for i, f in enumerate(config['input']):
-      out_path = os.path.join(config['output'], os.path.splitext(os.path.basename(f))[0] + config['output_suffix'] + '_' + str(i) + '.txt')
+      out_path = os.path.join(config['output'], 
+        os.path.splitext(os.path.basename(f))[0] + config['output_suffix'] + \
+          '_' + str(i) + '.txt')
       logger.info('Saving input file {} to {}'.format(i, out_path))
       df_a = df.loc[df['input_id'] == i]
       df_a.to_csv(out_path, sep='\t', index=False)

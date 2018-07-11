@@ -1,4 +1,4 @@
-### RTLib configuration
+### DART-ID configuration
 ### =========================
 
 verbose: true
@@ -6,27 +6,28 @@ verbose: true
 ## Input
 ## ==========================
 
-input:
-  - /gd/MS/SCoPE/SingleCell_Data/FP18/evidence.txt
+input: 
+  - /gd/MS/SCoPE/SQC/SQC_67_95_Varied/evidence.txt
 
 sep: \t
-
 include: ~
 exclude: ~
 
 low_memory: false
+#params_folder: ~/git/RTLib/Alignments/SQC_varied_20180711_1
 params_folder: ~
 
 ## Alignment Options
 ## ==========================
 
+# models: 'linear', 'two_piece_linear'
 model: 'two_piece_linear'
 
 prior_iters: 10
 stan_iters: 5000
-stan_attempts: 5
+stan_attempts: 3
 mu_min: 1
-rt_distortion: 0
+rt_distortion: 1
 
 ## Output
 ## ==========================
@@ -34,15 +35,15 @@ rt_distortion: 0
 output: ~
 print_figures: true
 save_params: true
-add_diagnostic_cols: false
+add_diagnostic_cols: true
 overwrite_pep: false
 
 save_combined_output: true
 combined_output_name: ev_updated.txt
 
-save_separate_output: true
+save_separate_output: false
 save_in_input_folder: false
-output_suffix: _dart
+output_suffix: _updated
 output_ext: .txt
 
 log_file: true
@@ -88,9 +89,9 @@ filters:
     dynamic: true
     value: 0.01667
 
-  - name: smears
-    dynamic: true
-    value: 0.03333
+  #- name: smears
+  #  dynamic: true
+  #  value: 0.03333
 
   - name: num_exps
     value: 3
