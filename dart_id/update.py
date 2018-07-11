@@ -41,9 +41,8 @@ def update(dfa, params, config):
   # validate parameters file. make sure it is from the same filters
   # or else the program will crash in the code below
   
-    # check num_experiments
+  # check num_experiments, num_peptides
   if np.max(params['exp']['exp_id']) != (num_experiments-1) or \
-    # check num peptides
     np.max(params['peptide']['peptide_id']) != (num_peptides-1):
     raise ConfigFileError('Parameters file has different data than the input data provided. Ensure that both the input list and filters used to generate the alignment parameters and those provided to the current update are the __exact__ same.')
   

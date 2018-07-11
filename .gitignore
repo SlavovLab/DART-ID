@@ -62,7 +62,7 @@ papers/*
 # ignore notebooks
 *.ipynb
 .ipynb_checkpoints/**/*
-dart/models/*.pkl
+dart_id/models/*.pkl
 __pycache__/
 
 Figures/**/*
