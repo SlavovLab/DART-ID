@@ -9,10 +9,10 @@ import pandas as pd
 import pickle
 import pkg_resources
 import pystan
-import re
 import time
 
 from dart_id.converter import process_files
+from dart_id.exceptions import *
 from dart_id.models import models, get_model_from_config
 from dart_id.helper import *
 from hashlib import md5
@@ -124,7 +124,7 @@ def align(dfa, config):
 
   # if loop terminates without any optimization parameters, then STAN failed
   if op is None:
-    raise Exception('Maximum number of tries exceeded for STAN. Please re-run process or choose different parameters.')
+    raise STANError('Maximum number of tries exceeded for STAN. Please re-run process or choose different parameters.')
 
   # exp_params - contains regression parameters for each experiment
   # peptide_params - contains canonical RT (mu) for each peptide sequence

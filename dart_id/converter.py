@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # coding: utf-8
 
-# Converters from search-engine inputs to compatible outputs
+# converter.py - converters from search-engine inputs to compatible outputs
 # for alignment and update
 
 import argparse
@@ -9,12 +9,10 @@ import logging
 import numpy as np
 import os
 import pandas as pd
-import pkg_resources
 import re
-import sys
-import yaml
 
 from functools import reduce
+from dart_id.exceptions import *
 from dart_id.helper import *
 
 logger = logging.getLogger('root')
@@ -45,16 +43,14 @@ def filter_uniprot_exclusion_list(df, config, _filter):
         exclusion_list = [line.rstrip('\n') for line in f]
         logger.info('Loaded {} proteins from exclusion list.'.format(len(exclusion_list)))
     except EnvironmentError:
-      logger.warning('Exclusion list file {} not found. Skipping UniProt ID exclusion list filter.'.format(_filter['file']))
-      return None
+      raise ConfigFileError('Exclusion list file {} not found. Please provide a path to a file with UniProt IDs separated by line'.format(_filter['file']))
 
   elif 'list' in _filter and len(_filter['list']) > 0:
     # load UniProt IDs from the configuration file
     exclusion_list = _filter['list']
     logger.info('Loading {} UniProt IDs from exclusion list as defined in config file'.format(len(exclusion_list)))
   else:
-    logger.warning('No exclusion list file or list of UniProt IDs provided. Skipping UniProt ID exclusion list filter.')
-    return None
+    raise ConfigFileError('No exclusion list file or list of UniProt IDs provided. Please provide a path to a file with UniProt IDs separated by line with the \"file\" key, or provide a python list of UniProt IDs with the \"list\" key. If not using a UniProt ID exclusion list, then comment out the \"uniprot_exclusion\" key from the filter list.')
 
   # filter exclusion list
   if len(exclusion_list) > 0:
@@ -70,8 +66,7 @@ def filter_uniprot_exclusion_list(df, config, _filter):
     logger.info('Filtering out {} PSMs from the exclusion list'.format(np.sum(blacklist_filter)))
     return blacklist_filter
   else:
-    logger.warning('Exclusion list found and loaded, but no UniProt IDs found. Check the format of the file, or the list in the config file. Skipping UniProt ID exclusion list filter.')
-    return None
+    raise ConfigFileError('Exclusion list found and loaded, but no UniProt IDs found. Check the format of the file, or the list in the config file.')
 
 def filter_contaminant(df, config, _filter):
   """
@@ -81,6 +76,14 @@ def filter_contaminant(df, config, _filter):
 
   # load the tag in from the config file
   CON_TAG = _filter['tag']
+
+  if CON_TAG is None:
+    raise ConfigFileError('Contaminant filter has no tag specified. Please provide an expression with the \"tag\" key that matches a contaminant tag from the search engine output. If you don\'t want to apply this filter, then comment out the \"contaminant\" key from the filter list.')
+  elif type(CON_TAG) is not str:
+    raise ConfigFileError('Contaminant tag {} is not of type string. Please provide an expression with the \"tag\" key that matches a contaminant tag from the search engine output.'.format(CON_TAG))
+  elif len(CON_TAG) <= 0:
+    raise ConfigFileError('Contaminant tag empty. Please provide an expression with the \"tag\" key that matches a contaminant tag from the search engine output.')
+
   # search for the tag in the 'proteins' column
   filter_con = df['proteins'].str.contains(CON_TAG)
   filter_con[pd.isnull(filter_con)] = False
@@ -96,6 +99,14 @@ def filter_decoy(df, config, _filter):
 
   # load the tag in from the config file
   REV_TAG = _filter['tag']
+
+  if REV_TAG is None:
+    raise ConfigFileError('Decoy filter has no tag specified. Please provide an expression with the \"tag\" key that matches a decoy tag from the search engine output. If you don\'t want to apply this filter, then comment out the \"decoy\" key from the filter list.')
+  elif type(REV_TAG) is not str:
+    raise ConfigFileError('Decoy tag {} is not of type string. Please provide an expression with the \"tag\" key that matches a decoy tag from the search engine output.'.format(REV_TAG))
+  elif len(REV_TAG) <= 0:
+    raise ConfigFileError('Decoy tag empty. Please provide an expression with the \"tag\" key that matches a decoy tag from the search engine output.')
+
   # search for the tag in the 'leading protein' column
   filter_rev = df['leading_protein'].str.contains(REV_TAG)
   filter_rev[pd.isnull(filter_rev)] = False
@@ -111,11 +122,9 @@ def filter_retention_length(df, config, _filter):
 
   # input checks
   if 'value' not in _filter or _filter['value'] is None:
-    logger.warning('No value provided to the retention_length filter. Skipping this filter.')
-    return None
+    raise ConfigFileError('No value provided to the retention_length filter. If you don\'t want to apply this filter, then comment out the \"retention_length\" key from the filter list. Or, please provide a threshold with the \"value\" key, and specify whether or not this is an absolute time in minutes with \"dynamic\"=false or \"dynamic\"=true if the filter is a fraction of the experiment run-time. If \"dynamic\"=true, then \"value\" must be between 0 and 1.')
   if 'dynamic' not in _filter or type(_filter['dynamic']) is not bool:
-    logger.warning('Incorrect value provided to the \"dynamic\" field of the retention_length filter. Please provide a bool, either true or false. Skipping this filter.')
-    return None
+    raise ConfigFileError('Incorrect value provided to the \"dynamic\" field of the retention_length filter. Please provide a bool, either true or false. If \"dynamic\"=false, then \"value\" is the threshold in minutes. If \"dynamic\"=true, then \"value\" must be between 0 and 1.')
   
   if _filter['dynamic']:
     # use the dynamic filter, where the value is a proportion
@@ -123,8 +132,7 @@ def filter_retention_length(df, config, _filter):
     
     # only allow values between 0 and 1 for the dynamic filter
     if _filter['value'] > 1 or _filter['value'] <= 0:
-      logger.warning('Dynamic retention_length filter {} is above 1 or below 0. Please provide a number between 0 and 1, which is the fraction of the max RT for each experiment. e.g., 0.01 means that 1%% of the max RT will be used as the retention_length threshold.'.format(_filter['value']))
-      return None
+      raise ConfigFileError('Dynamic retention_length filter {} is above 1 or below 0. Please provide a number between 0 and 1, which is the fraction of the max RT for each experiment. e.g., 0.01 means that 1%% of the max RT will be used as the retention_length threshold.'.format(_filter['value']))
 
     logger.info('Using dynamic retention length of {} * run-time (max RT) for each experiment'.format(_filter['value']))
 
@@ -141,8 +149,7 @@ def filter_retention_length(df, config, _filter):
 
     # only allow values between 0 and max(RT)
     if _filter['value'] <= 0 or _filter['value'] > np.max(df['retention_time']):
-      logger.warning('retention_length filter {} is not defined or incorrectly defined. Please provide a decimal number between 0.0 and max(RT).'.format(_filter['value']))
-      return None
+      raise ConfigFileError('retention_length filter {} is not defined or incorrectly defined. Please provide a decimal number between 0.0 and max(RT).'.format(_filter['value']))
     
     filter_rtl = (df['retention_length'] > _filter['value'])
 
@@ -160,13 +167,11 @@ def filter_pep(df, config, _filter):
 
   # input checking
   if 'value' not in _filter or _filter['value'] is None:
-    logger.warning('PEP filter not defined. Skipping PEP filter...')
-    return None
+    raise ConfigFileError('PEP filter not defined. Please provide a PEP threshold between 0 and 1 with the \"value\" key. If you don\'t want to apply this filter, then comment out the \"pep\" key from the filter list.')
 
   # only allow values between 0 and 1
   if _filter['value'] <= 0 or _filter['value'] > 1:
-    logger.warning('PEP filter {} is not defined or incorrectly defined. Please provide a decimal number between 0.0 and 1.0. Skipping PEP filter...'.format(_filter['value']))
-    return None
+    raise ConfigFileError('PEP filter {} is incorrectly defined. Please provide a decimal number between 0.0 and 1.0.'.format(_filter['value']))
 
   filter_pep = ((df['pep'] > _filter['value']) | pd.isnull(df['pep']))
 
@@ -181,9 +186,17 @@ def filter_num_exps(df, config, _filter):
   """
 
   # input checking
-  if 'value' not in _filter or _filter['value'] is None or _filter['value'] < 1:
-    logger.warning('Incorrect value provided to the filter for the number of raw files that a peptide must be observed in. Please provide a value greater than or equal to 1. Skipping this filter.')
-    return None
+  if 'value' not in _filter or _filter['value'] is None:
+    raise ConfigFileError('No value provided to the filter for the number of raw files that a peptide must be observed in. Please provide an integer greater than or equal to 1 with the \"value\" key. If you don\'t want to apply this filter, then comment out the \"num_exps\" key from the filter list. If doing so, the filter will still be applied but with the default value of 3.')
+  if type(_filter['value']) is not int:
+    raise ConfigFileError('Incorrect value of type {} provided to the filter for the number of raw files that a peptide must be observed in. Please provide an integer greater than or equal to 1 with the \"value\" key.'.format(str(type(_filter['value']))))
+  if _filter['value'] < 1:
+    raise ConfigFileError('Incorrect value of {} provided to the filter for the number of raw files that a peptide must be observed in. Please provide an integer greater than or equal to 1 with the \"value\" key.'.format(_filter['value']))
+
+  num_exps = len(df['raw_file'].unique())
+  if _filter['value'] > num_exps:
+    raise ConfigFileError('Number of experiments filter threshold {} is greater than the number of experiments in the input list. Please provide an integer greater than or equal to 1 and less than the number of experiments with the \"value\" key.'.format(_filter['value']))
+
   if _filter['value'] == 1:
     logger.warning('Filter for number of raw files that a peptide must be observed in is set to 1. The alignment will proceed but this may result in non-informative canonical RTs and high residuals. It is recommended that this parameter is at least 3.')
 
@@ -212,11 +225,9 @@ def filter_smears(df, config, _filter):
 
   # input checking
   if 'value' not in _filter or _filter['value'] is None:
-    logger.warning('No value provided to the smears filter. Skipping this filter.')
-    return None
+    raise ConfigFileError('No value provided to the \"smears\" filter. If you don\'t want to apply this filter, then comment out the \"smears\" key from the filter list. Or, please provide a threshold with the \"value\" key, and specify whether or not this is an absolute time in minutes with \"dynamic\"=false or \"dynamic\"=true if the filter is a fraction of the experiment run-time. If \"dynamic\"=true, then \"value\" must be between 0 and 1.')
   if 'dynamic' not in _filter or type(_filter['dynamic']) is not bool:
-    logger.warning('Incorrect value provided to the \"dynamic\" field of the smears filter. Please provide a bool, either true or false. Skipping this filter.')
-    return None
+    raise ConfigFileError('Incorrect value provided to the \"dynamic\" field of the \"smears\" filter. Please provide a bool, either true or false. If \"dynamic\"=false, then \"value\" is the threshold in minutes. If \"dynamic\"=true, then \"value\" must be between 0 and 1.')
 
   # TODO: there might also be merit to excluding these observations from the PEP update
   # process as well, given that the spectral PEP is below a very 
@@ -232,8 +243,7 @@ def filter_smears(df, config, _filter):
     # of the max RT (the run-time) of that raw file
     
     if _filter['value'] > 1 or _filter['value'] <= 0:
-      logger.warning('Dynamic smear filter {} is above 1 or below 0. Please provide a number between 0 and 1, which is the fraction of the max RT for each experiment. e.g., 0.01 means that 1%% of the max RT will be used as the smear threshold.'.format(_filter['value']))
-      return None
+      raise ConfigFileError('Dynamic smear filter {} is above 1 or below 0. Please provide a number between 0 and 1, which is the fraction of the max RT for each experiment. e.g., 0.01 means that 1%% of the max RT will be used as the retention_length threshold.'.format(_filter['value']))
 
     logger.info('Using dynamic smear length (in RT) of {} * run-time (max RT) for each experiment'.format(_filter['value']))
 
@@ -247,8 +257,7 @@ def filter_smears(df, config, _filter):
     logger.info('Using constant smear length (in RT) of {} for all raw files.'.format(_filter['value']))
 
     if _filter['value'] <= 0:
-      logger.warning('Smear filter {} is not defined or incorrectly defined. Please provide a decimal number between 0.0 and max(RT).'.format(filter_retention_length))
-      return None
+      raise ConfigFileError('Smear filter {} is not defined or incorrectly defined. Please provide a decimal number between 0.0 and max(RT).'.format(_filter['value']))
 
     # get the (exp_id, peptide_id) tuples for PSMs with a range above the threshold
     smears = smears[smears > _filter['value']].index.values
@@ -302,7 +311,7 @@ def convert(df, config):
     # check if the column specified in the config file exists in the df or not
     if config['col_names'][col] not in df.columns:
       # this is probably grounds to kill the program
-      raise Exception('Column {} of value {} not found in the input file. Please check that this column exists, or leave the field for {} empty in the config file.'.format(col, config['col_names'][col], col))
+      raise ConfigFileError('Column {} of value {} not found in the input file. Please check that this column exists, or leave the field for {} empty in the config file.'.format(col, config['col_names'][col], col))
 
     # keep track of the column and the column name
     cols.append(config['col_names'][col])
@@ -326,7 +335,7 @@ def filter_psms(df, config):
     # for each required column in the filter, check if it exists
     for j in required_cols[f['name']]:
       if j not in df.columns:
-        raise ValueError('Filter {} required a column {}, but this was not found in the input dataframe.'.format(f['name'], j))
+        raise ConfigFileError('Filter {} required a column {}, but this was not found in the input dataframe.'.format(f['name'], j))
 
   # by default, exclude nothing. we'll use binary ORs (|) to
   # gradually add more and more observations to this exclude blacklist
@@ -396,7 +405,7 @@ def process_files(config):
   # exclusively include experiments from whitelist
   if 'include' in config and config['include'] is not None:
     if len(config['include']) <= 0:
-      logger.warning('Experiment inclusion by raw file name provided, but inclusion expression is missing or defined incorrectly. Skipping this filter...')
+      raise ConfigFileError('Experiment inclusion by raw file name provided, but inclusion expression is missing or defined incorrectly. Please provide a regular expression to match against raw file names, that determines whether or not that raw file is included in the alignment procedure.')
     else:
       # get matches for this expression
       include_exps = list(filter(lambda x: re.search(r'' + config['include'] + '', x), df['raw_file'].unique()))
@@ -409,11 +418,13 @@ def process_files(config):
 
       # keep track of excluded experiments
       df_original['input_exclude'][~include_exps] = True
+  else:
+    logger.info('No experiment inclusion list provided. Skipping...')
 
   # remove experiments from blacklist
   if 'exclude' in config and config['exclude'] is not None:
     if len(config['exclude']) <= 0:
-      logger.warning('Experiment exclusion by raw file name provided, but exclusion expression is defined incorrectly. Skipping this filter...')
+      raise ConfigFileError('Experiment exclusion by raw file name provided, but exclusion expression is defined incorrectly. Please provide a regular expression to match against raw file names, that determines whether or not that raw file is included in the alignment procedure.')
     else:
       # see if any raw file names match the user-provided expression
       exclude_exps = list(filter(lambda x: re.search(r'' + config['exclude'] + '', x), 
@@ -429,7 +440,7 @@ def process_files(config):
       # keep track of which experiments were excluded in 
       df_original['input_exclude'][exclude_exps] = True
   else:
-    logger.info('No experiment exclusion list provided. Skipping this filter.')
+    logger.info('No experiment exclusion list provided. Skipping...')
 
   logger.info('{} PSMs loaded from input file(s)'.format(df.shape[0]))
 
@@ -468,7 +479,7 @@ def process_files(config):
   if np.any(num_exclude['sum'].astype(int) == num_exclude['count']):
     exp_names = np.sort(df['raw_file'].unique())
     no_psm_exps = exp_names[num_exclude['sum'].astype(int) == num_exclude['count']]
-    raise Exception('Experiments ' + np.array_str(no_psm_exps) + ' have no PSMs left for alignment after filtering. Exclude these experiments using the \"exclude_exps\" expression in the config file, or loosen the PSM filters.')
+    raise FilteringError('Experiments ' + np.array_str(no_psm_exps) + ' have no PSMs left for alignment after filtering. Exclude these experiments using the \"exclude_exps\" expression in the config file, or loosen the PSM filters.')
 
   # only take the four required columns (+ the IDs) with us
   # the rest were only needed for filtering and can be removed

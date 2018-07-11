@@ -10,6 +10,7 @@ import time
 
 from dart_id.align import align
 from dart_id.converter import process_files
+from dart_id.exceptions import *
 from dart_id.figures import figures
 from dart_id.models import models, get_model_from_config
 from dart_id.helper import *
@@ -168,7 +169,7 @@ def main():
   config = read_config_file(args)
 
   # initialize logger
-  init_logger(config['verbose'], os.path.join(config['output'], 'align.log'), config['log_file'])
+  init_logger(config['verbose'], os.path.join(config['output'], 'dart.log'), config['log_file'])
 
   logger.info('Converting files and filtering PSMs')
   df, df_original = process_files(config)

@@ -8,6 +8,7 @@ import os
 import pandas as pd
 import path
 
+from dart_id.exceptions import *
 from dart_id.helper import *
 from scipy.stats import norm, lognorm
 
@@ -19,7 +20,7 @@ def get_model_from_config(config):
     if config['model'] in models:
       model = config['model']
     else:
-      raise Exception('Model \"{}\" not found. Available choices are: {}'.format(
+      raise ConfigFileError('Model \"{}\" not found. Available choices are: {}'.format(
         model, models.keys()))
   else:
     logger.info('Alignment model not defined. Defaulting to \"two_piece_linear\" model')
