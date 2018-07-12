@@ -57,7 +57,7 @@ transformed parameters {
   for (i in 1:num_pep_exp_pairs) {
     
     // simple linear regression
-    muij[i] = beta_0[muij_to_exp[i]] + beta_1[muij_to_exp[i]] * mu[muij_to_pep[i]];
+    muij[i] = beta_0[muij_to_exp[i]] + (beta_1[muij_to_exp[i]] * mu[muij_to_pep[i]]);
 
     // make sure that the retention time is within the physical limits
     if( muij[i] > max_retention_time ) {

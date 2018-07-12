@@ -154,9 +154,9 @@ def filter_retention_length(df, config, _filter):
     filter_rtl = (df['retention_length'] > _filter['value'])
 
   if _filter['dynamic']:
-    logger.info('Filtering out {} PSMs with retention length greater than {:.2f} * max(exp_RT) of each raw file.'.format(np.sum(filter_rtl), _filter['value']))
+    logger.info('Filtering out {} PSMs with retention length greater than {:.4f} * max(exp_RT) of each raw file.'.format(np.sum(filter_rtl), _filter['value']))
   else:
-    logger.info('Filtering out {} PSMs with retention length greater than {:.2f}'.format(np.sum(filter_rtl), _filter['value']))
+    logger.info('Filtering out {} PSMs with retention length greater than {:.4f}'.format(np.sum(filter_rtl), _filter['value']))
   return filter_rtl
 
 def filter_pep(df, config, _filter):
@@ -175,7 +175,7 @@ def filter_pep(df, config, _filter):
 
   filter_pep = ((df['pep'] > _filter['value']) | pd.isnull(df['pep']))
 
-  logger.info('Filtering out {} PSMs with PEP greater than {:.2f} or null PEP'.format(np.sum(filter_pep), _filter['value']))
+  logger.info('Filtering out {} PSMs with PEP greater than {:.4f} or null PEP'.format(np.sum(filter_pep), _filter['value']))
   return filter_pep
 
 def filter_num_exps(df, config, _filter):
@@ -245,7 +245,7 @@ def filter_smears(df, config, _filter):
     if _filter['value'] > 1 or _filter['value'] <= 0:
       raise ConfigFileError('Dynamic smear filter {} is above 1 or below 0. Please provide a number between 0 and 1, which is the fraction of the max RT for each experiment. e.g., 0.01 means that 1%% of the max RT will be used as the retention_length threshold.'.format(_filter['value']))
 
-    logger.info('Using dynamic smear length (in RT) of {} * run-time (max RT) for each experiment'.format(_filter['value']))
+    logger.info('Using dynamic smear length (in RT) of {:.4f} * run-time (max RT) for each experiment'.format(_filter['value']))
 
     max_rts = df.groupby('exp_id')['retention_time'].max().values
 
@@ -254,10 +254,10 @@ def filter_smears(df, config, _filter):
 
   else:
     # use a constant filter for the retention length
-    logger.info('Using constant smear length (in RT) of {} for all raw files.'.format(_filter['value']))
+    logger.info('Using constant smear length (in RT) of {:.4f} for all raw files.'.format(_filter['value']))
 
     if _filter['value'] <= 0:
-      raise ConfigFileError('Smear filter {} is not defined or incorrectly defined. Please provide a decimal number between 0.0 and max(RT).'.format(_filter['value']))
+      raise ConfigFileError('Smear filter {:.4f} is not defined or incorrectly defined. Please provide a decimal number between 0.0 and max(RT).'.format(_filter['value']))
 
     # get the (exp_id, peptide_id) tuples for PSMs with a range above the threshold
     smears = smears[smears > _filter['value']].index.values
@@ -266,9 +266,9 @@ def filter_smears(df, config, _filter):
   smears = pd.Series(list(zip(df['exp_id'], df['peptide_id']))).isin(smears)
 
   if _filter['dynamic']:
-    logger.info('Filtering out {} PSMs with an intra-experiment RT spread greater than {} * max(exp_RT) for each raw file.'.format(smears.sum(), _filter['value']))
+    logger.info('Filtering out {} PSMs with an intra-experiment RT spread greater than {:.4f} * max(exp_RT) for each raw file.'.format(smears.sum(), _filter['value']))
   else:
-    logger.info('Filtering out {} PSMs with an intra-experiment RT spread greater than {}'.format(smears.sum(), _filter['value']))
+    logger.info('Filtering out {} PSMs with an intra-experiment RT spread greater than {:.4f}'.format(smears.sum(), _filter['value']))
 
   return smears
 
