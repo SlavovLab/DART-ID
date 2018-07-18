@@ -394,6 +394,13 @@ def process_files(config):
     # append to master dataframe
     df = df.append(dfa)
 
+  # modify columns?
+  # append the ion charge to the sequence
+  if config['add_charge_to_sequence']:
+    # make sure the charge column is specified and exists
+    #if config['col_names']['charge'] is not None and 
+    pass
+
   # create a unique ID for each PSM to help with stiching the final result together
   # after all of our operations
   df['id'] = range(0, df.shape[0])
@@ -412,8 +419,7 @@ def process_files(config):
       # only keep rows that are in these raw file matches
       include_exps = df['raw_file'].isin(include_exps).values
       df = df[include_exps]
-      logger.info('Keeping {} observations out of {} matching \
-        inclusion expression \"{}\"'.format(np.sum(include_exps), 
+      logger.info('Keeping {} observations out of {} matching inclusion expression \"{}\"'.format(np.sum(include_exps), 
           df_original.shape[0], config['include']))
 
       # keep track of excluded experiments
@@ -434,8 +440,7 @@ def process_files(config):
       # the final output later
       exclude_exps = df['raw_file'].isin(exclude_exps).values
       df = df[~exclude_exps]
-      logger.info('Filtering out {} observations \
-        matching \"{}\"'.format(np.sum(exclude_exps), config['exclude']))
+      logger.info('Filtering out {} observations matching \"{}\"'.format(np.sum(exclude_exps), config['exclude']))
 
       # keep track of which experiments were excluded in 
       df_original['input_exclude'][exclude_exps] = True
@@ -456,12 +461,12 @@ def process_files(config):
   if 'exp_id' not in config['col_names'] or config['col_names']['exp_id'] is None:
     df['exp_id'] = df['raw_file'].map({
       ind: val for val, ind in enumerate(np.sort(df['raw_file'].unique()))})
-  logger.info('{} experiments (raw files) loaded'.format(np.max(df['exp_id'])))
+  logger.info('{} experiments (raw files) loaded'.format(np.max(df['exp_id'])+1))
 
   if 'peptide_id' not in config['col_names'] or config['col_names']['peptide_id'] is None:
     df['peptide_id'] = df['sequence'].map({
       ind: val for val, ind in enumerate(df['sequence'].unique())})
-  logger.info('{} peptide sequences loaded'.format(np.max(df['peptide_id'])))
+  logger.info('{} peptide sequences loaded'.format(np.max(df['peptide_id'])+1))
 
   # run filters for all PSMs
   # filtered-out PSMs are not removed from the dataframe, but are instead flagged
