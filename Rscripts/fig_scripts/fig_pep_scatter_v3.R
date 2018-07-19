@@ -32,13 +32,13 @@ colfunc <- colorRampPalette(c('white', 'red'))
 
 ## -------
 
-pdf(file='manuscript/Figs/pep_scatter_v3.pdf', width=2.32, height=2.25)
+pdf(file='manuscript/Figs/pep_scatter_v4.pdf', width=3.5, height=3)
 
-par(mar=c(2,2,1,1),
+par(mar=c(2.5,2,1.25,1),
     pty='s', las=1,
-    cex.axis=0.6, cex.lab=0.75, cex.main=0.75)
+    cex.axis=0.85, cex.lab=1, cex.main=1)
 
-cols <- colfunc(20)
+cols <- colfunc(40)
 
 # Normal
 image(x.bin, y.bin, freq2D, col=cols,
@@ -46,33 +46,32 @@ image(x.bin, y.bin, freq2D, col=cols,
       xaxs='i', yaxs='i',
       xaxt='n', yaxt='n', useRaster=F)
 
-
-
 abline(a=0, b=1, col='black')
 #abline(h=-2, col='black', lty=2)
 #abline(v=-2, col='black', lty=2)
 segments(x0=-2, x1=-2, y0=-5, y1=-2, col='black', lty=2)
 segments(x0=-2, x1=0, y0=-2, y1=-2, col='black', lty=2)
 
-text(x=-3.5, y=-1.9, labels='New PSMs selected\nat 0.01 PEP', adj=c(0, 0), cex=0.6)
+text(x=-3.5, y=-1.9, labels='New PSMs selected\nat 0.01 PEP', adj=c(0, 0), cex=0.85)
 
 rng <- seq(-5, 0, 1)
-axis(1, tck=-0.02, padj=-2, 
-     at=rng, labels=fancy_scientific(10^rng))
+axis(1, tck=-0.02,  
+     at=rng, labels=fancy_scientific(10^rng),
+     mgp=c(0, 0.2, 0))
 axis(2, tck=-0.02, 
      at=rng, labels=fancy_scientific(10^rng),
-     mgp=c(0, 0.3, 0))
+     mgp=c(0, 0.4, 0), las=1)
 
-mtext('Spectra', 1, line=0.75, cex=0.75)
-mtext('DART-ID', 2, line=1.25, cex=0.75, las=3)
-mtext('Error Probability (PEP)', 3, line=0.1, cex=0.75, font=2)
+mtext('Spectra', 1, line=1, cex=1)
+mtext('DART-ID', 2, line=1.85, cex=1, las=3)
+mtext('Error Probability (PEP)', 3, line=0.1, cex=1, font=2)
 
 scale = (length(cols)-1)/(-1-(-3))
 for (i in 1:(length(cols)-1)) {
   y = (i-1)/scale + -3
   rect(-4.5, y, -4, y+1/scale, col=cols[i], border=NA, add=T)
 }
-text(x=-4.25, y=-0.85, labels='Density', adj=c(0.5, 0), cex=0.7)
+text(x=-4.25, y=-0.85, labels='Density', adj=c(0.5, 0), cex=0.85)
 
 # Log
 #image(x.bin, y.bin, log(freq2D), col=r)
