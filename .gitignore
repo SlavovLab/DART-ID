@@ -74,3 +74,6 @@ Alignments/**/*
 
 # testing file
 testing.sh
+
+# jupyter notebooks
+python_notebooks/**/*
