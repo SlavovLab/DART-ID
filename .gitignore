@@ -44,16 +44,8 @@ old_figures/*
 ShinyRT/*
 .Rproj.user
 
-# generated TEX files
-manuscript/*.aux
-manuscript/*.bbl
-manuscript/*.bcf
-manuscript/*.blg
-manuscript/*.log
-manuscript/*.out
-manuscript/*.run.xml
-manuscript/*.gz
-manuscript/*.pdf
+# all manuscript files
+manuscript/**/*
 
 # misc fig folders
 papers/*
