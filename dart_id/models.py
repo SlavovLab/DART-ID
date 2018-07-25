@@ -10,7 +10,7 @@ import path
 
 from dart_id.exceptions import *
 from dart_id.helper import *
-from scipy.stats import norm, lognorm
+from scipy.stats import norm, lognorm, laplace
 
 logger = logging.getLogger('root')
 
@@ -200,11 +200,16 @@ def mixture_normal_normal(exp):
 
   comp1 = exp['pep'] * \
     norm.pdf(exp['retention_time'], loc=rt_mean, scale=rt_std)
-  comp2 = (1 - exp['pep']) * \
+  comp2 = (1.0 - exp['pep']) * \
     norm.pdf(exp['retention_time'], loc=exp['muij'], scale=exp['sigmaij'])
 
   return comp1 + comp2
 
+def normal_drt(exp):
+  return norm.pdf(exp['retention_time'], loc=exp['muij'], scale=exp['sigmaij'])
+
+def laplace_drt(exp):
+  return laplace.pdf(exp['retention_time'], loc=exp['muij'], scale=exp['sigmaij'])
 
 models = {
   'linear': {
@@ -232,7 +237,8 @@ models = {
     'rt_minus_func': normal_null,
     # function for likelihood of RT given correct assignment
     # P(RT|PSM+)
-    'rt_plus_func': mixture_normal_normal
+    #'rt_plus_func': mixture_normal_normal
+    'rt_plus_func': normal_drt
   },
   'two_piece_linear': {
     'model_name': 'FitTwoPieceLinear',
@@ -245,6 +251,21 @@ models = {
     'muij_func': muij_two_piece_linear,
     'sigmaij_func': sigmaij_linear_mu,
     'rt_minus_func': normal_null,
-    'rt_plus_func': mixture_normal_normal
+    #'rt_plus_func': mixture_normal_normal
+    'rt_plus_func': normal_drt
+  },
+  'two_piece_linear_laplace': {
+    'model_name': 'FitTwoPieceLinearLaplace',
+    'stan_file': 'fit_RT3d_laplace.stan',
+    'init_func': generate_inits_two_piece_linear,
+    'exp_keys': ['beta_0', 'beta_1', 'beta_2', 
+      'split_point', 'sigma_intercept', 'sigma_slope'],
+    'pair_keys': ['muij', 'sigma_ij'],
+    'peptide_keys': ['mu'],
+    'muij_func': muij_two_piece_linear,
+    'sigmaij_func': sigmaij_linear_mu,
+    'rt_minus_func': normal_null,
+    #'rt_plus_func': mixture_normal_normal
+    'rt_plus_func': laplace_drt
   }
 }

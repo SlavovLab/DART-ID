@@ -66,7 +66,7 @@ def update(dfa, params, config):
 
     # ensure that PEP does not exceed 1
     # will result in incorrect negative densities when applying mixture model
-    exp_f['pep'][exp_f['pep'] > 1] = 1
+    exp_f['pep'][exp_f['pep'] > 1.0] = 1.0
 
     # convert peptide_id to stan_peptide_id
     exp_f['stan_peptide_id'] = exp_f['peptide_id'].map({
@@ -84,8 +84,8 @@ def update(dfa, params, config):
     # PEP.new = P(PSM-|RT) =  ---------------------------------------
     #                         P(RT|PSM-)*P(PSM-) + P(RT|PSM+)*P(PSM+)
     #                         
-    # PSM+ <- PSM is Correct
-    # PSM- <- PSM is Incorrect
+    # PSM+ = Correct ID (true positive)
+    # PSM- = Incorrect (false positive)
     
     # P(RT|PSM-) = probability of peptides RT, given that PSM is incorrect
     #           estimate empirical density of RTs over the experiment
@@ -109,10 +109,12 @@ def update(dfa, params, config):
     #                                    P(RT|PSM-)*P(PSM-)
     # PEP.new = P(PSM-|RT) =  ---------------------------------------
     #                         P(RT|PSM-)*P(PSM-) + P(RT|PSM+)*P(PSM+)
-    # + | PSM = Correct
-    # - | PSM = Incorrect
+    #                         
+    # PSM+ = Correct ID (true positive)
+    # PSM- = Incorrect (false positive)
+    # 
     pep_new = (rt_minus * exp_f['pep']) / \
-      ((rt_minus * exp_f['pep']) + (rt_plus * (1 - exp_f['pep'])))
+      ((rt_minus * exp_f['pep']) + (rt_plus * (1.0 - exp_f['pep'])))
 
     # for PSMs for which we have alignment/update data
     exp_new = pd.DataFrame({
@@ -206,8 +208,7 @@ def main():
 
   # add rows of removed experiments (done with the --remove-exps options)
   if config['exclude'] is not None or config['include'] is not None:
-    logger.info('Reattaching {} PSMs excluded with the \
-      experiment blacklist'.format(df_original['input_exclude'].sum()))
+    logger.info('Reattaching {} PSMs excluded with the experiment blacklist'.format(df_original['input_exclude'].sum()))
     # store a copy of the columns and their order for later
     df_cols = df_adjusted.columns
     # concatenate data frames
