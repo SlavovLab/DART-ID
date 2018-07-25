@@ -396,10 +396,10 @@ def process_files(config):
 
   # modify columns?
   # append the ion charge to the sequence
-  if config['add_charge_to_sequence']:
-    # make sure the charge column is specified and exists
-    #if config['col_names']['charge'] is not None and 
-    pass
+  # also make sure the charge column is specified and exists
+  if config['add_charge_to_sequence'] and 'charge' in df.columns:
+    logger.info('Appending charge to peptide sequence, to align different charge states separately.')
+    df['sequence'] = df['sequence'] + '_' + df['charge'].apply(str)
 
   # create a unique ID for each PSM to help with stiching the final result together
   # after all of our operations
