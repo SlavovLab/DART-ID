@@ -39,12 +39,14 @@ log_file: true
 ## Alignment Options
 ## ==========================
 
-
 model: 'two_piece_linear'
+
+add_charge_to_sequence: false
 
 prior_iters: 10
 stan_iters: 20000
 stan_attempts: 3
+
 mu_min: 1
 rt_distortion: 0
 
@@ -60,6 +62,7 @@ col_names:
   pep: PEP
 
   # optional columns
+  charge: Charge
   leading_protein: Leading razor protein
   proteins: Proteins
   leading_gene: ~

@@ -87,8 +87,17 @@ log_file: true
 ## ==========================
 
 # Which alignment model to use
-# Options: 'linear', 'two_piece_linear'
-model: 'two_piece_linear'
+# Options: 'linear', 'two_piece_linear', 'two_piece_linear_laplace'
+model: 'two_piece_linear_laplace'
+
+# add charge of ion onto the sequence, so that sequences ionized
+# with different charge states will be aligned separately.
+# 
+# Sometimes peptide sequences will form chemical adducts on column
+# that can reflect on the charge received by the peptide during the
+# ioniziation process, and aligning differently charged peptides can
+# account for these chromatographic changes
+add_charge_to_sequence: false
 
 # Number of iterations to run when generating priors
 # If the average error when generating priors is too high,
