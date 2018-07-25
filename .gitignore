@@ -69,3 +69,6 @@ testing.sh
 
 # jupyter notebooks
 python_notebooks/**/*
+
+# binary builds of tools
+tools/**/bin/*
