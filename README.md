@@ -9,7 +9,7 @@ The DART-ID code goal is to make the process as simple as possible. Run ```dart_
 # Installation
 
 ```
-pip install git+https://github.com/blahoink/DART-ID
+pip install git+https://github.com/SlavovLab/DART-ID
 ```
 
 Uninstall the package with:
