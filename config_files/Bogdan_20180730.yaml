@@ -7,15 +7,13 @@ verbose: true
 ## ==========================
 
 input: 
-  - /gd/MS/SCoPE/SQC/SQC_67_95_Varied/evidence.txt
+  - /gd/bayesian_RT/Bogdan/071018X_Ucells_PMA_2x2_Plate11_1-6_UniprotHuman_NOByonic_PSMs.txt
 
 sep: \t
-include: ~
-exclude: 78A2
 
 low_memory: false
-params_folder: /gd/bayesian_RT/Alignments/SQC_varied_20180730_1
 #params_folder: ~
+params_folder: ~/git/RTLib/Alignments/Bogdan_PD_20180731_1
 
 ## Alignment Options
 ## ==========================
@@ -25,11 +23,11 @@ model: 'two_piece_linear_laplace'
 
 add_charge_to_sequence: false
 
-prior_iters: 10
+prior_iters: 15
 stan_iters: 50000
-stan_attempts: 3
+stan_attempts: 1
 mu_min: 1
-rt_distortion: 1
+rt_distortion: 0
 
 ## Output
 ## ==========================
@@ -37,11 +35,12 @@ rt_distortion: 1
 output: ~
 print_figures: false
 save_params: true
-add_diagnostic_cols: true
+add_diagnostic_cols: false
 overwrite_pep: false
+psm_fdr_threshold: 0.01
 
 save_combined_output: true
-combined_output_name: ev_updated.txt
+combined_output_name: PSMs_updated.txt
 
 save_separate_output: false
 save_in_input_folder: false
@@ -55,18 +54,18 @@ log_file: true
 
 col_names:
 
-  sequence: Modified sequence
-  raw_file: Raw file
-  retention_time: Retention time
-  pep: PEP
+  sequence: Annotated Sequence
+  raw_file: Spectrum File
+  retention_time: RT [min]
+  pep: Percolator PEP
 
   charge: Charge
-  leading_protein: Leading razor protein
-  proteins: Proteins
+  leading_protein: Master Protein Accessions
+  proteins: Protein Accessions
   #leading_gene: ~
   #genes: ~
-  retention_length: Retention length
-  intensity: Intensity
+  retention_length: ~
+  intensity: ~
   #exclude: exclude
   #exp_id: exp_id
   #peptide_id: peptide_id
@@ -74,10 +73,19 @@ col_names:
 ## Filters
 ## ==========================
 
+pep_threshold: 0.5
+num_experiments: 3
+
 filters:
-  - name: uniprot_exclusion
-    file: ~/git/RTLib/pd_exclude.txt
-    list: ~
+  #- name: include_filename
+  #  expr: FP18
+
+  #- name: exclude_filename
+  #  expr: 18A
+
+  #- name: uniprot_exclusion
+  #  file: ~/git/RTLib/pd_exclude.txt
+  #  list: ~
 
   - name: contaminant
     tag: CON__
@@ -85,16 +93,10 @@ filters:
   - name: decoy
     tag: REV__
 
-  - name: pep
-    value: 0.5
-
-  - name: retention_length
-    dynamic: true
-    value: 0.01667
+  #- name: retention_length
+  #  dynamic: true
+  #  value: 0.01667
 
   - name: smears
     dynamic: true
     value: 0.03333
-
-  - name: num_exps
-    value: 3

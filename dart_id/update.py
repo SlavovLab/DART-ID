@@ -14,15 +14,16 @@ from dart_id.exceptions import *
 from dart_id.figures import figures
 from dart_id.models import models, get_model_from_config
 from dart_id.helper import *
-from scipy.stats import norm, lognorm
+from scipy.stats import norm, lognorm, laplace
 
 logger = logging.getLogger('root')
 
 def update(dfa, params, config):
+  dfa = dfa.reset_index(drop=True)
   dff = dfa[~(dfa['exclude'])]
   dff = dff.reset_index(drop=True)
 
-  logger.info('{} / {} ({:.2%}) confident, alignable observations (PSMs) after filtering.'.format(dff.shape[0], dfa.shape[0], dff.shape[0] / dfa.shape[0]))
+  #logger.info('{} / {} ({:.2%}) confident, alignable observations (PSMs) after filtering.'.format(dff.shape[0], dfa.shape[0], dff.shape[0] / dfa.shape[0]))
 
   # refactorize peptide id into stan_peptide_id, 
   # to preserve continuity when feeding data into STAN
@@ -45,109 +46,160 @@ def update(dfa, params, config):
      params['peptide'].shape[0] != (dff['stan_peptide_id'].max() + 1):
     raise ConfigFileError('Parameters files have different data than the input data provided. Ensure that both the input list and filters used to generate the alignment parameters and those provided to the current update are the __exact__ same.')
   
-
   model = get_model_from_config(config)
+
+  # convert peptide_id to stan_peptide_id for all data (dfa), regardless if they
+  # have computed reference RTs or not.
+  # for now we'll set NaNs to 0s to satisfy indexing requirements,
+  # but we'll set them back to NaN later.
+  dfa['stan_peptide_id'] = dfa['peptide_id'].map({
+    ind: val for val, ind in enumerate(pep_id_list)
+  })
+  # mu from the STAN alignment
+  dfa['mu'] = params['peptide']['mu'].values[dfa['stan_peptide_id']] 
+  
+  # concatenate transformation parameters
+  exp_params = pd.DataFrame({ key: params['exp'][key][dfa['exp_id']] \
+    for key in models[model]['exp_keys']}).reset_index(drop=True)
+  dfa = pd.concat([dfa, exp_params], axis=1)
+
+  # predict mus with RTs, and RTs with aligned mus
+  dfa['mu_pred'] = models[model]['mu_func'](dfa, dfa['mu'], params)
+  dfa['muij']    = models[model]['muij_func'](dfa, dfa['mu'], params)
+  dfa['sigmaij'] = models[model]['sigmaij_func'](dfa, params)
+
+  # PEP ceiling at 1, otherwise will result in 
+  # incorrect negative densities when plugging into Bayes' theorem
+  dfa['pep'][dfa['pep'] > 1.0] = 1.0
 
   # output table
   df_new = pd.DataFrame()
 
   for i, e in enumerate(np.sort(dff['exp_id'].unique())):
     exp_name = exp_names[i]
-    logger.info('Updating PEPs for experiment #{} - {}'.format(i+1, exp_name))
+    logger.info('Updating PEPs: Exp ({} / {}) - {}'.format(i+1, num_experiments, exp_name))
     
+    _time = time.time()
+
     exp = dfa[dfa['exp_id'] == e]
     exp = exp.reset_index(drop=True)
+
+    exp_peptides = exp['stan_peptide_id'].unique()
+
+    # P(RT|delta=1)
+    # 
+    # need to avoid using this experiment's own data to update the confidence
+    # of its own observations. recalculate the reference RTs (mu) without the
+    # data from this experiment, by: 
+    # 1) non-parametric bootstrapping over the median of the predicted mus.
+    # OR
+    # 2) parametric bootstrapping, using the RT distribution parameters
     
-    # not all peptides in this experiment have data from the model
-    # we can only update those that have that data. others will not be touched
-    exp_matches = np.isin(exp['peptide_id'].values, pep_id_list)
-    exp_f = exp[exp_matches]
-    exp_f = exp_f.reset_index(drop=True)
+    # get predicted mus of peptides in this experiment, excluding predicted mus
+    # transformed from RTs observed in this experiment
+    dfe = dfa.loc[((dfa['stan_peptide_id'].isin(exp_peptides)) & (dfa['exp_id'] != e)), \
+      ['stan_peptide_id', 'pep', 'mu_pred']]
 
-    # ensure that PEP does not exceed 1
-    # will result in incorrect negative densities when applying mixture model
-    exp_f['pep'][exp_f['pep'] > 1.0] = 1.0
+    # extract predicted mus and PEPs    
+    mu_preds = dfe.groupby('stan_peptide_id')['mu_pred']\
+      .apply(lambda x: x.values).values.tolist()
+    peps = dfe.groupby('stan_peptide_id')['pep']\
+      .apply(lambda x: x.values).values.tolist()
+    
+    # number of observations per peptide sequence
+    obs_per_seq = [len(peptide) for peptide in mu_preds]
+    # number of peptides
+    num_peptides = len(mu_preds)
 
-    # convert peptide_id to stan_peptide_id
-    exp_f['stan_peptide_id'] = exp_f['peptide_id'].map({
-      ind: val for val, ind in enumerate(pep_id_list)
-    })
-    exp_peptides = exp_f['stan_peptide_id'].unique()
-    exp_f['mu'] = params['peptide']['mu'].values[exp_f['stan_peptide_id']]
+    # k = number of iterations. more = slower, but better estimates (more normal)
+    k = 50
 
-    # get muij from mu, using the monotone transformation parameters from this experiment
-    exp_f['muij'] = models[model]['muij_func'](exp_f, i, params)
-    # get sigmaij from data and parameters
-    exp_f['sigmaij'] = models[model]['sigmaij_func'](exp_f, i, params)
+    # instead of generating random indices for the sampling for each
+    # iteration, and for each peptide, we'll generate a batch of random numbers
+    # now and pull from them later.
+    # the counter will keep track of which portion of the pool we're using
+    counter = 0
+    rand_pool = np.random.rand(np.sum(obs_per_seq) * k)
 
-    #                                    P(RT|PSM-)*P(PSM-)
-    # PEP.new = P(PSM-|RT) =  ---------------------------------------
-    #                         P(RT|PSM-)*P(PSM-) + P(RT|PSM+)*P(PSM+)
+    # the number of observations per peptide -- used in loop
+    num_obs = 0
+    # matrix of n by k estimated mus from the bootstrapping
+    # will iterate over in the loop after the immediate one
+    mu_k = np.zeros((num_peptides, k))
+
+    for i in range(0, num_peptides): # for each peptide sequence
+      num_obs = obs_per_seq[i]
+      for j in range(0, k): # for each iteration:
+        # new estimate of mu is median of resampled samples
+        
+        # TODO: choice also of mean, weighted mean
+        # TODO: parametric as well as non-parametric bootstrap
+        mu_k[i][j] = np.median(mu_preds[i][\
+          (rand_pool[counter:(counter+num_obs)] * num_obs).astype(int, copy=False)])
+
+        counter = counter + num_obs
+
+    # once mu_k, matrix of bootstrapped values, is generated,
+    # we use transformed bootstrapped values as means for distributions 
+    # on which we will evaluate the observed RTs.
+    
+    # map of stan_peptide_id onto 1:num_peptides
+    pep_inds = {ind: var for var, ind in enumerate(exp_peptides)}
+    # vector of P(RT|delta=1) for this experiment.
+    rt_plus = pd.Series(np.zeros(exp.shape[0]))
+
+    # for each bootstrap iteration:
+    for j in range(0, k):
+      # evaluate the transformed RTs (predicted mus) on distributions
+      # with the bootstrapped, estimated mus as the means.
+      rt_plus = rt_plus + laplace.pdf(exp['retention_time'], \
+        loc=models[model]['muij_func'](\
+          exp, mu_k[:,j][exp['stan_peptide_id'].map(pep_inds)], params), \
+        scale=exp['sigmaij'])
+
+    # divide total likelihood by # of iterations to normalize to area of 1
+    rt_plus = rt_plus / k
+
+    #                                         P(RT|delta=0)*P(delta=0)
+    # PEP.new = P(delta=0|RT) =   ---------------------------------------------------
+    #                             P(RT|delta=0)*P(delta=0) + P(RT|delta=1)*P(delta=1)
     #                         
-    # PSM+ = Correct ID (true positive)
-    # PSM- = Incorrect (false positive)
+    # delta=1 = Correct ID (true positive)
+    # delta=0 = Incorrect (false positive)
     
-    # P(RT|PSM-) = probability of peptides RT, given that PSM is incorrect
+    # P(RT|delta=0) = probability of peptides RT, given that PSM is incorrect
     #           estimate empirical density of RTs over the experiment
     
-    rt_minus = models[model]['rt_minus_func'](exp_f)
+    rt_minus = models[model]['rt_minus_func'](exp)
 
-    # P(PSM-) = probability that PSM is incorrect (PEP)
-    # P(PSM+) = probability that PSM is correct (1-PEP)
+    # P(delta=0) = probability that PSM is incorrect (PEP)
+    # P(delta=1) = probability that PSM is correct (1-PEP)
     
-    # P(RT|PSM+) = probability that given the correct ID, the RT falls in the
+    # P(RT|delta=1) = probability that given the correct ID, the RT falls in the
     #           normal distribution of RTs for that peptide, for that experiment
-    #
-    # this is defined in fit_RT3d.stan as a mixture between 2 normal distributions
-    # where one distribution for the peptide RT is weighted by 1-PEP
-    # and the other distribution for all RTs is weighted by PEP
-    # -- summing to a total density of 1
-
-    rt_plus = models[model]['rt_plus_func'](exp_f)
-
-    # now we can update the PEP
-    #                                    P(RT|PSM-)*P(PSM-)
-    # PEP.new = P(PSM-|RT) =  ---------------------------------------
-    #                         P(RT|PSM-)*P(PSM-) + P(RT|PSM+)*P(PSM+)
-    #                         
-    # PSM+ = Correct ID (true positive)
-    # PSM- = Incorrect (false positive)
+      
+    # delta=1 = Correct ID (true positive)
+    # delta=0 = Incorrect (false positive)
     # 
-    pep_new = (rt_minus * exp_f['pep']) / \
-      ((rt_minus * exp_f['pep']) + (rt_plus * (1.0 - exp_f['pep'])))
+    pep_new = (rt_minus * exp['pep']) / \
+      ((rt_minus * exp['pep']) + (rt_plus * (1.0 - exp['pep'])))
 
     # for PSMs for which we have alignment/update data
     exp_new = pd.DataFrame({
         'rt_minus':          rt_minus.tolist(),
         'rt_plus':           rt_plus.tolist(),
-        'mu':                exp_f['mu'].values.tolist(),
-        'muij':              exp_f['muij'].values.tolist(),
-        'sigmaij':           exp_f['sigmaij'].values.tolist(),
+        'mu':                exp['mu'].values.tolist(),
+        'muij':              exp['muij'].values.tolist(),
+        'sigmaij':           exp['sigmaij'].values.tolist(),
         'pep_new':           pep_new.tolist(),
 
-        'id':                exp_f['id'],
-        'exp_id':            exp_f['exp_id'],
-        'peptide_id':        exp_f['peptide_id'],
-        'stan_peptide_id':   exp_f['stan_peptide_id'],
-        'input_id':          exp_f['input_id'],
-        'exclude':           exp_f['exclude']
+        'id':                exp['id'],
+        'exp_id':            exp['exp_id'],
+        'peptide_id':        exp['peptide_id'],
+        'stan_peptide_id':   exp['stan_peptide_id'],
+        'input_id':          exp['input_id'],
+        'exclude':           exp['exclude']
     })
-    # for PSMs without alignment/update data
-    exp_new = exp_new.append(pd.DataFrame({
-        'rt_minus':          np.nan,
-        'rt_plus':           np.nan,
-        'mu':                np.nan,
-        'muij':              np.nan,
-        'sigmaij':           np.nan,
-        'pep_new':           np.nan,
-
-        'id':                exp['id'][~(exp_matches)],
-        'exp_id':            exp['exp_id'][~(exp_matches)],
-        'peptide_id':        exp['peptide_id'][~(exp_matches)],
-        'stan_peptide_id':   np.nan,
-        'input_id':          exp['input_id'][~(exp_matches)],
-        'exclude':           exp['exclude'][~(exp_matches)]
-    }))
     # append to master DataFrame and continue
     df_new = df_new.append(exp_new)
 
@@ -159,10 +211,21 @@ def update(dfa, params, config):
 
 def write_output(df, out_path, config):
   # remove diagnostic columns, unless they are specified to be kept
-  if not config['add_diagnostic_cols']:
-    df = df.drop(['input_exclude', 'exclude', 'mu', 'muij', 
+  if 'add_diagnostic_cols' not in config or config['add_diagnostic_cols'] == False:
+    df = df.drop(['remove', 'exclude', 'mu', 'muij', 
       'rt_minus', 'rt_plus', 'sigmaij', 
       'input_id', 'exp_id', 'peptide_id', 'stan_peptide_id'], axis=1)
+
+  # filter by 1% FDR?
+  if 'psm_fdr_threshold' in config and type(config['psm_fdr_threshold']) == float:
+    if config['psm_fdr_threshold'] <= 0:
+      logger.warning('FDR threshold equal to or below 0. Please provide a value between 0 and 1. Ignoring...')
+    elif config['psm_fdr_threshold'] >= 1:
+      logger.warning('FDR threshold equal to or greater than 1. Please provide a value between 0 and 1. Ignoring...')
+    else:
+      to_remove = (df['q-value'] > config['psm_fdr_threshold'])
+      logger.info('{}/{} ({:.2%}) PSMs removed at a threshold of {:.2%} FDR.'.format(np.sum(to_remove), df.shape[0], np.sum(to_remove) / df.shape[0], config['psm_fdr_threshold']*100))
+      df = df[~to_remove].reset_index(drop=True)
     
   df.to_csv(out_path, sep='\t', index=False)
 
@@ -204,15 +267,15 @@ def main():
   # add new columns to original DF, and remove the duplicate ID column
   logger.info('Concatenating results to original data...')
 
-  df_adjusted = pd.concat([df_original.loc[~df_original['input_exclude']].reset_index(drop=True), df_new.drop(['id', 'input_id'], axis=1).reset_index(drop=True)], axis=1)
+  df_adjusted = pd.concat([df_original.loc[~df_original['remove']].reset_index(drop=True), df_new.drop(['id', 'input_id'], axis=1).reset_index(drop=True)], axis=1)
 
-  # add rows of removed experiments (done with the --remove-exps options)
-  if config['exclude'] is not None or config['include'] is not None:
-    logger.info('Reattaching {} PSMs excluded with the experiment blacklist'.format(df_original['input_exclude'].sum()))
+  # add rows of PSMs originally removed from analysis
+  if np.sum(df_original['remove']) > 0:
+    logger.info('Reattaching {} PSMs excluded from initial filters'.format(df_original['remove'].sum()))
     # store a copy of the columns and their order for later
     df_cols = df_adjusted.columns
     # concatenate data frames
-    df_adjusted = pd.concat([df_adjusted, df_original.loc[df_original['input_exclude']]], axis=0, ignore_index=True)
+    df_adjusted = pd.concat([df_adjusted, df_original.loc[df_original['remove']]], axis=0, ignore_index=True)
     # pd.concat reindexes the order of the columns, 
     # so just order it back to what it used to be
     df_adjusted = df_adjusted.reindex(df_cols, axis=1)
@@ -226,6 +289,16 @@ def main():
   df_adjusted['pep_updated'] = df_adjusted['pep_new']
   df_adjusted['pep_updated'][pd.isnull(df_adjusted['pep_new'])] = \
     df_adjusted[config['col_names']['pep']][pd.isnull(df_adjusted['pep_new'])]
+
+  # add q-value (FDR) column
+  # rank-sorted, cumulative sum of PEPs is expected number of false positives
+  # q-value is just that vector divided by # of observations, to get FDR
+  df_adjusted['q-value'] = \
+    ( \
+      np.cumsum(df_adjusted['pep_updated'][np.argsort(df_adjusted['pep_updated'])]) / \
+      np.arange(1, df_adjusted.shape[0]+1) \
+    )[np.argsort(np.argsort(df_adjusted['pep_updated']))]
+
 
   # print figures?
   if config['print_figures']:
@@ -244,6 +317,10 @@ def main():
   # tell the user whether or not to expect diagnostic columns
   if config['add_diagnostic_cols']:
     logger.info('Adding diagnostic columns to output')
+
+  # if no output is specified, throw an error
+  if config['save_combined_output'] == False and config['save_separate_output'] == False:
+    raise ConfigFileError('No output format specified. Either set \"save_combined_output\" to true, or set \"save_separate_output\" to true.')
 
   # write to file
   if config['save_combined_output']:

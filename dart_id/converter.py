@@ -18,8 +18,41 @@ from dart_id.helper import *
 logger = logging.getLogger('root')
 
 # all filter funcs take in the df, config object, and the filter object
-# as inputs, and output the exclude vector (True/False), where True means
-# to exclude that particular row
+# as inputs, and output the filter vector (True/False), where True means
+# to filter out that particular row
+
+def filter_exclude_filename(df, config, _filter):
+  # remove experiments from blacklist
+  if 'expr' not in _filter or len(_filter['expr']) == 0:
+    raise ConfigFileError('Experiment exclusion by raw file name provided, but exclusion expression is defined incorrectly. Please provide a regular expression, with the \"expr\" key, to match against raw file names, that determines whether or not that raw file is included in the alignment procedure.')
+  
+  # see if any raw file names match the user-provided expression
+  exclude_exps = list(filter(lambda x: re.search(r'' + _filter['expr'] + '', x), 
+    df['raw_file'].unique()))
+  # remove excluded rows from the sparse dataframe,
+  # but keep them in the original data frame, so that we can stitch together
+  # the final output later
+  exclude_exps = df['raw_file'].isin(exclude_exps).values
+  df = df[~exclude_exps]
+  logger.info('Filtering out {} observations matching \"{}\"'.format(np.sum(exclude_exps), _filter['expr']))
+
+  return exclude_exps
+
+def filter_include_filename(df, config, _filter):
+  # exclusively include experiments from whitelist
+  if 'expr' not in _filter or len(_filter['expr']) == 0:
+    raise ConfigFileError('Experiment inclusion by raw file name provided, but inclusion expression is missing or defined incorrectly. Please provide a regular expression, with the \"expr\" key, to match against raw file names, that determines whether or not that raw file is included in the alignment procedure.')
+  
+  # get matches for this expression
+  include_exps = list(filter(lambda x: re.search(r'' + _filter['expr'] + '', x), df['raw_file'].unique()))
+  # only keep rows that are in these raw file matches
+  include_exps = df['raw_file'].isin(include_exps).values
+  df = df[include_exps]
+  logger.info('Keeping {} observations out of {} matching inclusion expression \"{}\"'.format(np.sum(include_exps), 
+      df.shape[0], _filter['expr']))
+
+  # filter out the opposite of the included experiments
+  return ~include_exps
 
 def filter_uniprot_exclusion_list(df, config, _filter):
   """
@@ -138,8 +171,11 @@ def filter_retention_length(df, config, _filter):
 
     # get the max RT for each raw file, reindex to the same dimension as the
     # retention_length column, and then multiply by the filter value
-    max_rts = df.groupby('exp_id')['retention_time'].max().values
-    filter_rtl = max_rts[df['exp_id']] * _filter['value']
+    max_rts = df.groupby('raw_file')['retention_time'].max().values
+    
+    filter_rtl = max_rts[df['raw_file'].map({ 
+      ind: val for val, ind in enumerate(np.sort(df['raw_file'].unique()))
+    })] * _filter['value']
 
     filter_rtl = (df['retention_length'] > filter_rtl)
 
@@ -157,62 +193,8 @@ def filter_retention_length(df, config, _filter):
     logger.info('Filtering out {} PSMs with retention length greater than {:.4f} * max(exp_RT) of each raw file.'.format(np.sum(filter_rtl), _filter['value']))
   else:
     logger.info('Filtering out {} PSMs with retention length greater than {:.4f}'.format(np.sum(filter_rtl), _filter['value']))
+
   return filter_rtl
-
-def filter_pep(df, config, _filter):
-  """
-  Filter by PEP (Posterior Error Probability), 
-  measured from spectra and a search engine
-  """
-
-  # input checking
-  if 'value' not in _filter or _filter['value'] is None:
-    raise ConfigFileError('PEP filter not defined. Please provide a PEP threshold between 0 and 1 with the \"value\" key. If you don\'t want to apply this filter, then comment out the \"pep\" key from the filter list.')
-
-  # only allow values between 0 and 1
-  if _filter['value'] <= 0 or _filter['value'] > 1:
-    raise ConfigFileError('PEP filter {} is incorrectly defined. Please provide a decimal number between 0.0 and 1.0.'.format(_filter['value']))
-
-  filter_pep = ((df['pep'] > _filter['value']) | pd.isnull(df['pep']))
-
-  logger.info('Filtering out {} PSMs with PEP greater than {:.4f} or null PEP'.format(np.sum(filter_pep), _filter['value']))
-  return filter_pep
-
-def filter_num_exps(df, config, _filter):
-  """
-  Filter for occurence of PSM in number of experiments
-  i.e., filter out all PSMs of peptide, if that peptide has only been 
-  observed in less than n experiments
-  """
-
-  # input checking
-  if 'value' not in _filter or _filter['value'] is None:
-    raise ConfigFileError('No value provided to the filter for the number of raw files that a peptide must be observed in. Please provide an integer greater than or equal to 1 with the \"value\" key. If you don\'t want to apply this filter, then comment out the \"num_exps\" key from the filter list. If doing so, the filter will still be applied but with the default value of 3.')
-  if type(_filter['value']) is not int:
-    raise ConfigFileError('Incorrect value of type {} provided to the filter for the number of raw files that a peptide must be observed in. Please provide an integer greater than or equal to 1 with the \"value\" key.'.format(str(type(_filter['value']))))
-  if _filter['value'] < 1:
-    raise ConfigFileError('Incorrect value of {} provided to the filter for the number of raw files that a peptide must be observed in. Please provide an integer greater than or equal to 1 with the \"value\" key.'.format(_filter['value']))
-
-  num_exps = len(df['raw_file'].unique())
-  if _filter['value'] > num_exps:
-    raise ConfigFileError('Number of experiments filter threshold {} is greater than the number of experiments in the input list. Please provide an integer greater than or equal to 1 and less than the number of experiments with the \"value\" key.'.format(_filter['value']))
-
-  if _filter['value'] == 1:
-    logger.warning('Filter for number of raw files that a peptide must be observed in is set to 1. The alignment will proceed but this may result in non-informative canonical RTs and high residuals. It is recommended that this parameter is at least 3.')
-
-  # only want to do this operation on PSMs that aren't already marked to be filtered out
-  # first, take subset on remaining PSMs, then count number 
-  # of unique experiments for each of them
-  exps_per_pep = df[-(df['exclude'])].groupby('peptide_id')['exp_id'].unique().apply((lambda x: len(x)))
-  # map values to DataFrame. peptides without any value will get NaN,
-  # which will then be assigned to 0.
-  exps_per_pep = df['peptide_id'].map(exps_per_pep)
-  exps_per_pep[np.isnan(exps_per_pep)] = 0
-
-  filter_n_exps = (exps_per_pep < _filter['value'])
-
-  logger.info('Filtering out {} PSMs that have less than {} occurrences in different experiments.'.format(filter_n_exps.sum(), _filter['value']))
-  return filter_n_exps
 
 def filter_smears(df, config, _filter):
   """
@@ -229,14 +211,11 @@ def filter_smears(df, config, _filter):
   if 'dynamic' not in _filter or type(_filter['dynamic']) is not bool:
     raise ConfigFileError('Incorrect value provided to the \"dynamic\" field of the \"smears\" filter. Please provide a bool, either true or false. If \"dynamic\"=false, then \"value\" is the threshold in minutes. If \"dynamic\"=true, then \"value\" must be between 0 and 1.')
 
-  # TODO: there might also be merit to excluding these observations from the PEP update
-  # process as well, given that the spectral PEP is below a very 
-  # conservative threshold (1% or maybe even lower)
   logger.info('Determining RT spread of peptides within each experiment...')
   # for each experiment-peptide pair, get the range of retention times
   # this is the step that could take a long time
   # TODO: optimize this?
-  smears = df.groupby(['exp_id', 'peptide_id'])['retention_time'].apply(np.ptp)
+  smears = df.groupby(['raw_file', 'sequence'])['retention_time'].apply(np.ptp)
   
   if _filter['dynamic']:
     # use the dynamic filter, where the value is a proportion
@@ -247,10 +226,14 @@ def filter_smears(df, config, _filter):
 
     logger.info('Using dynamic smear length (in RT) of {:.4f} * run-time (max RT) for each experiment'.format(_filter['value']))
 
-    max_rts = df.groupby('exp_id')['retention_time'].max().values
+    max_rts = df.groupby('raw_file')['retention_time'].max().values
 
-    # get the (exp_id, peptide_id) tuples for PSMs with a range above the threshold
-    smears = smears[smears > max_rts[smears.index.to_frame()['exp_id'].values] * _filter['value']].index.values
+    smear_pair_inds = smears.index.to_frame()['raw_file'].values
+    smear_pair_inds = pd.Series(smear_pair_inds).map({
+      ind: val for val, ind in enumerate(np.sort(df['raw_file'].unique())) })
+
+    # get the (raw_file, sequence) tuples for PSMs with a range above the threshold
+    smears = smears[smears > (max_rts[smear_pair_inds] * _filter['value'])].index.values
 
   else:
     # use a constant filter for the retention length
@@ -263,38 +246,37 @@ def filter_smears(df, config, _filter):
     smears = smears[smears > _filter['value']].index.values
   
   # map the tuples back to the original data frame, and set smears to be excluded
-  smears = pd.Series(list(zip(df['exp_id'], df['peptide_id']))).isin(smears)
+  smears = pd.Series(list(zip(df['raw_file'], df['sequence']))).isin(smears)
 
   if _filter['dynamic']:
     logger.info('Filtering out {} PSMs with an intra-experiment RT spread greater than {:.4f} * max(exp_RT) for each raw file.'.format(smears.sum(), _filter['value']))
   else:
     logger.info('Filtering out {} PSMs with an intra-experiment RT spread greater than {:.4f}'.format(smears.sum(), _filter['value']))
 
-  return smears
+  return smears.values
 
 # dictionary of all filter functions
 filter_funcs = {
+  'exclude_filename':   filter_exclude_filename,
+  'include_filename':   filter_include_filename,
   'uniprot_exclusion':  filter_uniprot_exclusion_list,
   'contaminant':        filter_contaminant,
   'decoy':              filter_decoy,
   'retention_length':   filter_retention_length,
-  'pep':                filter_pep,
-  'num_exps':           filter_num_exps,
   'smears':             filter_smears
 }
 
 # columns required for each filter to run
 # will skip the filter if this column does not exist in the input file
 required_cols = {
+  'exclude_filename':   [],
+  'include_filename':   [],
   'uniprot_exclusion':  ['proteins'],
   'contaminant':        ['proteins'],
   'decoy':              ['leading_protein'],
   'retention_length':   ['retention_length'],
-  'pep':                [],
-  'num_exps':           [],
   'smears':             []
 }
-
 
 def convert(df, config):
 
@@ -323,10 +305,13 @@ def convert(df, config):
 
   return dfa
 
+
 def filter_psms(df, config):
   logger.info('Filtering PSMs...')
 
   # load the filtering functions specified by the input config
+  # types of filter functions depends on what stage of filtering this is:
+  # removing observations or merely excluding from alignment
   filters = config['filters']
 
   # each filter has a specified required column from the dataframe
@@ -337,9 +322,9 @@ def filter_psms(df, config):
       if j not in df.columns:
         raise ConfigFileError('Filter {} required a column {}, but this was not found in the input dataframe.'.format(f['name'], j))
 
-  # by default, exclude nothing. we'll use binary ORs (|) to
-  # gradually add more and more observations to this exclude blacklist
-  df['exclude'] = np.repeat(False, df.shape[0])
+  # by default, filter out nothing. we'll use binary ORs (|) to
+  # gradually add more and more observations to this filter out blacklist
+  df['remove'] = np.repeat(False, df.shape[0])
 
   # run all the filters specified by the list in the input config file
   # all filter functions are passed df, and the run configuration
@@ -348,7 +333,7 @@ def filter_psms(df, config):
   for i, f in enumerate(filters):
     e = filter_funcs[f['name']](df, config, f)
     if e is not None:
-      df['exclude'] = (df['exclude'] | e)
+      df['remove'] = (df['remove'] | e)
 
   return df
 
@@ -407,51 +392,54 @@ def process_files(config):
   df_original['id'] = range(0, df.shape[0])
 
   # by default, exclude nothing from the original experiment
-  df_original['input_exclude'] = np.repeat(False, df_original.shape[0])
+  df_original['remove'] = np.repeat(False, df_original.shape[0])
 
-  # exclusively include experiments from whitelist
-  if 'include' in config and config['include'] is not None:
-    if len(config['include']) <= 0:
-      raise ConfigFileError('Experiment inclusion by raw file name provided, but inclusion expression is missing or defined incorrectly. Please provide a regular expression to match against raw file names, that determines whether or not that raw file is included in the alignment procedure.')
-    else:
-      # get matches for this expression
-      include_exps = list(filter(lambda x: re.search(r'' + config['include'] + '', x), df['raw_file'].unique()))
-      # only keep rows that are in these raw file matches
-      include_exps = df['raw_file'].isin(include_exps).values
-      df = df[include_exps]
-      logger.info('Keeping {} observations out of {} matching inclusion expression \"{}\"'.format(np.sum(include_exps), 
-          df_original.shape[0], config['include']))
+  # if the input already has an 'remove' column, then skip this step
+  if 'remove' in config['col_names'] and config['col_names']['remove'] is not None:
+    df['remove'] = df['remove'].astype(bool)
+  else: # otherwise, run the filters
+    df = filter_psms(df, config)
 
-      # keep track of excluded experiments
-      df_original['input_exclude'][~include_exps] = True
-  else:
-    logger.info('No experiment inclusion list provided. Skipping...')
+  # apply non-optional filters, PEP threshold and requirement that
+  # sequence is observed in at least n experiments (num_experiments)
+  
+  # first check if PEP threshold is valid
+  if 'pep_threshold' not in config or config['pep_threshold'] is None:
+    raise ConfigFileError('PEP threshold not defined. Please provide a PEP threshold between 0 and 1 with the \"pep_threshold\" key. If including all PEPs, then set this value to 1.')
+  # only allow values between 0 and 1
+  if config['pep_threshold'] <= 0 or config['pep_threshold'] > 1:
+    raise ConfigFileError('PEP threshold {} is incorrectly defined. Please provide a decimal number between 0.0 and 1.0.'.format(config['pep_threshold']))
 
-  # remove experiments from blacklist
-  if 'exclude' in config and config['exclude'] is not None:
-    if len(config['exclude']) <= 0:
-      raise ConfigFileError('Experiment exclusion by raw file name provided, but exclusion expression is defined incorrectly. Please provide a regular expression to match against raw file names, that determines whether or not that raw file is included in the alignment procedure.')
-    else:
-      # see if any raw file names match the user-provided expression
-      exclude_exps = list(filter(lambda x: re.search(r'' + config['exclude'] + '', x), 
-        df['raw_file'].unique()))
-      # remove excluded rows from the sparse dataframe,
-      # but keep them in the original data frame, so that we can stitch together
-      # the final output later
-      exclude_exps = df['raw_file'].isin(exclude_exps).values
-      df = df[~exclude_exps]
-      logger.info('Filtering out {} observations matching \"{}\"'.format(np.sum(exclude_exps), config['exclude']))
+  # check if num_experiments option is valid
+  if 'num_experiments' not in config or config['num_experiments'] is None:
+    raise ConfigFileError('No value provided to the filter for the number of raw files that a peptide must be observed in. Please provide an integer greater than or equal to 1 with the \"num_experiments\" key.')
+  if type(config['num_experiments']) is not int or config['num_experiments'] < 1:
+    raise ConfigFileError('Incorrect value of type {} provided to the filter for the number of raw files that a peptide must be observed in. Please provide an integer greater than or equal to 1 with the \"num_experiments\" key.'.format(str(type(config['num_experiments']))))
+  num_exps = len(df['raw_file'].unique())
+  if config['num_experiments'] > num_exps:
+    raise ConfigFileError('Number of experiments filter threshold {} is greater than the number of experiments in the input list. Please provide an integer greater than or equal to 1 and less than the number of experiments with the \"num_experiments\" key.'.format(config['num_experiments']))
+  if config['num_experiments'] == 1:
+    logger.warning('Filter for number of raw files that a peptide must be observed in is set to 1. The alignment will proceed but this may result in non-informative canonical RTs and high residuals. It is recommended that this parameter is at least 3.')
+  
+  # count the number of experiments a peptide is observed in, but filter out
+  # 1) PSMs removed from previous filters
+  # 2) PSMs with PEP > pep_threshold
+  exps_per_pep = df[-((df['remove']) | (df['pep'] > config['pep_threshold']))].groupby('sequence')['raw_file'].unique().apply((lambda x: len(x)))
+  # map values to DataFrame. peptides without any value will get NaN,
+  # which will then be assigned to 0.
+  exps_per_pep = df['sequence'].map(exps_per_pep)
+  exps_per_pep[np.isnan(exps_per_pep)] = 0
 
-      # keep track of which experiments were excluded in 
-      df_original['input_exclude'][exclude_exps] = True
-  else:
-    logger.info('No experiment exclusion list provided. Skipping...')
+  # flag these sequences for removal as well
+  logger.info('Removing {} PSMs from peptide sequences not observed confidently in more than {} experiments'.format(np.sum(exps_per_pep < config['num_experiments']), config['num_experiments']))
+  df['remove'] = (df['remove'] | (exps_per_pep < config['num_experiments']))
 
-  logger.info('{} PSMs loaded from input file(s)'.format(df.shape[0]))
+  logger.info('Total: {} / {} ({:.2%}) PSMs flagged for removal.'.format(np.sum(df['remove']), df.shape[0], np.sum(df['remove']) / df.shape[0]))
 
-  # just a quick index reset, in case any observations were completely removed
-  # in the experiment blacklist step
-  df = df.reset_index(drop=True)
+  # flag the observations in df_original that were removed
+  df_original['remove'] = df['remove']
+  # remove the flagged observations from the dataframe, and reset index
+  df = df[df['remove']==False].reset_index(drop=True)
 
   # map peptide and experiment IDs
   # sort experiment IDs alphabetically - or else the order is by 
@@ -468,23 +456,16 @@ def process_files(config):
       ind: val for val, ind in enumerate(df['sequence'].unique())})
   logger.info('{} peptide sequences loaded'.format(np.max(df['peptide_id'])+1))
 
-  # run filters for all PSMs
-  # filtered-out PSMs are not removed from the dataframe, but are instead flagged
-  # using the 'exclude' column
-  # when the alignment is run later, then these PSMs will be removed
-  
-  # if the input already has an 'exclude' column, then skip this step
-  if 'exclude' not in config['col_names'] or config['col_names']['exclude'] is None:
-    df = filter_psms(df, config)
-  else:
-    df['exclude'] = df['exclude'].astype(bool)
+  # flag non-confident PSMs for exclusion from alignment process
+  df['exclude'] = (df['pep'] > config['pep_threshold'])
+  logger.info('Excluding {} / {} ({:.2%}) PSMs from alignment process after filtering at PEP threshold of {}'.format(np.sum(df['pep'] > config['pep_threshold']), df.shape[0], np.sum(df['pep'] > config['pep_threshold']) / df.shape[0], config['pep_threshold']))
 
   # check that every experiment has PSMs that have passed the filter
-  num_exclude = df.groupby('exp_id')['exclude'].agg(['sum', 'count'])
-  if np.any(num_exclude['sum'].astype(int) == num_exclude['count']):
-    exp_names = np.sort(df['raw_file'].unique())
-    no_psm_exps = exp_names[num_exclude['sum'].astype(int) == num_exclude['count']]
-    raise FilteringError('Experiments ' + np.array_str(no_psm_exps) + ' have no PSMs left for alignment after filtering. Exclude these experiments using the \"exclude_exps\" expression in the config file, or loosen the PSM filters.')
+  # num_exclude = df.groupby('exp_id')['remove'].agg(['sum', 'count'])
+  # if np.any(num_exclude['sum'].astype(int) == num_exclude['count']):
+  #  exp_names = np.sort(df['raw_file'].unique())
+  #  no_psm_exps = exp_names[num_exclude['sum'].astype(int) == num_exclude['count']]
+  #  raise FilteringError('Experiments ' + np.array_str(no_psm_exps) + ' have no PSMs left for alignment after filtering. Exclude these experiments using the \"exclude_exps\" expression in the config file, or loosen the PSM filters.')
 
   # only take the four required columns (+ the IDs) with us
   # the rest were only needed for filtering and can be removed
@@ -512,16 +493,21 @@ def main():
   # process all input files (converts and filters)
   df, df_original = process_files(config)
   
-  logger.info('{} / {} ({:.2%}) observations pass criteria and will be used for alignment'.format(df.shape[0] - df['exclude'].sum(), 
-      df.shape[0], (df.shape[0] - df['exclude'].sum()) / df.shape[0]))
+  #logger.info('{} / {} ({:.2%}) observations pass filters and will be used for alignment'.format(np.sum(~df['exclude']), 
+  #    df_original.shape[0], np.sum(~df['exclude']) / df_original.shape[0]))
+
+  # if no output is specified, throw an error
+  if config['save_combined_output'] == False and config['save_separate_output'] == False:
+    raise ConfigFileError('No output format specified. Either set \"save_combined_output\" to true, or set \"save_separate_output\" to true.')
 
   # write to file
-  if config['combine_output']:
+  if config['save_combined_output']:
     # if combining input files, then write to one combined file
     out_path = os.path.join(config['output'], config['combined_output_name'])
     logger.info('Combining input file(s) and writing adjusted data file to {} ...'.format(out_path))
     df.to_csv(out_path, sep='\t', index=False)
-  else:
+  
+  if config['save_separate_output']:
     # if keeping input files separate, then use 'input_id' to retain the
     # order in which the input files were passed in
     logger.info('Saving output to separate files...')

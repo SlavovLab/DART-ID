@@ -33,14 +33,9 @@ def generate_inits_linear(dff, config):
   num_experiments = len(exp_names)
   num_peptides = dff['stan_peptide_id'].max() + 1
 
-  # get the PEP filter, if it exists
-  filter_pep = next((f for f in config['filters'] if f['name'] == 'pep'))
-  if filter_pep is not None: filter_pep = filter_pep['value']
-  else:                      filter_pep = np.max(dff['pep'])
-
   # get the average retention time for a peptide, weighting by PEP
   def get_mu(x):
-    weights = ((1 - x['pep'].values) - (1 - filter_pep)) / filter_pep
+    weights = ((1 - x['pep'].values) - (1 - config['pep_threshold'])) / config['pep_threshold']
     return np.sum(x['retention_time'].values * weights) / np.sum(weights)
 
   # apply the get_mu function on all peptides and add some distortion
@@ -154,32 +149,42 @@ def generate_inits_two_piece_linear(dff, config):
 
   return init_list
 
-def muij_two_piece_linear(exp, exp_id, params):
-  muij = pd.Series(np.zeros(len(exp['mu'])))
+def muij_two_piece_linear(df, mu, params):
+  muij = pd.Series(np.zeros(df.shape[0]))
   # if the mu is before the split point, only account for the first segment
-  muij[exp['mu'] < params['exp']['split_point'][exp_id]] = \
-    params['exp']['beta_0'][exp_id] + \
-    (params['exp']['beta_1'][exp_id] * exp['mu'])
+  muij[mu <= df['split_point']] = \
+    df['beta_0'] + (df['beta_1'] * mu)
   # if the mu is after the split point, account for both segments
-  muij[exp['mu'] >= params['exp']['split_point'][exp_id]] = \
-    params['exp']['beta_0'][exp_id] + \
-    (params['exp']['beta_1'][exp_id] * params['exp']['split_point'][exp_id]) + \
-    (params['exp']['beta_2'][exp_id] * (exp['mu'] - params['exp']['split_point'][exp_id]))
+  muij[mu  > df['split_point']] = \
+    df['beta_0'] + (df['beta_1'] * df['split_point']) + \
+    (df['beta_2'] * (mu-df['split_point']))
 
   return muij
+
+def mu_two_piece_linear(df, mu, params):
+  mu_pred = pd.Series(np.zeros(df.shape[0]))
+
+  mu_pred[mu <= df['split_point']] = \
+    (df['retention_time'] - df['beta_0']) / df['beta_1']
+
+  mu_pred[mu  > df['split_point']] = \
+    ((df['retention_time'] - df['beta_0'] - (df['beta_1']*df['split_point'])) \
+    / df['beta_2']) + df['split_point']
+
+  return mu_pred
 
 def muij_linear(exp, exp_id, params):
   muij = params['exp']['beta_0'][exp_id] + \
     params['exp']['beta_1'][exp_id] * exp['mu']
-
   return muij
 
-def sigmaij_linear_mu(exp, exp_id, params):
-  # get sigmaij from the sigma_intercept and sigma_slope parameters for this experiment
-  sigmaij = \
-    params['exp']['sigma_intercept'][exp_id] + \
-    params['exp']['sigma_slope'][exp_id] / 100 * exp['mu']
+def mu_linear(df, params):
+  mu_pred = (df['retention_time'] - df['beta_0']) / df['beta_1']
+  return mu_pred
 
+def sigmaij_linear_mu(df, params):
+  # get sigmaij from the sigma_intercept and sigma_slope parameters for this experiment
+  sigmaij = df['sigma_intercept'] + ((df['sigma_slope'] / 100) * df['mu'])
   return sigmaij
 
 # uniform RT density from min(RT) to max(RT)
@@ -231,6 +236,7 @@ models = {
     # function to regenerate distribution mean and sds from
     # experiment transform functions
     'muij_func': muij_linear,
+    'mu_func': mu_linear,
     'sigmaij_func': sigmaij_linear_mu,
     # function for determining density over all RTs in experiment
     # P(RT|PSM-)
@@ -249,6 +255,7 @@ models = {
     'pair_keys': ['muij', 'sigma_ij'],
     'peptide_keys': ['mu'],
     'muij_func': muij_two_piece_linear,
+    'mu_func': mu_two_piece_linear,
     'sigmaij_func': sigmaij_linear_mu,
     'rt_minus_func': normal_null,
     #'rt_plus_func': mixture_normal_normal
@@ -263,6 +270,7 @@ models = {
     'pair_keys': ['muij', 'sigma_ij'],
     'peptide_keys': ['mu'],
     'muij_func': muij_two_piece_linear,
+    'mu_func': mu_two_piece_linear,
     'sigmaij_func': sigmaij_linear_mu,
     'rt_minus_func': normal_null,
     #'rt_plus_func': mixture_normal_normal

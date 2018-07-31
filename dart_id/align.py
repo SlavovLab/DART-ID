@@ -29,7 +29,7 @@ def align(dfa, config):
   dff = dfa[-(dfa['exclude'])]
   dff = dff.reset_index(drop=True)
 
-  logger.info('{} / {} ({:.2%}) confident, alignable observations (PSMs) after filtering.'.format(dff.shape[0], dfa.shape[0], dff.shape[0] / dfa.shape[0]))
+  #logger.info('{} / {} ({:.2%}) confident, alignable observations (PSMs) after filtering.'.format(dff.shape[0], dfa.shape[0], dff.shape[0] / dfa.shape[0]))
 
   # refactorize peptide id into stan_peptide_id, 
   # to preserve continuity when feeding data into STAN
@@ -143,6 +143,17 @@ def align(dfa, config):
   # put the maps in the pair parameters file as well
   pair_params = pair_params.assign(muij_to_pep=muij_to_pep)
   pair_params = pair_params.assign(muij_to_exp=muij_to_exp)
+
+  # add initial values to parameters files, and prepend those column names with 'init_'
+  exp_params = pd.concat([exp_params,
+    pd.DataFrame({ 'init_'+key: init_list[key] for key in models[model]['exp_keys']})],
+    axis=1)
+  peptide_params = pd.concat([peptide_params,
+    pd.DataFrame({ 'init_'+key: init_list[key] for key in models[model]['peptide_keys']})],
+    axis=1)
+  #pair_params = pd.concat([pair_params,
+  #  pd.DataFrame({ 'init_'+key: init_list[key] for key in models[model]['pair_keys']})],
+  #  axis=1, ignore_index=True)
 
   if config['save_params']:
     # write parameters to file, so operations can be done on alignment data without

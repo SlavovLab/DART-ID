@@ -12,7 +12,7 @@ from scipy.stats import norm, lognorm
 logger = logging.getLogger('root')
 
 def gen(df, config, params, output_path):
-  df = df[-(df['input_exclude'])]
+  df = df[-(df['remove'])]
 
   figures_path = create_fig_folder(output_path, 'figures')
   fig_names = []

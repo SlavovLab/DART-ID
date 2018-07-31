@@ -6,59 +6,50 @@ verbose: true
 ## Input
 ## ==========================
 
-input:
-  - /path/to/dat/PS061A/evidence.txt
-  - /path/to/dat/PS062ABCD/evidence.txt
-  - /path/to/dat/PS063/evidence.txt
-  - /path/to/dat/PS064AG/evidence.txt
+input: 
+  - /gd/MS/SCoPE/SingleCell_Data/All_mouse/2/evidence.txt
 
 sep: \t
+include: ~
+#exclude: set\#30|set\#31
+exclude: ~
+
 low_memory: false
-params_folder: /path/to/output_folder_from_prev_run
+params_folder: ~
 
 ## Alignment Options
 ## ==========================
 
+# models: 'linear', 'two_piece_linear'
 model: 'two_piece_linear'
 
 add_charge_to_sequence: false
 
-prior_iters: 10
-stan_iters: 20000
+prior_iters: 15
+stan_iters: 50000
 stan_attempts: 3
 
 mu_min: 1
-rt_distortion: 0
-
-## Update Options
-## ==========================
-
-# parametric, non-parametric
-bootstrap_method: 'non-parametric'
-bootstrap_iters: 50
-
-# mean, median, weighted_mean
-mu_estimation: 'median'
+rt_distortion: 5
 
 ## Output
 ## ==========================
 
-output: /path/to/output/folder
+output: ~
 print_figures: true
 save_params: true
 add_diagnostic_cols: true
-overwrite_pep: true
+overwrite_pep: false
 
 save_combined_output: true
 combined_output_name: ev_updated.txt
 
-save_separate_output: true
-save_in_input_folder: true
+save_separate_output: false
+save_in_input_folder: false
 output_suffix: _updated
 output_ext: .txt
 
 log_file: true
-
 
 ## Input Type Options
 ## ==========================
@@ -70,44 +61,34 @@ col_names:
   retention_time: Retention time
   pep: PEP
 
-  # optional columns
   charge: Charge
   leading_protein: Leading razor protein
   proteins: Proteins
-  leading_gene: ~
-  genes: ~
+  #leading_gene: ~
+  #genes: ~
   retention_length: Retention length
   intensity: Intensity
-  exclude: ~
-  exp_id: ~
-  peptide_id: ~
+  #exclude: exclude
+  #exp_id: exp_id
+  #peptide_id: peptide_id
 
 ## Filters
 ## ==========================
 
-pep_threshold: 0.5
-num_experiments: 3
-
 filters:
-  - name: exclude_filename 
-    expr: PS06[1-3][AB]|PS064F
-
-  - name: include_filename
-    expr: 2018A
-
-  - name: uniprot_exclusion
-    file: /path/to/list_of_uniprot_ids.txt
-    list:
-      - or_you_could
-      - list_uniprot_ids_here
-      - P36578
-      - Q99797
+  #- name: uniprot_exclusion
+  #  file: ~/git/RTLib/pd_exclude.txt
+  #  list: ~
 
   - name: contaminant
     tag: CON__
 
   - name: decoy
     tag: REV__
+
+  - name: pep
+    value: 0.1
+    #value: 0.01
 
   - name: retention_length
     dynamic: true
@@ -117,3 +98,5 @@ filters:
     dynamic: true
     value: 0.03333
 
+  - name: num_exps
+    value: 5

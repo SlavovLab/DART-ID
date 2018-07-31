@@ -48,7 +48,7 @@ def init_logger(verbose, log_file_path, log_to_file=True):
   consoleHandler.setFormatter(logFormatter)
   logger.addHandler(consoleHandler)
 
-  logger.info(' '.join(sys.argv[1:]))
+  logger.info(' '.join(sys.argv[0:]))
 
   return logger
 
@@ -91,7 +91,7 @@ def add_global_args(parser, add_config_file=True):
   parser.add_argument('--version', action='version', version='%(prog)s {version}'.format(version=__version__), help='Display the program\'s version')
 
   if add_config_file:
-    parser.add_argument('--config-file', required=True, type=argparse.FileType('r', encoding='UTF-8'), help='Path to config file. See example/config_example.yaml')
+    parser.add_argument('-c', '--config-file', required=True, type=argparse.FileType('r', encoding='UTF-8'), help='Path to config file. See example/config_example.yaml')
 
 def read_default_config_file():
   # load input file types

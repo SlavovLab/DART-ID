@@ -11,16 +11,16 @@ input:
 
 sep: \t
 
-include: ~
-exclude: ~
-
 low_memory: false
-params_folder: ~
+#params_folder: ~
+params_folder: ~/git/RTLib/Alignments/FP18_20180730_1
 
 ## Alignment Options
 ## ==========================
 
-model: 'two_piece_linear'
+model: 'two_piece_linear_laplace'
+
+add_charge_to_sequence: false
 
 prior_iters: 10
 stan_iters: 5000
@@ -28,14 +28,25 @@ stan_attempts: 5
 mu_min: 1
 rt_distortion: 0
 
+## Update Options
+## ==========================
+
+# parametric, non-parametric
+bootstrap_method: 'non-parametric'
+bootstrap_iters: 50
+
+# mean, median, weighted_mean
+mu_estimation: 'median'
+
 ## Output
 ## ==========================
 
 output: ~
 print_figures: true
 save_params: true
-add_diagnostic_cols: false
+add_diagnostic_cols: true
 overwrite_pep: false
+#psm_fdr_threshold: 0.01
 
 save_combined_output: true
 combined_output_name: ev_updated.txt
@@ -57,6 +68,7 @@ col_names:
   retention_time: Retention time
   pep: PEP
 
+  charge: Charge
   leading_protein: Leading razor protein
   proteins: Proteins
   #leading_gene: ~
@@ -64,13 +76,23 @@ col_names:
   retention_length: Retention length
   intensity: Intensity
   #exclude: exclude
+  #remove: remove
   #exp_id: exp_id
   #peptide_id: peptide_id
 
 ## Filters
 ## ==========================
 
+pep_threshold: 0.5
+num_experiments: 3
+
 filters:
+  - name: include_filename
+    expr: FP18
+
+  #- name: exclude_filename
+  #  expr: 18A
+
   - name: uniprot_exclusion
     file: ~/git/RTLib/pd_exclude.txt
     list: ~
@@ -81,9 +103,6 @@ filters:
   - name: decoy
     tag: REV__
 
-  - name: pep
-    value: 0.5
-
   - name: retention_length
     dynamic: true
     value: 0.01667
@@ -91,6 +110,3 @@ filters:
   - name: smears
     dynamic: true
     value: 0.03333
-
-  - name: num_exps
-    value: 3
