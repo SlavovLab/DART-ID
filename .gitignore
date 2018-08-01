@@ -9,13 +9,18 @@ desktop.ini
 # data files
 dat/*
 ~*.pptx
+Keratins.txt
+pd_exclude.txt
 
-# notes
+# notes, personal files
 notes.txt
 todo.txt
+rsync_exclude.txt
+copy_to_gdrive.sh
 
 # R project cache
 .Rproj.user/*
+*.Rproj
 
 # misc R files
 *.Rhistory
@@ -72,3 +77,5 @@ python_notebooks/**/*
 
 # binary builds of tools
 tools/**/bin/*
+
+
