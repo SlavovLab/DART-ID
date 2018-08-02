@@ -26,8 +26,7 @@ dirname = os.path.dirname(__file__)
 def align(dfa, config):
 
   # take subset of confident observations to use for alignment
-  dff = dfa[-(dfa['exclude'])]
-  dff = dff.reset_index(drop=True)
+  dff = dfa[-(dfa['exclude'])].reset_index(drop=True)
 
   #logger.info('{} / {} ({:.2%}) confident, alignable observations (PSMs) after filtering.'.format(dff.shape[0], dfa.shape[0], dff.shape[0] / dfa.shape[0]))
 
@@ -83,10 +82,10 @@ def align(dfa, config):
 
   model = get_model_from_config(config)
 
-  logger.info('Aligning RTs using the \"{}\" model'.format(model))
+  logger.info('Aligning RTs using the \"{}\" model'.format(model['name']))
 
   # generate initial values with the given function in models.py
-  init_list = models[model]['init_func'](dff, config)
+  init_list = model['init_func'](dff, config)
 
   # init sigmas (spread) for each peptide
   #sigma_init = np.zeros(num_peptides)
@@ -102,7 +101,7 @@ def align(dfa, config):
   # run STAN, store optimization parameters
   sm = StanModel_cache(model)
 
-  logger.info('Running STAN for {} iterations and {} attempts in case of failure'.format(config['stan_iters'], config['stan_attempts']))
+  logger.info('Running STAN for {} iterations and {} attempt(s) in case of failure'.format(config['stan_iters'], config['stan_attempts']))
 
   # sometimes STAN will error out due to bad RNG or bad priors
   # set a limit on how many times we will try this stan configuration 
@@ -114,13 +113,17 @@ def align(dfa, config):
       # run STAN and time it
       logger.info('Starting STAN Model | Attempt #{} ...'.format(counter))
       start = time.time()
+
       op = sm.optimizing(data=stan_data, init=init_list, 
         iter=config['stan_iters'], verbose=config['verbose'])
+
       logger.info('STAN Model Finished. Run time: {:.3f} seconds.'.format(
         time.time() - start))
     except RuntimeError as e:
       logger.error(str(e))
       counter = counter + 1
+
+  #print(op)
 
   # if loop terminates without any optimization parameters, then STAN failed
   if op is None:
@@ -133,9 +136,9 @@ def align(dfa, config):
   #               exp_params and peptide_params
   # 
   exp_params = pd.DataFrame({ 
-    key: op[key] for key in models[model]['exp_keys']})
-  peptide_params = pd.DataFrame({ key: op[key] for key in models[model]['peptide_keys']})
-  pair_params = pd.DataFrame({ key: op[key] for key in models[model]['pair_keys']})
+    key: op[key] for key in model['exp_keys']})
+  peptide_params = pd.DataFrame({ key: op[key] for key in model['peptide_keys']})
+  pair_params = pd.DataFrame({ key: op[key] for key in model['pair_keys']})
 
   # add exp_id to exp_params
   exp_params['exp_id'] = np.sort(dff['exp_id'].unique())
@@ -146,13 +149,13 @@ def align(dfa, config):
 
   # add initial values to parameters files, and prepend those column names with 'init_'
   exp_params = pd.concat([exp_params,
-    pd.DataFrame({ 'init_'+key: init_list[key] for key in models[model]['exp_keys']})],
+    pd.DataFrame({ 'init_'+key: init_list[key] for key in model['exp_keys']})],
     axis=1)
   peptide_params = pd.concat([peptide_params,
-    pd.DataFrame({ 'init_'+key: init_list[key] for key in models[model]['peptide_keys']})],
+    pd.DataFrame({ 'init_'+key: init_list[key] for key in model['peptide_keys']})],
     axis=1)
   #pair_params = pd.concat([pair_params,
-  #  pd.DataFrame({ 'init_'+key: init_list[key] for key in models[model]['pair_keys']})],
+  #  pd.DataFrame({ 'init_'+key: init_list[key] for key in model['pair_keys']})],
   #  axis=1, ignore_index=True)
 
   if config['save_params']:
@@ -178,9 +181,9 @@ def align(dfa, config):
 # #automatically-reusing-models
 def StanModel_cache(model):
 
-  model_name = models[model]['model_name']
+  model_name = model['model_name']
   model_code = pkg_resources.resource_string('dart_id', '/'.join((
-    'models', models[model]['stan_file'])))
+    'models', model['stan_file'])))
    
   # convert from bytes to a string
   model_code = model_code.decode('utf-8')

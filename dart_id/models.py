@@ -14,19 +14,6 @@ from scipy.stats import norm, lognorm, laplace
 
 logger = logging.getLogger('root')
 
-def get_model_from_config(config):
-  model = 'two_piece_linear'
-  if config['model'] is not None:
-    if config['model'] in models:
-      model = config['model']
-    else:
-      raise ConfigFileError('Model \"{}\" not found. Available choices are: {}'.format(
-        model, models.keys()))
-  else:
-    logger.info('Alignment model not defined. Defaulting to \"two_piece_linear\" model')
-
-  return model
-
 def generate_inits_linear(dff, config):
 
   exp_names = np.sort(dff['raw_file'].unique())
@@ -218,6 +205,7 @@ def laplace_drt(exp):
 
 models = {
   'linear': {
+    'name': 'linear',
     # model names must be valid C++ class names. no dashes, etc.
     'model_name': 'FitLinear',
     # name of the .stan file in the models/ folder
@@ -233,10 +221,11 @@ models = {
     'exp_keys': ['beta_0', 'beta_1', 'sigma_intercept', 'sigma_slope'],
     'pair_keys': ['muij', 'sigma_ij'],
     'peptide_keys': ['mu'],
-    # function to regenerate distribution mean and sds from
-    # experiment transform functions
-    'muij_func': muij_linear,
-    'mu_func': mu_linear,
+    # transform reference RT from reference space to absolute RT space
+    'ref_to_rt': muij_linear,
+    # inverse of above. transform absolute RTs into reference space
+    'rt_to_ref': mu_linear,
+
     'sigmaij_func': sigmaij_linear_mu,
     # function for determining density over all RTs in experiment
     # P(RT|PSM-)
@@ -247,6 +236,7 @@ models = {
     'rt_plus_func': normal_drt
   },
   'two_piece_linear': {
+    'name': 'two_piece_linear',
     'model_name': 'FitTwoPieceLinear',
     'stan_file': 'fit_RT3d.stan',
     'init_func': generate_inits_two_piece_linear,
@@ -254,26 +244,39 @@ models = {
       'split_point', 'sigma_intercept', 'sigma_slope'],
     'pair_keys': ['muij', 'sigma_ij'],
     'peptide_keys': ['mu'],
-    'muij_func': muij_two_piece_linear,
-    'mu_func': mu_two_piece_linear,
+    'ref_to_rt': muij_two_piece_linear,
+    'rt_to_ref': mu_two_piece_linear,
     'sigmaij_func': sigmaij_linear_mu,
     'rt_minus_func': normal_null,
-    #'rt_plus_func': mixture_normal_normal
     'rt_plus_func': normal_drt
   },
   'two_piece_linear_laplace': {
+    'name': 'two_piece_linear_laplace',
     'model_name': 'FitTwoPieceLinearLaplace',
-    'stan_file': 'fit_RT3d_laplace.stan',
+    'stan_file': 'fit_RT3e.stan',
     'init_func': generate_inits_two_piece_linear,
     'exp_keys': ['beta_0', 'beta_1', 'beta_2', 
       'split_point', 'sigma_intercept', 'sigma_slope'],
     'pair_keys': ['muij', 'sigma_ij'],
     'peptide_keys': ['mu'],
-    'muij_func': muij_two_piece_linear,
-    'mu_func': mu_two_piece_linear,
+    'ref_to_rt': muij_two_piece_linear,
+    'rt_to_ref': mu_two_piece_linear,
     'sigmaij_func': sigmaij_linear_mu,
     'rt_minus_func': normal_null,
-    #'rt_plus_func': mixture_normal_normal
     'rt_plus_func': laplace_drt
   }
 }
+
+def get_model_from_config(config):
+  model = 'two_piece_linear'
+  if config['model'] is not None:
+    if config['model'] in models:
+      model = config['model']
+    else:
+      raise ConfigFileError('Model \"{}\" not found. Available choices are: {}'.format(
+        model, models.keys()))
+  else:
+    logger.info('Alignment model not defined. Defaulting to \"two_piece_linear\" model')
+
+  return models[model]
+

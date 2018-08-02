@@ -20,53 +20,40 @@ logger = logging.getLogger('root')
 
 def update(dfa, params, config):
   dfa = dfa.reset_index(drop=True)
-  dff = dfa[~(dfa['exclude'])]
-  dff = dff.reset_index(drop=True)
 
   #logger.info('{} / {} ({:.2%}) confident, alignable observations (PSMs) after filtering.'.format(dff.shape[0], dfa.shape[0], dff.shape[0] / dfa.shape[0]))
 
   # refactorize peptide id into stan_peptide_id, 
   # to preserve continuity when feeding data into STAN
-  dff['stan_peptide_id'] = dff['sequence'].map({
-    ind: val for val, ind in enumerate(dff['sequence'].unique())})
+  dfa['stan_peptide_id'] = dfa['sequence'].map({
+    ind: val for val, ind in enumerate(dfa['sequence'].unique())})
 
-  num_experiments = dff['exp_id'].max() + 1
-  num_observations = dff.shape[0]
-  num_peptides = dff['peptide_id'].max() + 1
-  exp_names = np.sort(dff['raw_file'].unique())
-  mean_log_rt = np.mean(np.log(dff['retention_time']))
-  sd_log_rt = np.std(np.log(dff['retention_time']))
-  max_rt = dff['retention_time'].max()
-  pep_id_list = dff['peptide_id'].unique()
+  num_experiments = dfa['exp_id'].max() + 1
+  num_peptides = dfa['peptide_id'].max() + 1
+  exp_names = np.sort(dfa['raw_file'].unique())
+  pep_id_list = dfa['peptide_id'].unique()
 
   # validate parameters file. make sure it is from the same filters
   # or else the program will crash in the code below
   # check num_experiments, num_peptides
   if params['exp'].shape[0] != num_experiments or \
-     params['peptide'].shape[0] != (dff['stan_peptide_id'].max() + 1):
+     params['peptide'].shape[0] != (dfa['stan_peptide_id'].max() + 1):
     raise ConfigFileError('Parameters files have different data than the input data provided. Ensure that both the input list and filters used to generate the alignment parameters and those provided to the current update are the __exact__ same.')
   
   model = get_model_from_config(config)
 
-  # convert peptide_id to stan_peptide_id for all data (dfa), regardless if they
-  # have computed reference RTs or not.
-  # for now we'll set NaNs to 0s to satisfy indexing requirements,
-  # but we'll set them back to NaN later.
-  dfa['stan_peptide_id'] = dfa['peptide_id'].map({
-    ind: val for val, ind in enumerate(pep_id_list)
-  })
   # mu from the STAN alignment
   dfa['mu'] = params['peptide']['mu'].values[dfa['stan_peptide_id']] 
   
   # concatenate transformation parameters
   exp_params = pd.DataFrame({ key: params['exp'][key][dfa['exp_id']] \
-    for key in models[model]['exp_keys']}).reset_index(drop=True)
+    for key in model['exp_keys']}).reset_index(drop=True)
   dfa = pd.concat([dfa, exp_params], axis=1)
 
   # predict mus with RTs, and RTs with aligned mus
-  dfa['mu_pred'] = models[model]['mu_func'](dfa, dfa['mu'], params)
-  dfa['muij']    = models[model]['muij_func'](dfa, dfa['mu'], params)
-  dfa['sigmaij'] = models[model]['sigmaij_func'](dfa, params)
+  dfa['mu_pred'] = model['rt_to_ref'](dfa, dfa['mu'], params)
+  dfa['muij']    = model['ref_to_rt'](dfa, dfa['mu'], params)
+  dfa['sigmaij'] = model['sigmaij_func'](dfa, params)
 
   # PEP ceiling at 1, otherwise will result in 
   # incorrect negative densities when plugging into Bayes' theorem
@@ -75,90 +62,124 @@ def update(dfa, params, config):
   # output table
   df_new = pd.DataFrame()
 
-  for i, e in enumerate(np.sort(dff['exp_id'].unique())):
+  bootstrap_method = 'none'
+  if 'bootstrap_method' in config:
+    bootstrap_method = config['bootstrap_method']
+    logger.info('Using \"{}\" bootstrap method'.format(bootstrap_method))
+  else:
+    logger.info('Bootstrap method not defined, using point estimates to update confidence instead.')
+
+  k = 20 # default
+  if 'bootstrap_iters' in config:
+    k = config['bootstrap_iters']
+    if bootstrap_method != 'none':
+      logger.info('Using {} bootstrap iterations'.format(k))
+
+  for i, e in enumerate(np.sort(dfa['exp_id'].unique())):
     exp_name = exp_names[i]
     logger.info('Updating PEPs: Exp ({} / {}) - {}'.format(i+1, num_experiments, exp_name))
-    
-    _time = time.time()
 
     exp = dfa[dfa['exp_id'] == e]
     exp = exp.reset_index(drop=True)
 
     exp_peptides = exp['stan_peptide_id'].unique()
 
-    # P(RT|delta=1)
-    # 
-    # need to avoid using this experiment's own data to update the confidence
-    # of its own observations. recalculate the reference RTs (mu) without the
-    # data from this experiment, by: 
-    # 1) non-parametric bootstrapping over the median of the predicted mus.
-    # OR
-    # 2) parametric bootstrapping, using the RT distribution parameters
-    
-    # get predicted mus of peptides in this experiment, excluding predicted mus
-    # transformed from RTs observed in this experiment
-    dfe = dfa.loc[((dfa['stan_peptide_id'].isin(exp_peptides)) & (dfa['exp_id'] != e)), \
-      ['stan_peptide_id', 'pep', 'mu_pred']]
-
-    # extract predicted mus and PEPs    
-    mu_preds = dfe.groupby('stan_peptide_id')['mu_pred']\
-      .apply(lambda x: x.values).values.tolist()
-    peps = dfe.groupby('stan_peptide_id')['pep']\
-      .apply(lambda x: x.values).values.tolist()
-    
-    # number of observations per peptide sequence
-    obs_per_seq = [len(peptide) for peptide in mu_preds]
-    # number of peptides
-    num_peptides = len(mu_preds)
-
-    # k = number of iterations. more = slower, but better estimates (more normal)
-    k = 50
-
-    # instead of generating random indices for the sampling for each
-    # iteration, and for each peptide, we'll generate a batch of random numbers
-    # now and pull from them later.
-    # the counter will keep track of which portion of the pool we're using
-    counter = 0
-    rand_pool = np.random.rand(np.sum(obs_per_seq) * k)
-
-    # the number of observations per peptide -- used in loop
-    num_obs = 0
-    # matrix of n by k estimated mus from the bootstrapping
-    # will iterate over in the loop after the immediate one
-    mu_k = np.zeros((num_peptides, k))
-
-    for i in range(0, num_peptides): # for each peptide sequence
-      num_obs = obs_per_seq[i]
-      for j in range(0, k): # for each iteration:
-        # new estimate of mu is median of resampled samples
-        
-        # TODO: choice also of mean, weighted mean
-        # TODO: parametric as well as non-parametric bootstrap
-        mu_k[i][j] = np.median(mu_preds[i][\
-          (rand_pool[counter:(counter+num_obs)] * num_obs).astype(int, copy=False)])
-
-        counter = counter + num_obs
-
-    # once mu_k, matrix of bootstrapped values, is generated,
-    # we use transformed bootstrapped values as means for distributions 
-    # on which we will evaluate the observed RTs.
-    
-    # map of stan_peptide_id onto 1:num_peptides
-    pep_inds = {ind: var for var, ind in enumerate(exp_peptides)}
     # vector of P(RT|delta=1) for this experiment.
     rt_plus = pd.Series(np.zeros(exp.shape[0]))
 
-    # for each bootstrap iteration:
-    for j in range(0, k):
-      # evaluate the transformed RTs (predicted mus) on distributions
-      # with the bootstrapped, estimated mus as the means.
-      rt_plus = rt_plus + laplace.pdf(exp['retention_time'], \
-        loc=models[model]['muij_func'](\
-          exp, mu_k[:,j][exp['stan_peptide_id'].map(pep_inds)], params), \
-        scale=exp['sigmaij'])
+    if bootstrap_method != 'none':
 
-    # divide total likelihood by # of iterations to normalize to area of 1
-    rt_plus = rt_plus / k
+      # to avoid using this experiment's own data to update the confidence
+      # of its own observations, recalculate the reference RTs (mu) without the
+      # data from this experiment, by: 
+      # 1) non-parametric bootstrapping over the median of the predicted mus.
+      # OR
+      # 2) parametric bootstrapping, using the RT distribution parameters
+      
+      # get predicted mus of peptides in this experiment, excluding predicted mus
+      # transformed from RTs observed in this experiment
+      dfe = dfa.loc[((dfa['stan_peptide_id'].isin(exp_peptides)) & (dfa['exp_id'] != e)), \
+        ['stan_peptide_id', 'pep', 'mu_pred']]
+
+      # extract predicted mus and PEPs    
+      mu_preds = dfe.groupby('stan_peptide_id')['mu_pred']\
+        .apply(lambda x: x.values).values.tolist()
+      peps = dfe.groupby('stan_peptide_id')['pep']\
+        .apply(lambda x: x.values).values.tolist()
+      
+      # number of observations per peptide sequence
+      obs_per_seq = [len(peptide) for peptide in mu_preds]
+      num_peptides = len(mu_preds)
+
+      # the number of observations per peptide -- used in loop
+      num_obs = 0
+      # matrix of n by k estimated mus from the bootstrapping
+      # will iterate over in the loop after the immediate one
+      mu_k = np.zeros((num_peptides, k))
+
+      if bootstrap_method == 'parametric':
+        # parametric bootstrap
+        for i in range(0, num_peptides):
+          num_obs = obs_per_seq[i]
+
+          # generate all random numbers in one go, and mold into matrix
+          # where each column is a bootstrap iteration
+          # then, take the median of each column (bootstrap iter)
+          mu_k[i] = np.apply_along_axis(np.median, 0, 
+            laplace.rvs(\
+              loc=np.median(mu_preds[i]), 
+              scale=np.std(mu_preds[i]), 
+              size=k*num_obs)\
+            .reshape(num_obs, k))
+
+      #elif bootstrap_method == 'parametric_mixture':
+        # generate random samples from the mixture model instead of just the
+        # correct RT distribution
+        # to do this, need to calculate then apply an FDR (sum of PEPs / # observations)
+        # for each peptide.
+        #for i in range(0, num_peptides):
+
+      elif bootstrap_method == 'non-parametric':
+        # non-parametric bootstrap
+        # instead of generating random indices for the sampling for each
+        # iteration, and for each peptide, we'll generate a batch of random numbers
+        # now and pull from them later.
+        # the counter will keep track of which portion of the pool we're using
+        counter = 0
+        rand_pool = np.random.rand(np.sum(obs_per_seq) * k)
+
+        for i in range(0, num_peptides): # for each peptide sequence
+          num_obs = obs_per_seq[i]
+          for j in range(0, k): # for each iteration:
+            # re-estimate mu from the resampled mu_preds
+            # TODO: choice also of mean, weighted mean
+            mu_k[i][j] = np.median(mu_preds[i][\
+              (rand_pool[counter:(counter+num_obs)] * num_obs).astype(int, copy=False)])
+
+            counter = counter + num_obs
+
+      else:
+        raise ConfigFileError('Invalid bootstrap method. Please choose \"parametric\" or \"non-parametric.\"')
+      
+      # map of stan_peptide_id onto 1:num_peptides
+      pep_inds = {ind: var for var, ind in enumerate(exp_peptides)}
+
+      # for each bootstrap iteration:
+      for j in range(0, k):
+        # evaluate the transformed RTs (predicted mus) on distributions
+        # with the bootstrapped, estimated mus as the means.
+        rt_plus = rt_plus + laplace.pdf(exp['retention_time'], \
+          loc=model['ref_to_rt'](\
+            exp, mu_k[:,j][exp['stan_peptide_id'].map(pep_inds)], params), \
+          scale=exp['sigmaij'])
+
+      # divide total likelihood by # of iterations to normalize to area of 1
+      rt_plus = rt_plus / k
+
+    else:
+      # not using bootstrap, but using adjusted mu as a point estimate
+      # for updating the confidence
+      rt_plus = model['rt_plus_func'](exp)
 
     #                                         P(RT|delta=0)*P(delta=0)
     # PEP.new = P(delta=0|RT) =   ---------------------------------------------------
@@ -170,7 +191,7 @@ def update(dfa, params, config):
     # P(RT|delta=0) = probability of peptides RT, given that PSM is incorrect
     #           estimate empirical density of RTs over the experiment
     
-    rt_minus = models[model]['rt_minus_func'](exp)
+    rt_minus = model['rt_minus_func'](exp)
 
     # P(delta=0) = probability that PSM is incorrect (PEP)
     # P(delta=1) = probability that PSM is correct (1-PEP)
@@ -193,12 +214,12 @@ def update(dfa, params, config):
         'sigmaij':           exp['sigmaij'].values.tolist(),
         'pep_new':           pep_new.tolist(),
 
-        'id':                exp['id'],
-        'exp_id':            exp['exp_id'],
-        'peptide_id':        exp['peptide_id'],
-        'stan_peptide_id':   exp['stan_peptide_id'],
-        'input_id':          exp['input_id'],
-        'exclude':           exp['exclude']
+        'id':                exp['id'].values,
+        'exp_id':            exp['exp_id'].values,
+        'peptide_id':        exp['peptide_id'].values,
+        'stan_peptide_id':   exp['stan_peptide_id'].values,
+        'input_id':          exp['input_id'].values,
+        'exclude':           exp['exclude'].values
     })
     # append to master DataFrame and continue
     df_new = df_new.append(exp_new)
