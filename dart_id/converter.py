@@ -410,6 +410,12 @@ def process_files(config):
   if config['pep_threshold'] <= 0 or config['pep_threshold'] > 1:
     raise ConfigFileError('PEP threshold {} is incorrectly defined. Please provide a decimal number between 0.0 and 1.0.'.format(config['pep_threshold']))
 
+  # remove any observations with null pep
+  null_pep = pd.isnull(df['pep'])
+  if np.sum(null_pep) > 0:
+    df['remove'] = ((df['remove']) | (null_pep))
+    logger.info('Removing {} PSMs with no PEP entry.'.format(np.sum(null_pep)))
+
   # check if num_experiments option is valid
   if 'num_experiments' not in config or config['num_experiments'] is None:
     raise ConfigFileError('No value provided to the filter for the number of raw files that a peptide must be observed in. Please provide an integer greater than or equal to 1 with the \"num_experiments\" key.')
