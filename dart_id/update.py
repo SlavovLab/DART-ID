@@ -14,7 +14,7 @@ from dart_id.exceptions import *
 from dart_id.figures import figures
 from dart_id.models import models, get_model_from_config
 from dart_id.helper import *
-from scipy.stats import norm, lognorm, laplace
+from scipy.stats import norm, lognorm, laplace, bernoulli, uniform
 
 logger = logging.getLogger('root')
 
@@ -54,6 +54,14 @@ def update(dfa, params, config):
   dfa['mu_pred'] = model['rt_to_ref'](dfa, dfa['mu'], params)
   dfa['muij']    = model['ref_to_rt'](dfa, dfa['mu'], params)
   dfa['sigmaij'] = model['sigmaij_func'](dfa, params)
+  # scaled sigma is the same ratio of muij / mu applied to sigmaij
+  dfa['sigma_pred'] = dfa['sigmaij'] * dfa['mu_pred'] / dfa['muij']
+
+  # get parameters for the null distributions for each experiment
+  null_dists = dfa.groupby('exp_id')['retention_time'].agg([np.mean, np.std])
+  #null_dists = np.array([norm(loc=null_dists.loc[i, 'mean'], scale=null_dists.loc[i, 'std']) for i in range(0, num_experiments)])
+  # first column is mean, second is std
+  null_dists = np.array([null_dists['mean'].values, null_dists['std'].values]).T
 
   # PEP ceiling at 1, otherwise will result in 
   # incorrect negative densities when plugging into Bayes' theorem
@@ -75,14 +83,16 @@ def update(dfa, params, config):
     if bootstrap_method != 'none':
       logger.info('Using {} bootstrap iterations'.format(k))
 
+  logger.info('Updating PEPs...')
   for i, e in enumerate(np.sort(dfa['exp_id'].unique())):
     exp_name = exp_names[i]
-    logger.info('Updating PEPs: Exp ({} / {}) - {}'.format(i+1, num_experiments, exp_name))
 
     exp = dfa[dfa['exp_id'] == e]
     exp = exp.reset_index(drop=True)
 
     exp_peptides = exp['stan_peptide_id'].unique()
+
+    logger.info('Exp ({} / {}) - {} - ({} Peptides, {} PSMs)'.format(i+1, num_experiments, exp_name, len(exp_peptides), exp.shape[0]))
 
     # vector of P(RT|delta=1) for this experiment.
     rt_plus = pd.Series(np.zeros(exp.shape[0]))
@@ -99,13 +109,14 @@ def update(dfa, params, config):
       # get predicted mus of peptides in this experiment, excluding predicted mus
       # transformed from RTs observed in this experiment
       dfe = dfa.loc[((dfa['stan_peptide_id'].isin(exp_peptides)) & (dfa['exp_id'] != e)), \
-        ['stan_peptide_id', 'pep', 'mu_pred']]
+        ['stan_peptide_id', 'pep', 'mu_pred', 'mu', 'sigma_pred', 'exp_id']]
 
-      # extract predicted mus and PEPs    
-      mu_preds = dfe.groupby('stan_peptide_id')['mu_pred']\
-        .apply(lambda x: x.values).values.tolist()
-      peps = dfe.groupby('stan_peptide_id')['pep']\
-        .apply(lambda x: x.values).values.tolist()
+      # extract relevant values for each peptide
+      mu_preds    = dfe.groupby('stan_peptide_id')['mu_pred'].apply(lambda x: x.values).values.tolist()
+      mus         = dfe.groupby('stan_peptide_id')['mu'].apply(lambda x: x.values).values.tolist()
+      sigma_preds = dfe.groupby('stan_peptide_id')['sigma_pred'].apply(lambda x: x.values).values.tolist()
+      peps        = dfe.groupby('stan_peptide_id')['pep'].apply(lambda x: x.values).values.tolist()
+      exp_ids     = dfe.groupby('stan_peptide_id')['exp_id'].apply(lambda x: x.values).values.tolist()
       
       # number of observations per peptide sequence
       obs_per_seq = [len(peptide) for peptide in mu_preds]
@@ -117,27 +128,74 @@ def update(dfa, params, config):
       # will iterate over in the loop after the immediate one
       mu_k = np.zeros((num_peptides, k))
 
-      if bootstrap_method == 'parametric':
+      if bootstrap_method == 'parametric' or bootstrap_method == 'parametric_mixture':
+
+        t_laplace_samples = 0
+        t_coin_flips = 0
+        t_null_samples = 0
+        t_medians = 0
+
+        # create pool of coin flips, instead of sampling for every peptide
+        # the pool is uniformly distributed from 0 to 1, and "successful" coin flip
+        # is determined by whether or not the sample from the pool is less than the
+        # measured PEP
+        _time = time.time()
+        coin_flip_pool = 0
+        if bootstrap_method == 'parametric_mixture':
+          coin_flip_pool = uniform.rvs(size=(np.sum(obs_per_seq) * k))
+
+        t_coin_flips += (time.time() - _time)
+
+        coin_counter = 0
+
         # parametric bootstrap
         for i in range(0, num_peptides):
           num_obs = obs_per_seq[i]
+          
+          _time = time.time()
+          # sample num_obs synthetic RTs for k bootstrap iterations
+          # do the sampling in a big pool, then shape to matrix where
+          # rows correspond to bootstrap iters and columns correspond to sample observations
+          samples = laplace.rvs(size=(k * num_obs)).reshape(k, num_obs)
+          # shift and scale sampled RTs by mu and sigma_pred, respectively
+          samples = (samples * sigma_preds[i]) + mu_preds[i]
+          t_laplace_samples += (time.time() - _time)
 
-          # generate all random numbers in one go, and mold into matrix
-          # where each column is a bootstrap iteration
-          # then, take the median of each column (bootstrap iter)
-          mu_k[i] = np.apply_along_axis(np.median, 0, 
-            laplace.rvs(\
-              loc=np.median(mu_preds[i]), 
-              scale=np.std(mu_preds[i]), 
-              size=k*num_obs)\
-            .reshape(num_obs, k))
+          if bootstrap_method == 'parametric_mixture':
+            # sample from mixture distribution
+            _time = time.time()
+            # actually faster to just replicate the sample matrix and then
+            # take subindices from that instead of sampling from null every
+            # iteration of the loop below. this seems inefficient, especially
+            # if given very small PEPs, but still better than sampling every iteration.
+            # could probably optimize the size of the null sample matrix by
+            # looking at predicted false positive rates, but for now we're
+            # just going with worst case scenario and assuming for all false positives.
+            null_samples = norm.rvs(size=(k * num_obs)).reshape(k, num_obs)
+            # shift and scale sampled RTs by mean and std of null dists
+            null_samples = (null_samples * null_dists[exp_ids[i],1]) + null_dists[exp_ids[i],0]
+            t_null_samples += (time.time() - _time)
 
-      #elif bootstrap_method == 'parametric_mixture':
-        # generate random samples from the mixture model instead of just the
-        # correct RT distribution
-        # to do this, need to calculate then apply an FDR (sum of PEPs / # observations)
-        # for each peptide.
-        #for i in range(0, num_peptides):
+            for j in range(0, num_obs): # for each peptide in the matrix
+              _time = time.time()
+              fp = (coin_flip_pool[coin_counter:(coin_counter + k)] < peps[i][j]).astype(bool)
+              coin_counter += k
+              t_coin_flips += (time.time() - _time)
+
+              _time = time.time()
+              # overwrite original samples with samples from null distribution
+              samples[fp, j] = null_samples[fp, j]
+              t_null_samples += (time.time() - _time)
+
+          _time = time.time()
+          # now take the median of each row and store it in mu_k
+          mu_k[i] = np.median(samples, axis=1)
+          t_medians += (time.time() - _time)
+
+        print('laplace sampling: {} secs'.format(t_laplace_samples))
+        print('coin flips: {} secs'.format(t_coin_flips))
+        print('null sampling: {} secs'.format(t_null_samples))
+        print('taking medians: {} secs'.format(t_medians))
 
       elif bootstrap_method == 'non-parametric':
         # non-parametric bootstrap
