@@ -1,4 +1,4 @@
-### RTLib configuration
+### DART-ID configuration
 ### =========================
 
 verbose: true
@@ -6,27 +6,27 @@ verbose: true
 ## Input
 ## ==========================
 
-input:
-  - /gd/MS/SCoPE/SingleCell_Data/FP18/evidence.txt
+input: 
+  - /gd/MS/SCoPE/SQC/SQC_67_95_Varied/evidence.txt
 
 sep: \t
 
 low_memory: false
-#params_folder: ~
-params_folder: /gd/bayesian_RT/Alignments/FP18_20180730_1
+params_folder: ~
 
 ## Alignment Options
 ## ==========================
 
+# models: 'linear', 'two_piece_linear'
 model: 'two_piece_linear_laplace'
 
 add_charge_to_sequence: false
 
 prior_iters: 10
-stan_iters: 5000
-stan_attempts: 5
+stan_iters: 40000
+stan_attempts: 1
 mu_min: 1
-rt_distortion: 0
+rt_distortion: 1
 
 ## Update Options
 ## ==========================
@@ -37,6 +37,7 @@ bootstrap_iters: 1000
 
 # mean, median, weighted_mean
 mu_estimation: 'median'
+
 
 ## Output
 ## ==========================
@@ -51,9 +52,9 @@ overwrite_pep: false
 save_combined_output: true
 combined_output_name: ev_updated.txt
 
-save_separate_output: true
+save_separate_output: false
 save_in_input_folder: false
-output_suffix: _dart
+output_suffix: _updated
 output_ext: .txt
 
 log_file: true
@@ -87,11 +88,11 @@ pep_threshold: 0.5
 num_experiments: 3
 
 filters:
-  - name: include_filename
-    expr: FP18
+  #- name: include_filename
+  #  expr: SQC[0-9]{2}A|IFN6[HI]|FP18I
 
   #- name: exclude_filename
-  #  expr: 18A
+  #  expr: SQC67[AB][16]|SQC67C1[3-9]|SQC67[CD]5|SQC68[DE]|IFN6[H-K]-Trg|SQC72D|SQC73[CD]|SQC74M|180416S_QC_SQC78A2
 
   - name: uniprot_exclusion
     file: ~/git/RTLib/pd_exclude.txt
@@ -109,4 +110,4 @@ filters:
 
   - name: smears
     dynamic: true
-    value: 0.03333
+    value: 0.01667

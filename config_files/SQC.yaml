@@ -46,7 +46,8 @@ input:
 sep: \t
 
 low_memory: false
-params_folder: ~
+params_folder: /gd/bayesian_RT/Alignments/SQC_20180802_5exp_point
+#params_folder: ~
 
 ## Alignment Options
 ## ==========================
@@ -66,8 +67,8 @@ rt_distortion: 1
 ## ==========================
 
 # parametric, non-parametric
-bootstrap_method: 'non-parametric'
-bootstrap_iters: 50
+bootstrap_method: 'parametric_mixture'
+bootstrap_iters: 100
 
 # mean, median, weighted_mean
 mu_estimation: 'median'
@@ -77,7 +78,7 @@ mu_estimation: 'median'
 ## ==========================
 
 output: ~
-print_figures: true
+print_figures: false
 save_params: true
 add_diagnostic_cols: true
 overwrite_pep: false
@@ -119,7 +120,7 @@ col_names:
 ## ==========================
 
 pep_threshold: 0.5
-num_experiments: 3
+num_experiments: 5
 
 filters:
   #- name: include_filename

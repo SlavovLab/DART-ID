@@ -1,4 +1,4 @@
-### RTLib configuration
+### DART-ID configuration
 ### =========================
 
 verbose: true
@@ -6,34 +6,39 @@ verbose: true
 ## Input
 ## ==========================
 
-input:
-  - /gd/MS/SCoPE/SingleCell_Data/FP18/evidence.txt
+input: 
+  - /gd/MS/SCoPE/Bogdan/dat/U_cells_PMA/evidence.txt
+  #- /gd/MS/SCoPE/Bogdan/dat/HFX_60min_20180505/evidence.txt
+  #- /gd/MS/SCoPE/Bogdan/dat/HFX_60min_run1+2/evidence.txt
+  #- /gd/MS/SCoPE/Bogdan/dat/HFX_60min_run1+2/20180718_plates/evidence.txt
+  #- /gd/bayesian_RT/Bogdan/071018X_Ucells_PMA_2x2_Plate11_1-6_UniprotHuman_NOByonic_PSMs.txt
 
 sep: \t
 
 low_memory: false
-#params_folder: ~
-params_folder: /gd/bayesian_RT/Alignments/FP18_20180730_1
+params_folder: ~
 
 ## Alignment Options
 ## ==========================
 
+# models: 'linear', 'two_piece_linear'
 model: 'two_piece_linear_laplace'
 
 add_charge_to_sequence: false
 
-prior_iters: 10
-stan_iters: 5000
-stan_attempts: 5
+prior_iters: 15
+stan_iters: 10000
+stan_attempts: 2
+
 mu_min: 1
-rt_distortion: 0
+rt_distortion: 0.5
 
 ## Update Options
 ## ==========================
 
 # parametric, non-parametric
 bootstrap_method: 'parametric_mixture'
-bootstrap_iters: 1000
+bootstrap_iters: 100
 
 # mean, median, weighted_mean
 mu_estimation: 'median'
@@ -44,16 +49,15 @@ mu_estimation: 'median'
 output: ~
 print_figures: true
 save_params: true
-add_diagnostic_cols: true
+add_diagnostic_cols: false
 overwrite_pep: false
-#psm_fdr_threshold: 0.01
 
 save_combined_output: true
-combined_output_name: ev_updated.txt
+combined_output_name: PSMs_updated.txt
 
-save_separate_output: true
+save_separate_output: false
 save_in_input_folder: false
-output_suffix: _dart
+output_suffix: _updated
 output_ext: .txt
 
 log_file: true
@@ -76,7 +80,6 @@ col_names:
   retention_length: Retention length
   intensity: Intensity
   #exclude: exclude
-  #remove: remove
   #exp_id: exp_id
   #peptide_id: peptide_id
 
@@ -87,15 +90,15 @@ pep_threshold: 0.5
 num_experiments: 3
 
 filters:
-  - name: include_filename
-    expr: FP18
+  #- name: include_filename
+  #  expr: SQC[0-9]{2}A|IFN6[HI]|FP18I
 
   #- name: exclude_filename
-  #  expr: 18A
+  #  expr: SQC[0-9]{2}A|IFN6[HI]|FP18I
 
-  - name: uniprot_exclusion
-    file: ~/git/RTLib/pd_exclude.txt
-    list: ~
+  #- name: uniprot_exclusion
+  #  file: ~/git/RTLib/pd_exclude.txt
+  #  list: ~
 
   - name: contaminant
     tag: CON__
@@ -109,4 +112,4 @@ filters:
 
   - name: smears
     dynamic: true
-    value: 0.03333
+    value: 0.01667
