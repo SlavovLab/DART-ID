@@ -133,6 +133,7 @@ def update(dfa, params, config):
         t_laplace_samples = 0
         t_coin_flips = 0
         t_null_samples = 0
+        t_loop_indexing = 0
         t_medians = 0
 
         # create pool of coin flips, instead of sampling for every peptide
@@ -176,26 +177,25 @@ def update(dfa, params, config):
             null_samples = (null_samples * null_dists[exp_ids[i],1]) + null_dists[exp_ids[i],0]
             t_null_samples += (time.time() - _time)
 
-            for j in range(0, num_obs): # for each peptide in the matrix
-              _time = time.time()
+            _time = time.time()
+            for j in range(0, num_obs): # for each observation in the matrix
+              # take a chunk of the coin flip pool
               fp = (coin_flip_pool[coin_counter:(coin_counter + k)] < peps[i][j]).astype(bool)
               coin_counter += k
-              t_coin_flips += (time.time() - _time)
-
-              _time = time.time()
               # overwrite original samples with samples from null distribution
               samples[fp, j] = null_samples[fp, j]
-              t_null_samples += (time.time() - _time)
+            t_loop_indexing += (time.time() - _time)
 
           _time = time.time()
           # now take the median of each row and store it in mu_k
           mu_k[i] = np.median(samples, axis=1)
           t_medians += (time.time() - _time)
 
-        print('laplace sampling: {} secs'.format(t_laplace_samples))
-        print('coin flips: {} secs'.format(t_coin_flips))
-        print('null sampling: {} secs'.format(t_null_samples))
-        print('taking medians: {} secs'.format(t_medians))
+        logger.info('laplace sampling: {:.1f} ms'.format(t_laplace_samples*1000))
+        logger.info('coin flips: {:.1f} ms'.format(t_coin_flips*1000))
+        logger.info('null sampling: {:.1f} ms'.format(t_null_samples*1000))
+        logger.info('loop indexing: {:.1f} ms'.format(t_loop_indexing*1000))
+        logger.info('taking medians: {:.1f} ms'.format(t_medians*1000))
 
       elif bootstrap_method == 'non-parametric':
         # non-parametric bootstrap
@@ -368,15 +368,37 @@ def main():
   df_adjusted['pep_updated'] = df_adjusted['pep_new']
   df_adjusted['pep_updated'][pd.isnull(df_adjusted['pep_new'])] = \
     df_adjusted[config['col_names']['pep']][pd.isnull(df_adjusted['pep_new'])]
+  # make sure that updated PEP does not exceed 1
+  df_adjusted['pep_updated'][df_adjusted['pep_updated'] > 1] = 1
 
   # add q-value (FDR) column
   # rank-sorted, cumulative sum of PEPs is expected number of false positives
   # q-value is just that vector divided by # of observations, to get FDR
-  df_adjusted['q-value'] = \
-    ( \
-      np.cumsum(df_adjusted['pep_updated'][np.argsort(df_adjusted['pep_updated'])]) / \
-      np.arange(1, df_adjusted.shape[0]+1) \
-    )[np.argsort(np.argsort(df_adjusted['pep_updated']))]
+  
+  logger.info('Calculating FDR (q-values)')
+  
+  # q-value, without fixing # of false positives to a discrete number
+  #df_adjusted['q-value'] = \
+  #  ( \
+  #    np.cumsum(df_adjusted['pep_updated'][np.argsort(df_adjusted['pep_updated'])]) / \
+  #    np.arange(1, df_adjusted.shape[0]+1) \
+  #  )[np.argsort(np.argsort(df_adjusted['pep_updated']))]
+  
+  # q-value, by fixing # of false positives to a discrete number
+  # get the index order of sorted PEPs
+  pep_order = np.argsort(df_adjusted['pep_updated'])
+  # Take the ceiling of the cumulative sum of the sorted PEPs to get the pessimistic
+  # estimate of the number of false positives when selecting at that level.
+  # because using ceiling, PSMs with different PEPs but within the same relative interval
+  # will get the same "num_fp" value.
+  num_fp = np.ceil(np.cumsum(df_adjusted['pep_updated'][pep_order])).astype(int)
+  # count the number of occurrences of num_fp and sum them up to get the sample size for each
+  # discrete false positive # threshold
+  fp_counts = np.cumsum(num_fp.value_counts().sort_index()).values
+  # divide # of false positivies by sample size to get q-value. sorting the index order brings
+  # the order of values back to their original form
+  df_adjusted['q-value'] = (num_fp / fp_counts[num_fp-1]).values[np.argsort(pep_order.values)]
+
 
 
   # print figures?
