@@ -158,8 +158,10 @@ def update(dfa, params, config):
           # do the sampling in a big pool, then shape to matrix where
           # rows correspond to bootstrap iters and columns correspond to sample observations
           samples = laplace.rvs(size=(k * num_obs)).reshape(k, num_obs)
+          mu_med = np.median(mu_preds[i])
           # shift and scale sampled RTs by mu and sigma_pred, respectively
-          samples = (samples * sigma_preds[i]) + mu_preds[i]
+          #samples = (samples * sigma_preds[i]) + mu_preds[i]
+          samples = (samples * sigma_preds[i]) + mu_med
           t_laplace_samples += (time.time() - _time)
 
           if bootstrap_method == 'parametric_mixture':
@@ -219,20 +221,25 @@ def update(dfa, params, config):
       else:
         raise ConfigFileError('Invalid bootstrap method. Please choose \"parametric\" or \"non-parametric.\"')
       
+      _t_dist_building = time.time()
       # map of stan_peptide_id onto 1:num_peptides
       pep_inds = {ind: var for var, ind in enumerate(exp_peptides)}
+      pep_inds = exp['stan_peptide_id'].map(pep_inds)
 
       # for each bootstrap iteration:
       for j in range(0, k):
         # evaluate the transformed RTs (predicted mus) on distributions
         # with the bootstrapped, estimated mus as the means.
-        rt_plus = rt_plus + laplace.pdf(exp['retention_time'], \
-          loc=model['ref_to_rt'](\
-            exp, mu_k[:,j][exp['stan_peptide_id'].map(pep_inds)], params), \
-          scale=exp['sigmaij'])
+        #rt_plus = rt_plus + laplace.pdf(exp['retention_time'], \
+        #  loc=model['ref_to_rt'](exp, mu_k[:,j][pep_inds], params), \
+        #  scale=exp['sigmaij'])
+        rt_plus = rt_plus + laplace.pdf(exp['mu_pred'],\
+          loc=mu_k[:,j][pep_inds], scale=exp['sigma_pred'])
 
       # divide total likelihood by # of iterations to normalize to area of 1
       rt_plus = rt_plus / k
+
+      logger.info('distribution building: {:.1f} ms'.format((time.time() - _t_dist_building)*1000))
 
     else:
       # not using bootstrap, but using adjusted mu as a point estimate
