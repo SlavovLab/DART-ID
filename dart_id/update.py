@@ -392,6 +392,12 @@ def main():
   #  )[np.argsort(np.argsort(df_adjusted['pep_updated']))]
   
   # q-value, by fixing # of false positives to a discrete number
+  
+  # for now, set all null PEPs to 1. we'll remember the index and set them back to nan later
+  null_peps = pd.isnull(df_adjusted['pep_updated'])
+  if null_peps.sum() > 0:
+    df_adjusted['pep_updated'][null_peps] = 1
+
   # get the index order of sorted PEPs
   pep_order = np.argsort(df_adjusted['pep_updated'])
   # Take the ceiling of the cumulative sum of the sorted PEPs to get the pessimistic
@@ -406,6 +412,10 @@ def main():
   # the order of values back to their original form
   df_adjusted['q-value'] = (num_fp / fp_counts[num_fp-1]).values[np.argsort(pep_order.values)]
 
+  # set null PEPs and q-values back to nan
+  if null_peps.sum() > 0:
+    df_adjusted['pep_updated'][null_peps] = np.nan
+    df_adjusted['q-value'][null_peps] = np.nan
 
 
   # print figures?
