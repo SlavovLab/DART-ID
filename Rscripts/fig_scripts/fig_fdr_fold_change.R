@@ -2,7 +2,8 @@ library(tidyverse)
 library(pracma)
 source('Rscripts/lib.R')
 
-ev <- read_tsv("/gd/bayesian_RT/Alignments/SQC_20180621_2/ev_updated.txt")
+#ev <- read_tsv("/gd/bayesian_RT/Alignments/SQC_20180621_2/ev_updated.txt")
+ev <- read_tsv("/gd/bayesian_RT/Alignments/SQC_20180724_3/ev_updated.txt")
 
 ## Add percolator data --------
 
@@ -91,7 +92,7 @@ df$Method <- factor(df$Method, levels=c('Spectra', 'Percolator', 'Percolator (co
 
 # fold change of IDs at FDR thresh ----------------------------------------
 
-pdf(file='manuscript/Figs/fdr_fold_change_v2.pdf', width=2.25, height=3)
+pdf(file='manuscript/Figs/fdr_fold_change_v3.pdf', width=2.25, height=3)
 
 layout(c(1, 2), heights=c(1.8, 2))
 

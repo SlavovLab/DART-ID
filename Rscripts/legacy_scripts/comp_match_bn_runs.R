@@ -41,7 +41,21 @@ ev_dt <- ev_dt %>% filter(Sequence %in% peps)
 
 ## --------
 
+ev_mqi %>% 
+  mutate(exp_id=as.numeric(as.factor(`Raw file`))) %>%
+  filter(exp_id==3) %>%
+  #filter(exp_id %in% c(1, 2, 3, 4)) %>%
+  #sample_n(1e3) %>% 
+ggplot(aes(x=`Retention time`, y=`Calibrated retention time`)) + 
+  geom_point(alpha=0.2)
 
+seq_freq <- as.data.frame(table(paste(ev_mqi$`Modified sequence`, ev_mqi$Charge))) %>% 
+  arrange(desc(Freq))
+
+ev_mqi %>%
+  filter(paste(`Modified sequence`, Charge) == as.character(seq_freq[4,]$Var1)) %>%
+ggplot(aes(x=`Retention time`, y=`Calibrated retention time`)) + 
+  geom_point(alpha=0.2)
 
 
 ## --------
@@ -121,3 +135,9 @@ title(x="Residual RT (min)", y="Density")
 legend('topleft', c("MaxQuant MBR", "DART-ID"),
        col=c(av[1], av[2]), lty=c(1, 1), lwd=c(2, 2),
        cex=0.8, bty='n', y.intersp=1.4)
+
+
+## -------------
+
+
+

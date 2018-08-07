@@ -1,5 +1,6 @@
 library(tidyverse)
 library(reshape2)
+library(pracma)
 source('Rscripts/lib.R')
 
 # increase in protein quant
@@ -13,7 +14,8 @@ data.cols <- grep('Reporter intensity corrected', colnames(ev))
 # filter for sqc master sets only, and only keep correctly IDed proteins
 ev.f <- ev %>%
   #filter(apply(ev[,data.cols]!=0, 1, sum) >= 8) %>%
-  filter(grepl('SQC', `Raw file`)) %>%
+  #filter(grepl('SQC', `Raw file`)) %>%
+  filter(!grepl('SQC67[AB][16]|SQC67C1[3-9]|SQC67[CD]5|SQC68[DE]|IFN6[H-K]-Trg|SQC72D|SQC73[CD]|SQC74M|180416S_QC_SQC78A2',`Raw file`)) %>%
   filter(!grepl('REV__', `Leading razor protein`)) %>%
   filter(!grepl('CON__', Proteins)) %>%
   # filter(apply(ev[,data.cols]!=0, 1, sum) == length(data.cols)) %>%
@@ -34,7 +36,7 @@ ev.f <- ev.f %>%
 
 # only take rows w/ quantitation
 # 8/10, because there are 2 empty channels
-ev.f <- ev.f[apply(ev.f[,data.cols] != 0, 1, sum) >= 8,]
+#ev.f <- ev.f[apply(ev.f[,data.cols] != 0, 1, sum) >= 8,]
 
 # filter by FDR < 1%
 fdr_thresh <- 0.01
@@ -45,7 +47,7 @@ ev.f      <- ev.f %>% filter(qval         < fdr_thresh)
 experiments <- sort(unique(ev.f$`Raw file`))
 #prots <- unique(ev.f.new$Protein)
 #prots <- unique(ev$Protein)
-prots <- unique(ev$Sequence)
+prots <- unique(ev$`Modified sequence`)
 
 dmat <- zeros(length(prots), length(experiments))
 dmat_new <- zeros(length(prots), length(experiments))
@@ -70,11 +72,11 @@ for(i in 1:length(experiments)) {
   flush.console()
   
   ev.a <- ev.f %>% filter(`Raw file`==experiments[i])
-  dmat     [prots %in% ev.a$Sequence,i] <- 1
+  dmat     [prots %in% ev.a$`Modified sequence`,i] <- 1
   ev.a <- ev.f.new %>% filter(`Raw file`==experiments[i])
-  dmat_new [prots %in% ev.a$Sequence,i] <- 1
+  dmat_new [prots %in% ev.a$`Modified sequence`,i] <- 1
   ev.a <- ev.f.perc %>% filter(`Raw file`==experiments[i])
-  dmat_perc[prots %in% ev.a$Sequence,i] <- 1
+  dmat_perc[prots %in% ev.a$`Modified sequence`,i] <- 1
 }
 
 # dmat_c

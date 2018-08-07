@@ -1,12 +1,15 @@
+library(tidyverse)
+library(reshape2)
+
 ## PEP vs. PEP.new fractions ----
 
 ev.f <- ev %>%
-  filter(!is.na(PEP.new)) %>%
-  select(c('Raw file', 'Sequence', 'PEP', 'PEP.new', 'Retention time', 'muijs')) %>%
+  filter(!is.na(pep_new)) %>%
+  select(c('Raw file', 'Sequence', 'PEP', 'pep_new', 'Retention time', 'muij')) %>%
   mutate(PEP=ifelse(PEP > 1, 1, PEP), 
          PEP=ifelse(PEP == 0, .Machine$double.xmin, PEP)) %>%
-  mutate(dPEP=log2(PEP/PEP.new),
-         dRT=log10(abs(`Retention time`-muijs))) %>%
+  mutate(dPEP=log2(PEP/pep_new),
+         dRT=log10(abs(`Retention time`-muij))) %>%
   mutate_at(vars(dPEP, dRT), funs(ifelse(is.infinite(.), NA, .))) %>%
   #mutate(bin=cut(PEP, breaks=c(0, 5e-2, 1e-1, 5e-1, 9e-1, 1)))
   mutate(bin=cut(PEP, breaks=seq(0, 1, by=0.1)))
@@ -16,7 +19,7 @@ dmat <- matrix(nrow=10, ncol=10)
 for(i in 1:10) {
   b <- levels(ev.f$bin)[i]
   ev.a <- ev.f %>% filter(bin == b)
-  bin.new <- cut(ev.a$PEP.new, breaks=seq(0, 1, by=0.1))
+  bin.new <- cut(ev.a$pep_new, breaks=seq(0, 1, by=0.1))
   for(j in 1:10) {
     b2 <- levels(bin.new)[j]
     dmat[i, j] <- nrow(ev.a %>% filter(bin.new==b2)) / nrow(ev.a)
@@ -31,8 +34,8 @@ labels <- paste(labels, ' (n=', ev.f %>% group_by(bin) %>% summarise(n=length(bi
 
 ## ------
 
-pep.bins <-
-  ggplot(dmat, aes(x=x, y=y, fill=value*100)) +
+#pep.bins <-
+ggplot(dmat, aes(x=x, y=y, fill=value*100)) +
   geom_tile(color='black') +
   geom_text(aes(label=round(value*100, digits=1)), size=4) +
   scale_fill_gradientn(colors=c('white','red'), values=c(0, 1.25), guide=F) +

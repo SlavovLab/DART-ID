@@ -29,10 +29,11 @@ ev.f <- ev %>%
   # filter out non J/U sets (QC40E,F, QC42A)
   filter(!grepl('SQC9', `Raw file`)) %>%
   dplyr::select(c('Sequence', 'Modified sequence', 'Protein', 'Raw file', 'Retention time', 
-           'PEP', 'pep_new', 'pep_updated', 'qval', 'qval_updated', dcols)) %>% 
+           'PEP', 'pep_new', 'pep_updated', 'qval', 'qval_updated', dcols))
+
+ev.f <- ev.f %>%
   # remove empty channels
   dplyr::select(-grep('Reporter intensity corrected', colnames(ev.f))[c(3, 4)])
-#  filter(qval < 0.01) %>%
 
 # only take rows w/ quantitation
 ev.f <- ev.f[apply(ev.f[,grep('Reporter', colnames(ev.f))] == 0, 1, sum) == 0,]
@@ -43,7 +44,7 @@ ev.f <- normalize_ri_data_table(ev.f, dcols)
 
 ## -------
 
-conf_thresh <- 0.001
+conf_thresh <- 0.01
 
 # prot_quants <- ev.f %>% 
 #   #filter(!is.na(pep_new)) %>%

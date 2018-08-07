@@ -1,5 +1,6 @@
 validate.lib.3 <- function(ev, exclude.cols=c(1:4, 7:11)) {
   library(reshape2)
+  library(pracma)
   
   # find out the indices of columns with reporter ion data
   # should be 10 columns, but the code doesn't rely on this number
@@ -23,6 +24,8 @@ validate.lib.3 <- function(ev, exclude.cols=c(1:4, 7:11)) {
     filter(!grepl("CON__", Proteins)) %>%
     # only take SQC experiments
     filter(grepl("SQC", `Raw file`)) %>%
+    # remove SQC9* experiments
+    filter(!grepl('SQC9', `Raw file`)) %>%
     filter(!is.na(Protein))
   
   cat("Removing proteins without single-cell RI data\n")

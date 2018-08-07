@@ -6,7 +6,7 @@ library(tidyverse)
 
 # percolator -D 14 -U ~/git/RTLib/Alignments/SQC_20180621_2/pin.txt -m ~/git/RTLib/Alignments/SQC_20180621_2/pout.txt -Y
 
-pout <- read_tsv('/gd/bayesian_RT/Alignments/SQC_20180621_2/pout.txt')
+pout <- read_tsv('/gd/bayesian_RT/Alignments/SQC_20180724_3/pout.txt')
 
 # line up IDs
 pout <- pout %>% arrange(PSMId)

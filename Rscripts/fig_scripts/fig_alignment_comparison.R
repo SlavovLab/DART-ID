@@ -116,7 +116,7 @@ errors <- df_a %>% group_by(type) %>% summarise(err=mean(abs(error), na.rm=T)) %
 p <- 
 ggplot(df_a) +
   geom_density_ridges(aes(error, type, fill=type),
-                      #stat='binline', bins=51, 
+                      stat='binline', bins=50, 
                       size=0.5, color=NA,
                       rel_min_height=0.01, scale=1.25) +
   scale_x_continuous(limits=c(-10, 10), breaks=seq(-10, 10, by=5)) +
@@ -140,14 +140,14 @@ ggplot(df_a) +
     axis.title.y=element_text(hjust=0.5)
   )
 
-ggsave('manuscript/Figs/alignment_binline_pred_v2.pdf', p, device='pdf', width=1.75, height=2.5, units='in')
+ggsave('manuscript/Figs/alignment_binline_pred_v3.pdf', p, device='pdf', width=1.75, height=2.5, units='in')
 
 df_b <- error_df %>% filter(type %in% c('iRT', 'MaxQuant MBR', 'DART-ID'))
 errors <- df_b %>% group_by(type) %>% summarise(err=mean(abs(error), na.rm=T)) %>% pull(err)
 p <- 
   ggplot(df_b) +
   geom_density_ridges(aes(error, type, fill=type),
-                      #stat='binline', bins=51, 
+                      stat='binline', bins=50, 
                       size=0.5, color=NA, panel_scaling=F,
                       rel_min_height=0.01, scale=1.25) +
   scale_x_continuous(limits=c(-2, 2), breaks=seq(-2, 2, by=1)) +
@@ -168,7 +168,7 @@ p <-
     axis.title.y=element_text(hjust=0.5)
   )
 
-ggsave('manuscript/Figs/alignment_binline_align_v2.pdf', p, device='pdf', width=1.75, height=2.5, units='in')
+ggsave('manuscript/Figs/alignment_binline_align_v3.pdf', p, device='pdf', width=1.75, height=2.5, units='in')
 
 # boxplots -----------------------------------------------------------------
 

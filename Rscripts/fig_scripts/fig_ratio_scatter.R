@@ -5,7 +5,8 @@ library(RColorBrewer)
 library(viridis)
 source('Rscripts/lib.R')
 
-ev <- read_tsv('/gd/bayesian_RT/Alignments/SQC_20180621_2/ev_updated.txt')
+#ev <- read_tsv('/gd/bayesian_RT/Alignments/SQC_20180621_2/ev_updated.txt')
+ev <- read_tsv('/gd/bayesian_RT/Alignments/SQC_20180803_5exp_parametric_mixture_v2/ev_updated.txt')
 
 ## load cormat data -----
 

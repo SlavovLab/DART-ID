@@ -15,7 +15,7 @@ exp <- 4
 ev_linear_f <- ev_linear %>% filter(exp_id == exp)
 ev_twopiece_f <- ev_twopiece %>% filter(exp_id == exp)
 
-pdf(file='manuscript/Figs/linear_fit_mu_v_rt_v2.pdf', width=3.5, height=6)
+pdf(file='manuscript/Figs/linear_fit_mu_v_rt_v3.pdf', width=3.5, height=6)
 
 layout(rbind(c(1), c(2)))
 
@@ -60,7 +60,7 @@ axis(1, at=seq(10, 60, by=10), tck=-0.02, mgp=c(0, 0.3, 0))
 axis(2, at=seq(10, 60, by=10), tck=-0.02,
      mgp=c(0, 0.5, 0), las=1)
 
-mtext('Canonical RT (min)', side=1, outer=T, cex=1, line=1)
+mtext('Reference RT (min)', side=1, outer=T, cex=1, line=1)
 mtext('Observed RT (min)', side=2, outer=T, cex=1, line=0.1)
 
 dev.off()
@@ -70,28 +70,28 @@ dev.off()
 
 ecdf_linear <- ecdf(ev_linear %>%
   filter(!is.na(muij)) %>%
-  mutate(dRT=`Retention time`-muij) %>% pull(dRT))
+  mutate(dRT=abs(`Retention time`-muij)) %>% pull(dRT))
 ecdf_twopiece <- ecdf(ev_twopiece %>%
   filter(!is.na(muij)) %>%
-  mutate(dRT=`Retention time`-muij) %>% pull(dRT))
+  mutate(dRT=abs(`Retention time`-muij)) %>% pull(dRT))
 
-pdf(file='manuscript/Figs/linear_fit_ecdf.pdf', width=3.5, height=3)
+pdf(file='manuscript/Figs/linear_fit_ecdf_v2.pdf', width=3.5, height=3)
 
 par(mar=c(2.5, 2.75, 1.5, 0.75), cex.axis=0.85)
 
-x <- seq(-1, 1, by=0.01)
+x <- seq(0, 2, by=0.01)
 plot(x, ecdf_linear(x), type='l', col='red', lwd=2,
      xlab=NA, ylab=NA, xaxt='n', yaxt='n',
      ylim=c(0, 1))
 lines(x, ecdf_twopiece(x), type='l', col='blue', lwd=2, lty=1)
 
-axis(1, at=seq(-1, 1, by=0.25), tck=-0.02, mgp=c(0, 0.3, 0))
+axis(1, at=seq(0, 2, by=0.25), tck=-0.02, mgp=c(0, 0.3, 0))
 axis(2, at=seq(0, 1, by=0.2), tck=-0.02, mgp=c(0, 0.5, 0), las=1)
 
-legend('topleft', c('Linear', 'Segmented'), col=c('red', 'blue'), lty=1, lwd=2,
+legend('bottomright', c('Linear', 'Segmented'), col=c('red', 'blue'), lty=1, lwd=2,
        bty='n', inset=c(0, 0), y.intersp=1, cex=0.85)
 
-mtext('Residual RT (min)', side=1, line=1.5, cex=1)
+mtext('| Residual RT |  (min)', side=1, line=1.5, cex=1)
 mtext('Density', side=2, line=1.75, cex=1)
 mtext('Fit Residual ECDF', side=3, line=0.25, font=2, cex=1)
 
@@ -100,7 +100,7 @@ dev.off()
 
 # compare sigmaijs --------------------------------------------------------
 
-pdf(file='manuscript/Figs/linear_fit_sigmas.pdf', widt=3.5, height=3)
+pdf(file='manuscript/Figs/linear_fit_sigmas_v2.pdf', widt=3.5, height=3)
 
 par(oma=c(2, 2, 1, 2), pty='s',
     mar=c(0,0,0,0))
@@ -117,7 +117,7 @@ par(mar=c(0.5, 0.5, 0.5, 0), cex.axis=0.75)
 
 plot(ev_linear$sigmaij[n], ev_twopiece$sigmaij[n], 
      pch=16, col=rgb(0,0,0,0.3), cex=0.5,
-     xlim=c(0, 1), ylim=c(0, 1),
+     xlim=c(0, 1.1), ylim=c(0, 1.1),
      xlab=NA, ylab=NA, xaxt='n', yaxt='n')
 abline(a=0, b=1, col='red')
 

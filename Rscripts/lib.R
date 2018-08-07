@@ -397,7 +397,7 @@ normalize_ri_data <- function(dmat) {
   dmat <- dmat[!apply(apply(dmat, 1, is.na), 2, sum) > 0,]
   dmat
 }
-normalize_ri_data_table <- function(ev, dcols) {
+normalize_ri_data_table <- function(ev, dcols, remove.empty.rows=T) {
   ev[,dcols][ev[,dcols]==0] <- NA
   
   ## normalize data
@@ -407,7 +407,9 @@ normalize_ri_data_table <- function(ev, dcols) {
   # now normalize across rows, by mean
   ev[,dcols] <- ev[,dcols] / apply(ev[,dcols], 1, mean, na.rm=T)
   # remove rows without quant
-  ev <- ev[!apply(apply(ev[,dcols], 1, is.na), 2, sum) > 0,]
+  if(remove.empty.rows) {
+    ev <- ev[!apply(apply(ev[,dcols], 1, is.na), 2, sum) > 0,]
+  }
   ev
 }
 

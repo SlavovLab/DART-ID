@@ -1,7 +1,8 @@
 library(tidyverse)
 source('Rscripts/lib.R')
 
-ev <- read_tsv("/gd/bayesian_RT/Alignments/SQC_20180621_2/ev_updated.txt")
+#ev <- read_tsv("/gd/bayesian_RT/Alignments/SQC_20180621_2/ev_updated.txt")
+ev <- read_tsv("/gd/bayesian_RT/Alignments/SQC_20180724_3/ev_updated.txt")
 
 ## add percolator data
 
@@ -20,7 +21,7 @@ boxs <- list(Spectra=apply(dmat, 2, sum),
              DART_prev=apply(dmat_new[!no_conf_ids,], 2, sum))
 ## ---------
 
-pdf(file='manuscript/Figs/peps_per_exp_v4.pdf', width=1.25, height=3)
+pdf(file='manuscript/Figs/peps_per_exp_v6.pdf', width=1.25, height=3)
 
 par(mar=c(2.5,2,0.5,0.5),
     pty='m', las=1, cex.axis=0.75)
