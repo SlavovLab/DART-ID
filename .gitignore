@@ -77,5 +77,5 @@ python_notebooks/**/*
 
 # binary builds of tools
 tools/**/bin/*
-
+tools/**/*.o
 
