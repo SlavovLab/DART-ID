@@ -11,6 +11,7 @@ import time
 from dart_id.align import align
 from dart_id.converter import process_files
 from dart_id.exceptions import *
+from dart_id.fido.BayesianNetwork import run_internal
 from dart_id.figures import figures
 from dart_id.models import models, get_model_from_config
 from dart_id.helper import *
@@ -191,6 +192,9 @@ def update(dfa, params, config):
           _time = time.time()
           # now take the median of each row and store it in mu_k
           mu_k[i] = np.median(samples, axis=1)
+          # or take the weighted mean
+          #weights = ((1 - peps[i]) - (1 - config['pep_threshold'])) / config['pep_threshold']
+          #mu_k[i] = (np.sum(samples * weights, axis=1) / np.sum(weights))
           t_medians += (time.time() - _time)
 
         logger.info('laplace sampling: {:.1f} ms'.format(t_laplace_samples*1000))
@@ -299,19 +303,33 @@ def write_output(df, out_path, config):
   # remove diagnostic columns, unless they are specified to be kept
   if 'add_diagnostic_cols' not in config or config['add_diagnostic_cols'] == False:
     df = df.drop(['remove', 'exclude', 'mu', 'muij', 
-      'rt_minus', 'rt_plus', 'sigmaij', 
+      'rt_minus', 'rt_plus', 'sigmaij', 'residual',
       'input_id', 'exp_id', 'peptide_id', 'stan_peptide_id'], axis=1)
 
-  # filter by 1% FDR?
+  # filter by PSM FDR?
   if 'psm_fdr_threshold' in config and type(config['psm_fdr_threshold']) == float:
     if config['psm_fdr_threshold'] <= 0:
-      logger.warning('FDR threshold equal to or below 0. Please provide a value between 0 and 1. Ignoring...')
+      logger.warning('PSM FDR threshold equal to or below 0. Please provide a value between 0 and 1. Ignoring...')
     elif config['psm_fdr_threshold'] >= 1:
-      logger.warning('FDR threshold equal to or greater than 1. Please provide a value between 0 and 1. Ignoring...')
+      logger.warning('PSM FDR threshold equal to or greater than 1. Please provide a value between 0 and 1. Ignoring...')
     else:
       to_remove = (df['q-value'] > config['psm_fdr_threshold'])
       logger.info('{}/{} ({:.2%}) PSMs removed at a threshold of {:.2%} FDR.'.format(np.sum(to_remove), df.shape[0], np.sum(to_remove) / df.shape[0], config['psm_fdr_threshold']*100))
       df = df[~to_remove].reset_index(drop=True)
+
+  # filter by protein FDR?
+  if 'protein_fdr_threshold' in config and type(config['protein_fdr_threshold']) == float:
+    if 'prot_fdr' in columns:
+      if config['protein_fdr_threshold'] <= 0:
+        logger.warning('Protein FDR threshold equal to or below 0. Please provide a value between 0 and 1. Ignoring...')
+      elif config['protein_fdr_threshold'] >= 1:
+        logger.warning('Protein FDR threshold equal to or greater than 1. Please provide a value between 0 and 1. Ignoring...')
+      else:
+        to_remove = ((df['prot_fdr'] > config['protein_fdr_threshold']) | pd.isnull(df['prot_fdr']))
+        logger.info('{}/{} ({:.2%}) PSMs removed at a threshold of {:.2%} Protein FDR.'.format(np.sum(to_remove), df.shape[0], np.sum(to_remove) / df.shape[0], config['protein_fdr_threshold']*100))
+        df = df[~to_remove].reset_index(drop=True)
+    else:
+      raise ConfigFileError('Protein FDR threshold specified, but no protein inference run with this analysis. Please set \"run_pi\" to true and fill out all the respective parameters.')
     
   df.to_csv(out_path, sep='\t', index=False)
 
@@ -352,16 +370,21 @@ def main():
 
   # add new columns to original DF, and remove the duplicate ID column
   logger.info('Concatenating results to original data...')
-
-  df_adjusted = pd.concat([df_original.loc[~df_original['remove']].reset_index(drop=True), df_new.drop(['id', 'input_id'], axis=1).reset_index(drop=True)], axis=1)
+  df_adjusted = pd.concat([ \
+    df_original.loc[~df_original['remove']].reset_index(drop=True), \
+    df_new.drop(['id', 'input_id'], axis=1).reset_index(drop=True)], axis=1)
 
   # add rows of PSMs originally removed from analysis
   if np.sum(df_original['remove']) > 0:
-    logger.info('Reattaching {} PSMs excluded from initial filters'.format(df_original['remove'].sum()))
+    logger.info('Reattaching {} PSMs excluded from initial filters'.format( \
+      df_original['remove'].sum()))
     # store a copy of the columns and their order for later
     df_cols = df_adjusted.columns
     # concatenate data frames
-    df_adjusted = pd.concat([df_adjusted, df_original.loc[df_original['remove']]], axis=0, ignore_index=True)
+    df_adjusted = pd.concat([ \
+      df_adjusted, \
+      df_original.loc[df_original['remove']]], 
+      axis=0, ignore_index=True)
     # pd.concat reindexes the order of the columns, 
     # so just order it back to what it used to be
     df_adjusted = df_adjusted.reindex(df_cols, axis=1)
@@ -381,7 +404,6 @@ def main():
   # add q-value (FDR) column
   # rank-sorted, cumulative sum of PEPs is expected number of false positives
   # q-value is just that vector divided by # of observations, to get FDR
-  
   logger.info('Calculating FDR (q-values)')
   
   # q-value, without fixing # of false positives to a discrete number
@@ -392,7 +414,6 @@ def main():
   #  )[np.argsort(np.argsort(df_adjusted['pep_updated']))]
   
   # q-value, by fixing # of false positives to a discrete number
-  
   # for now, set all null PEPs to 1. we'll remember the index and set them back to nan later
   null_peps = pd.isnull(df_adjusted['pep_updated'])
   if null_peps.sum() > 0:
@@ -417,6 +438,41 @@ def main():
     df_adjusted['pep_updated'][null_peps] = np.nan
     df_adjusted['q-value'][null_peps] = np.nan
 
+
+  ## Run protein inference (fido)?
+  if 'run_pi' in config and config['run_pi']:
+    logger.info('Running protein inference with Fido...')
+
+    # build fido options into a dict (parameter_map)
+    parameter_map = {
+      'gamma': config['pi_gamma'] if 'pi_gamma' in config else None,
+      'alpha': config['pi_alpha'] if 'pi_alpha' in config else None,
+      'beta':  config['pi_beta']  if 'pi_beta'  in config else None,
+
+      'connected_protein_threshold':  config['pi_connected_protein_thresh'],
+      'omit_clean_peptide_name':     ~config['pi_clean_peptide_name'],
+      'all_psms':                     config['pi_use_all_psms'],
+      'group_proteins':               config['pi_group_proteins'],
+      'prune_low_scores':             config['pi_prune_low_scores'],
+      'parameter_accuracy':           config['pi_parameter_accuracy'],
+
+      'proteins_column':         config['col_names']['proteins'],
+      'protein_delimiter':       config['pi_protein_delimiter'],
+      'leading_protein_column':  config['col_names']['leading_protein'],
+      'decoy_tag':               config['pi_decoy_tag'],
+
+      'sequence_column':         config['col_names']['sequence'],
+      #'error_prob_column':       config['col_names']['pep']
+      'error_prob_column':       'pep_updated'
+    }
+    logger.info('parameter_map for fido:')
+    logger.info(str(parameter_map))
+
+    # run fido subroutine
+    df_adjusted = run_internal(df_adjusted, parameter_map)
+
+    logger.info('Fido finished')
+    logger.info('Protein FDR placed in \"prot_fdr\" column')
 
   # print figures?
   if config['print_figures']:

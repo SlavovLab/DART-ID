@@ -81,4 +81,7 @@ tools/**/*.o
 
 # for now, don't track fido cpp files
 tools/fido/*
-
+# fido outputs/intermediates for testing
+psm_graph.txt
+target_decoy.txt
+fido_out.txt

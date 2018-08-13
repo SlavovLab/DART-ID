@@ -12,7 +12,7 @@ name = 'dart_id'
 setup(
   name=name,
   version='1.0.0',
-  description='RT Alignment and Confidence Updating for LC-MS/MS Data',
+  description='RT Alignment and Peptide ID Confidence Updating for LC-MS/MS Data',
   url='https://github.com/blahoink/DART-ID',
   author='Albert Chen',
   author_email='chen.alb@husky.neu.edu',
@@ -48,7 +48,8 @@ setup(
     'numpy>=1.14.3',
     'scipy>=1.0.0',
     'pandas>=0.22.0',
-    'matplotlib>=2.1.2'
+    'matplotlib>=2.1.2',
+    'networkx>=2.1'
   ],
   #test_requires=[
   #  'pytest'

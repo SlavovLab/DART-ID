@@ -67,7 +67,7 @@ rt_distortion: 1
 ## ==========================
 
 # parametric, non-parametric
-bootstrap_method: 'parametric_mixture'
+bootstrap_method: 'parametric'
 bootstrap_iters: 100
 
 # mean, median, weighted_mean

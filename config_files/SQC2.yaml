@@ -6,18 +6,57 @@ verbose: true
 ## Input
 ## ==========================
 
-input:
+input: 
+  # w/ new column
+  #- /gd/MS/SCoPE/SQC/SQC100/evidence.txt
+  #- /gd/MS/SCoPE/SQC/SQC101/evidence.txt -- these two have very little PSMs
+  - /gd/MS/SCoPE/SQC/SQC102_all/evidence.txt
+  - /gd/MS/SCoPE/SQC/SQC104/evidence.txt
+  - /gd/MS/SCoPE/SQC/SQC105/evidence.txt
+  - /gd/MS/SCoPE/SQC/SQC106/evidence.txt
+  #- /gd/MS/SCoPE/SQC/SQC107/evidence.txt
+  - /gd/MS/SCoPE/SQC/SQC107_all/evidence.txt
+  - /gd/MS/SCoPE/SQC/SQC108_all/evidence.txt
+  - /gd/MS/SCoPE/SQC/SQC109_all/evidence.txt
+  #- /gd/MS/SCoPE/SQC/SQC108v109/evidence.txt
+  #- /gd/MS/SCoPE/SQC/SQC110/evidence.txt
+  - /gd/MS/SCoPE/SQC/SQC110_all/evidence.txt
+  #- /gd/MS/SCoPE/SQC/SQC111/evidence.txt
+  #- /gd/MS/SCoPE/SQC/SQC111EG/evidence.txt
+  - /gd/MS/SCoPE/SQC/SQC111_all/evidence.txt
+  #- /gd/MS/SCoPE/SQC/SQC112/evidence.txt
+  - /gd/MS/SCoPE/SQC/SQC112_all/evidence.txt
+  - /gd/MS/SCoPE/SQC/SQC113/evidence.txt
+  #- /gd/MS/SCoPE/SQC/SQC114N/evidence.txt
+  - /gd/MS/SCoPE/SQC/SQC114_all/evidence.txt
+  #- /gd/MS/SCoPE/SQC/SQC115QRST/evidence.txt
+  - /gd/MS/SCoPE/SQC/SQC115_all/evidence.txt
+  - /gd/MS/SCoPE/SQC/SQC116/evidence.txt
+  - /gd/MS/SCoPE/SQC/SQC117/evidence.txt
+
+  # FP Sets
   - /gd/MS/SCoPE/mPOP/dat/FP17/evidence.txt
-  - /gd/MS/SCoPE/mPOP/dat/FP18/evidence.txt
-  #- /gd/MS/SCoPE/mPOP/dat/FP42-43/evidence.txt
-  #- /gd/MS/SCoPE/mPOP/dat/FP44/evidence.txt
-  #- /gd/MS/SCoPE/mPOP/dat/FP45/evidence.txt
+  - /gd/MS/SCoPE/mPOP/dat/FP42-43/evidence.txt
+  - /gd/MS/SCoPE/mPOP/dat/FP44/evidence.txt
+  - /gd/MS/SCoPE/mPOP/dat/FP45/evidence.txt
+  - /gd/MS/SCoPE/mPOP/dat/FP46/evidence.txt
+  - /gd/MS/SCoPE/mPOP/dat/FP47/evidence.txt
+  - /gd/MS/SCoPE/mPOP/dat/FP47C/evidence.txt
+  - /gd/MS/SCoPE/mPOP/dat/FP48/evidence.txt
+  - /gd/MS/SCoPE/mPOP/dat/FP49/evidence.txt
+  - /gd/MS/SCoPE/mPOP/dat/FP49EF/evidence.txt
+  - /gd/MS/SCoPE/mPOP/dat/FP49GH/evidence.txt
+  - /gd/MS/SCoPE/mPOP/dat/FP50/evidence.txt
+  - /gd/MS/SCoPE/mPOP/dat/FP51/evidence.txt
+
+  # 1000 cell sets
+  - /gd/MS/Ribo/IFN/dat/IFN6H_K_hiFDR/evidence.txt
+  - /gd/MS/SCoPE/SingleCell_Data/FP18/evidence.txt
 
 sep: \t
 
 low_memory: false
-params_folder: ~/git/RTLib/Alignments/FP1718_20180813_1
-#params_folder: ~
+params_folder: ~
 
 ## Alignment Options
 ## ==========================
@@ -31,7 +70,7 @@ prior_iters: 10
 stan_iters: 40000
 stan_attempts: 1
 mu_min: 1
-rt_distortion: 1
+rt_distortion: 0.5
 
 ## Update Options
 ## ==========================
@@ -79,7 +118,7 @@ combined_output_name: ev_updated.txt
 
 save_separate_output: false
 save_in_input_folder: false
-output_suffix: _dart
+output_suffix: _updated
 output_ext: .txt
 
 log_file: true
@@ -94,6 +133,7 @@ col_names:
   retention_time: Retention time
   pep: PEP
 
+  charge: Charge
   leading_protein: Leading razor protein
   proteins: Proteins
   #leading_gene: ~
@@ -101,6 +141,7 @@ col_names:
   retention_length: Retention length
   intensity: Intensity
   #exclude: exclude
+  #remove: remove
   #exp_id: exp_id
   #peptide_id: peptide_id
 
@@ -115,8 +156,8 @@ filters:
   #- name: include_filename
   #  expr:
 
-  #- name: exclude_filename
-  #  expr: SQC77|IFN6[H-K]-Trg
+  - name: exclude_filename
+    expr: SQC77|IFN6[H-K]-Trg
 
   #- name: uniprot_exclusion
   #  file: ~/git/RTLib/pd_exclude.txt

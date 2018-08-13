@@ -12,7 +12,7 @@ input:
 sep: \t
 
 low_memory: false
-params_folder: ~
+params_folder: ~/git/RTLib/Alignments/SQC_varied_median_MLE_20180807_1
 
 ## Alignment Options
 ## ==========================
