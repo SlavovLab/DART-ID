@@ -79,3 +79,6 @@ python_notebooks/**/*
 tools/**/bin/*
 tools/**/*.o
 
+# for now, don't track fido cpp files
+tools/fido/*
+
