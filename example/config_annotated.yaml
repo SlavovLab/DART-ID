@@ -80,6 +80,61 @@ bootstrap_iters: 50
 # mean, median, weighted_mean
 mu_estimation: 'median'
 
+## Protein Inference Options
+## ==========================
+
+# Run protein inference on the newly updated PSMs with the Fido framework
+# https://noble.gs.washington.edu/proj/fido
+# Paper in J. Proteome Research: http://dx.doi.org/10.1021/pr100594k
+
+# Most, if not all, parameters described below are also described in detail
+# on the Fido website and by the helper tips for the command-line verison of Fido.
+
+# To run protein inference, set this flag to true
+run_pi: true
+
+# Parameters derived from a parameter search and optimizing over an objective
+# that minimizes selecting false positives.
+# Parameters listed below are the default for fido. Leave these, or specify them,
+# to skip the parameter searching step.
+# Comment out these three parameters to search for the best set of 3 parameters and
+# then run protein inference with those.
+pi_gamma: 0.5
+pi_alpha: 0.1
+pi_beta:  0.01
+
+# Log2 of maximum number of subgraph connected states. Graphs with more states
+# than this threshold will be pruned. Increasing this number increases run-time,
+# by a lot!
+pi_connected_protein_thresh: 14
+# Clean up the peptide sequence string, by removing adjacent amino acids,
+# modifications, and also switching isoleucine to leucine.
+pi_clean_peptide_name: false
+# Default behavior is to cut all PSMs except for the highest scoring one,
+# for each peptide, in order to simplify the graph. Set this to true to include
+# all PSMs
+pi_use_all_psms: false
+# Use protein group level inference
+pi_group_proteins: false
+# Prune low-scoring PSMs from the graph before the main pruning procedure.
+# The threshold in this case is 1e-2 (PEP > 0.99)
+pi_prune_low_scores: true
+# Accuracy of the parameter selection. This will be ignored if pi_gamma, pi_alpha,
+# and pi_beta are provided, as the selection will not be performed in the first place.
+# 1 = best    / slower     (uses entire data file)
+# 2 = relaxed / faster     (uses 300 observations)
+# 3 = sloppy  / very fast  (uses 100 observations)
+pi_parameter_accuracy: 3
+
+# Proteins in the "Proteins" column are assumed to be protein IDs in a string,
+# separated by a delimiter, which is specified here:
+# i.e., the delimiter is ';' if the "Proteins" string is:
+#       "Protein1;Protein2;Protein3;Protein4"
+pi_protein_delimiter: ';'
+# A substring that delineates decoy proteins. In the case of MaxQuant,
+# all decoy proteins are prepended with the string "REV__"
+pi_decoy_tag: 'REV__'
+
 
 ## Output
 ## ==========================
@@ -108,6 +163,15 @@ add_diagnostic_cols: true
 # the original PEP to the 'Spectra PEP' column.
 # Useful for workflows that rely on the PEP column
 overwrite_pep: true
+
+# Remove PSMs that have an FDR (q-value) below this value.
+# 0.01 corresponds to selecting PSMs at an FDR of 1%
+psm_fdr_threshold: 0.01
+
+# Remove PSMs that have an associated protein FDR (q-value) below this value.
+# 0.01 corresponds to selecting proteins at an FDR of 1%
+protein_fdr_threshold: 0.01
+
 
 # If providing multiple input files, combine them all into one
 # tabular file and save it.

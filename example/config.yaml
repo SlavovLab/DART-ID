@@ -40,6 +40,26 @@ bootstrap_iters: 50
 # mean, median, weighted_mean
 mu_estimation: 'median'
 
+## Protein Inference Options
+## ==========================
+
+run_pi: true
+
+# optional
+pi_gamma: 0.5
+pi_alpha: 0.1
+pi_beta:  0.01
+
+pi_connected_protein_thresh: 14
+pi_clean_peptide_name: false
+pi_use_all_psms: false
+pi_group_proteins: false
+pi_prune_low_scores: true
+pi_parameter_accuracy: 3
+
+pi_protein_delimiter: ';'
+pi_decoy_tag: 'REV__'
+
 ## Output
 ## ==========================
 
@@ -48,6 +68,8 @@ print_figures: true
 save_params: true
 add_diagnostic_cols: true
 overwrite_pep: true
+psm_fdr_threshold: 0.01
+protein_fdr_threshold: 0.01
 
 save_combined_output: true
 combined_output_name: ev_updated.txt
