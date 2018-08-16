@@ -147,8 +147,14 @@ def update(dfa, params, config):
           coin_flip_pool = uniform.rvs(size=(np.sum(obs_per_seq) * k))
 
         t_coin_flips += (time.time() - _time)
-
         coin_counter = 0
+
+        # create a pool of laplace samples, to pull from for each peptide
+        _time = time.time()
+        sample_pool = laplace.rvs(size=(np.sum(obs_per_seq) * k))
+        t_laplace_samples += (time.time() - _time)
+        # keep track of where we are in the pool with a counter
+        sample_counter = 0
 
         # parametric bootstrap
         for i in range(0, num_peptides):
@@ -158,11 +164,20 @@ def update(dfa, params, config):
           # sample num_obs synthetic RTs for k bootstrap iterations
           # do the sampling in a big pool, then shape to matrix where
           # rows correspond to bootstrap iters and columns correspond to sample observations
-          samples = laplace.rvs(size=(k * num_obs)).reshape(k, num_obs)
-          mu_med = np.median(mu_preds[i])
+          #samples = laplace.rvs(size=(k * num_obs)).reshape(k, num_obs)
+          
+          # draw samples from sample pool, reshape into matrix
+          _time = time.time()
+          samples = sample_pool[sample_counter:(sample_counter+(k*num_obs))]
+          samples = samples.reshape(k, num_obs)
+
+          # increment sample counter
+          sample_counter += (k*num_obs)
+
+          #mu_med = np.median()
           # shift and scale sampled RTs by mu and sigma_pred, respectively
-          #samples = (samples * sigma_preds[i]) + mu_preds[i]
-          samples = (samples * sigma_preds[i]) + mu_med
+          samples = (samples * sigma_preds[i]) + mu_preds[i]
+          #samples = (samples * sigma_preds[i]) + mu_med
           t_laplace_samples += (time.time() - _time)
 
           if bootstrap_method == 'parametric_mixture':
