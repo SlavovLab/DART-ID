@@ -156,6 +156,8 @@ emptyPlot <- function() {
 bHeatmap <- c('#710e0d', '#8b42df', '#4c94dc', '#40df91', '#fef245')
 vc <- c("#004358", "#1F8A70", "#BEDB39", "#FFE11A", "#FD7400")
 av <- c("#20B2CF", "#85DB86", "#F29F05", "#F25C05", "#D92525")
+#cb <- c('#20B2CF', '#FF6666', '#F68930', '#FFFFFF')
+cb <- c('#20B2CF', '#FF6666', '#888888', '#FFFFFF')
 
 #' Process Experiment Description Excel Sheet
 process.desc <- function() {

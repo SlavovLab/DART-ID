@@ -3,6 +3,7 @@ library(pracma)
 source('Rscripts/lib.R')
 
 #ev <- read_tsv('/gd/bayesian_RT/Alignments/SQC_20180621_2/ev_updated.txt')
+#ev <- read_tsv('/gd/bayesian_RT/Alignments/SQC_20180813_with_PI/ev_updated.txt')
 
 ## load data -------
 
@@ -28,8 +29,12 @@ ev.f <- ev %>%
   filter(grepl("SQC", `Raw file`)) %>%
   # filter out non J/U sets (QC40E,F, QC42A)
   filter(!grepl('SQC9', `Raw file`)) %>%
+  # select 1% protein fdr
+  filter(!is.na(prot_fdr)) %>%
+  filter(prot_fdr < 0.01) %>%
   dplyr::select(c('Sequence', 'Modified sequence', 'Protein', 'Raw file', 'Retention time', 
            'PEP', 'pep_new', 'pep_updated', 'qval', 'qval_updated', dcols))
+  
 
 ev.f <- ev.f %>%
   # remove empty channels

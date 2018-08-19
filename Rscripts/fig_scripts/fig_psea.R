@@ -6,15 +6,19 @@ source('Rscripts/lib.R')
 ## de-novo proteins ----------
 # MSigDB
 
-ev_a1 <- read_tsv('/gd/bayesian_RT/Alignments/SQC_20180621_2/PSEA_in_v2.txt-1563089131_GO.txt')
-ev_b1 <- read_tsv('/gd/bayesian_RT/Alignments/SQC_20180621_2/PSEA_in_denovo_v2.txt1471657536_GO.txt')
+#ev_a1 <- read_tsv('/gd/bayesian_RT/Alignments/SQC_20180621_2/PSEA_in_v2.txt-1563089131_GO.txt')
+#ev_b1 <- read_tsv('/gd/bayesian_RT/Alignments/SQC_20180621_2/PSEA_in_denovo_v2.txt1471657536_GO.txt')
+ev_a1 <- read_tsv('/gd/bayesian_RT/Alignments/SQC_20180813_with_PI/spectra_go_20180815.txt')
+ev_b1 <- read_tsv('/gd/bayesian_RT/Alignments/SQC_20180813_with_PI/dart_go_20180815.txt')
 ev_c1 <- read_tsv('/gd/bayesian_RT/Alignments/SQC_20180621_2/psea_in_decoy.txt1810339583_GO.txt')
 ev_go <- rbind(ev_a1[-1,], ev_b1[-1,], ev_c1[-1,])
 ev_go$Method <- c(rep('Spectra', nrow(ev_a1)-1), rep('DART-ID', nrow(ev_b1)-1),
                 rep('Decoy', nrow(ev_c1)-1))
 
-ev_a2 <- read_tsv('/gd/bayesian_RT/Alignments/SQC_20180621_2/PSEA_in_v2.txt-4388391_MSigDB.txt')
-ev_b2 <- read_tsv('/gd/bayesian_RT/Alignments/SQC_20180621_2/PSEA_in_denovo_v2.txt-667074535_MSigDB.txt')
+#ev_a2 <- read_tsv('/gd/bayesian_RT/Alignments/SQC_20180621_2/PSEA_in_v2.txt-4388391_MSigDB.txt')
+#ev_b2 <- read_tsv('/gd/bayesian_RT/Alignments/SQC_20180621_2/PSEA_in_denovo_v2.txt-667074535_MSigDB.txt')
+ev_a2 <- read_tsv('/gd/bayesian_RT/Alignments/SQC_20180813_with_PI/spectra_msigdb_20180815.txt')
+ev_b2 <- read_tsv('/gd/bayesian_RT/Alignments/SQC_20180813_with_PI/dart_msigdb_20180815.txt')
 ev_c2 <- read_tsv('/gd/bayesian_RT/Alignments/SQC_20180621_2/psea_in_decoy.txt-1216633080_MSigDB.txt')
 ev_msig <- rbind(ev_a2[-1,], ev_b2[-1,], ev_c2[-1,])
 ev_msig$Method <- c(rep('Spectra', nrow(ev_a2)-1), rep('DART-ID', nrow(ev_b2)-1),
@@ -41,7 +45,7 @@ ev_b2 <- ev_b2 %>% filter(`Annotation Description` %in% common_annots_2)
 
 ## --------
 
-pdf(file='manuscript/Figs/psea_denovo_v2.pdf', width=2.5, height=3.5)
+pdf(file='manuscript/Figs/psea_denovo_v3.pdf', width=2.5, height=3.5)
 
 par(mar=c(2,2.5,1.5,1),
     pty='s', las=1,

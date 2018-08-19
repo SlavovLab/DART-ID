@@ -5,6 +5,7 @@ ev.a <- read_tsv("/gd/bayesian_RT/Alignments/SQC_20180802_5exp_point/ev_updated.
 ev.b <- read_tsv("/gd/bayesian_RT/Alignments/SQC_20180802_5exp_non-parametric/ev_updated.txt")
 ev.c <- read_tsv("/gd/bayesian_RT/Alignments/SQC_20180802_5exp_parametric/ev_updated.txt")
 ev.d <- read_tsv("/gd/bayesian_RT/Alignments/SQC_20180803_5exp_parametric_mixture_v2/ev_updated.txt")
+ev.e <- read_tsv('/gd/bayesian_RT/Alignments/SQC_20180807_5exp_weightedmean/ev_updated.txt')
 
 conf_limit <- 1e-8
 
@@ -33,6 +34,14 @@ ev.fc <- ev.c %>%
          pep_new_log=log10(pep_new))
 
 ev.fd <- ev.d %>%
+  select(c('Sequence', 'PEP', 'pep_new', 'id', 'stan_peptide_id')) %>%
+  filter(!is.na(pep_new)) %>%
+  #filter(PEP > 0 & pep_new > 0 & PEP > conf_limit & pep_new > conf_limit) %>%
+  mutate_at(c('PEP', 'pep_new'), funs(ifelse(. > 1, 1, .))) %>%
+  mutate(pep_log=log10(PEP),
+         pep_new_log=log10(pep_new))
+
+ev.fe <- ev.e %>%
   select(c('Sequence', 'PEP', 'pep_new', 'id', 'stan_peptide_id')) %>%
   filter(!is.na(pep_new)) %>%
   #filter(PEP > 0 & pep_new > 0 & PEP > conf_limit & pep_new > conf_limit) %>%
@@ -88,7 +97,7 @@ set.seed(1)
 n <- sample.int(nrow(ev.fa), 5e4)
 
 x <- log10(ev.fa$PEP/ev.fa$pep_new)[n]
-y <- log10(ev.fd$PEP/ev.fd$pep_new)[n]
+y <- log10(ev.fe$PEP/ev.fe$pep_new)[n]
 
 inds <- ((x > 4) | (x < -4) | (y > 4) | (y < -4))
 x <- x[-inds]
@@ -107,12 +116,12 @@ plot(x, y, pch=16, cex=0.75,
      #col=rgb(0,0,0,0.05),
      #col=contour_cols[findInterval(dens, seq(0, max(dens), length.out=100))],
      #col=paste0(cols(k)[findInterval(log10(ev.fa$PEP), seq(-5, 0, length.out=k))], '66'),
-     col=cols[(ev.fa$PEP > 0.5)+1],
+     col=cols[(ev.fa$PEP > 0.8)+1],
      
      xlim=c(-4, 4), ylim=c(-4, 4),
      #xlab='Parametric Bootstrap', 
      xlab='No Bootstrap', 
-     ylab='Parametric Bootstrap\nMixture Sampling',
+     ylab='Parametric, Mixture\nWeighted Mean',
      main='Change in PEP\nlog10(PEP/Updated PEP)',
      mgp=c(2, 1, 0))
 abline(a=0, b=1, col='red', lwd=2)

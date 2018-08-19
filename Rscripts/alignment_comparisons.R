@@ -281,3 +281,31 @@ error_df %>%
   summarise(sd=sd(error, na.rm=T),
             mean=mean(abs(error), na.rm=T),
             median=median(abs(error), na.rm=T))
+
+
+
+
+# mu vs. median of ref RTs ------------------------------------------------
+
+
+exp_params <- read_tsv('/gd/bayesian_RT/Alignments/SQC_varied_20180711_4/exp_params.txt')
+
+mu <- ev.f$mu
+exp_id <- ev.f$exp_id+1
+mu_pred <- ev.f$`Retention time`
+mu_pred[mu <= exp_params$split_point[exp_id]] <- ((ev.f$`Retention time` - exp_params$beta_0[exp_id]) / exp_params$beta_1[exp_id])[mu <= exp_params$split_point[exp_id]]
+mu_pred[mu > exp_params$split_point[exp_id]] <- (((ev.f$`Retention time` - exp_params$beta_0[exp_id] - (exp_params$beta_1[exp_id] * exp_params$split_point[exp_id])) / exp_params$beta_2[exp_id]) + exp_params$split_point[exp_id])[mu > exp_params$split_point[exp_id]]
+
+median(abs(mu_pred - mu))
+
+mu_pred_meds <- sapply(1:nrow(ev.f), function(i) {
+  peptide_id = ev.f$stan_peptide_id[i]
+  id = ev.f$id[i]
+  median(mu_pred[ev.f$stan_peptide_id==peptide_id & ev.f$id != id])
+})
+
+muij_meds <- mu_pred_meds
+muij_meds[mu <= exp_params$split_point[exp_id]] <- ((mu_pred_meds * exp_params$beta_1[exp_id]) + exp_params$beta_0[exp_id])[mu <= exp_params$split_point[exp_id]]
+muij_meds[mu > exp_params$split_point[exp_id]] <- (exp_params$beta_0[exp_id] + (exp_params$split_point[exp_id] * exp_params$beta_1[exp_id]) + (exp_params$beta_2[exp_id] * (mu_pred_meds - exp_params$split_point[exp_id])))[mu > exp_params$split_point[exp_id]]
+
+median(abs(muij_meds - ev.f$`Retention time`), na.rm=T)

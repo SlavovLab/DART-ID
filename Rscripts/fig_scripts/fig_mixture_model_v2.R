@@ -4,7 +4,7 @@ source('Rscripts/lib.R')
 
 # no ggplot ---------------------------------------------------------------
 
-pdf(file='manuscript/Figs/mixture_model_v4.pdf', width=3.15, height=4)
+pdf(file='manuscript/Figs/mixture_model_v5.pdf', width=3.15, height=4)
 
 layout(c(1, 2))
 
@@ -30,11 +30,10 @@ lines(x, null*pep, type='l', col='steelblue', lwd=2)
 polygon(c(x, max(x), min(x)), c(null*pep, 0, 0), 
         border=NA, col=rgb(70,130,180,alpha=150,max=255))
 
-# legend('topleft', parse(text=c('  ', '  ')), pch=15,
-#        col=c(rgb(138,43,226,alpha=150, max=255), rgb(70,130,180,alpha=150,max=255)), 
-#        bty='n', cex=1, pt.cex=2.5, y.intersp=1.2, x.intersp=1.1, inset=c(0.02,0))
-points(rep(24, 2), c(0.1, 0.23), pch=15, cex=3,
+points(rep(24, 2), c(0.07, 0.20), pch=15, cex=3,
        col=c(rgb(70,130,180,alpha=150,max=255), rgb(138,43,226,alpha=150, max=255)))
+
+text(20, 0.27, 'Alignment Process', cex=1, adj=c(0, 0.5))
 
 axis(1, at=seq(0, 60, by=10), tck=-0.02, mgp=c(0, 0.2, 0), labels=NA)
 axis(2, at=seq(0, 0.3, by=0.1), tck=-0.02, las=1, mgp=c(0, 0.4, 0))
@@ -51,11 +50,10 @@ polygon(c(x, max(x), min(x)), c(y, 0, 0),
 lines(x, null, col='red', lwd=2)
 polygon(c(x, max(x), min(x)), c(null, 0, 0), border=NA, col=rgb(1,0,0,0.3))
 
-# legend('topleft', parse(text=c('a', 'b')), pch=15,
-#        col=c(rgb(0,0,255,alpha=150, max=255), rgb(255,0,0,alpha=150,max=255)), 
-#        bty='n', cex=1, pt.cex=2.5, y.intersp=1.2, x.intersp=1.1, inset=c(0.02,0))
-points(rep(24, 2), c(0.14, 0.21), pch=15, cex=3,
+points(rep(24, 2), c(0.10, 0.17), pch=15, cex=3,
        col=c(rgb(255,0,0,alpha=150,max=255), rgb(0,0,255,alpha=150, max=255)))
+
+text(25, 0.27, 'Update Process', cex=1, adj=c(0, 0.5))
 
 axis(1, at=seq(0, 60, by=10), tck=-0.02, mgp=c(0, 0.2, 0))
 axis(2, at=seq(0, 0.3, by=0.1), tck=-0.02, las=1, mgp=c(0, 0.4, 0))

@@ -2,7 +2,11 @@ library(tidyverse)
 source('Rscripts/lib.R')
 
 #ev <- read_tsv("/gd/bayesian_RT/Alignments/SQC_20180621_2/ev_updated.txt")
-ev <- read_tsv("/gd/bayesian_RT/Alignments/SQC_20180724_3/ev_updated.txt")
+#ev <- read_tsv("/gd/bayesian_RT/Alignments/SQC_20180724_3/ev_updated.txt")
+#ev <- read_tsv("/gd/bayesian_RT/Alignments/SQC_20180808_5exp_parametric/ev_updated.txt")
+#ev <- read_tsv('/gd/bayesian_RT/Alignments/SQC2_20180812_1/ev_updated.txt')
+#ev <- read_tsv('/gd/bayesian_RT/Alignments/SQC_20180813_with_PI/ev_updated.txt')
+ev <- read_tsv('/gd/bayesian_RT/Alignments/SQC_20180815_2/ev_updated.txt')
 
 ## add percolator data
 
@@ -37,7 +41,7 @@ dmat_cc <- as.raster(dmat_cc)
 ## ---------
 
 #pdf(file='manuscript/Figs/protein_map_v4.pdf', width=3.5, height=6)
-png(file='manuscript/Figs/protein_map_v7.png', width=3.5, height=6, units='in', res=250)
+png(file='manuscript/Figs/protein_map_v8.png', width=3.5, height=6, units='in', res=250)
 
 par(mar=c(4, 2, 1.25, 0.6),
     cex.axis=0.75, cex.lab=0.75,

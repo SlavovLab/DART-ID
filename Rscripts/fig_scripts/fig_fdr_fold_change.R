@@ -3,7 +3,9 @@ library(pracma)
 source('Rscripts/lib.R')
 
 #ev <- read_tsv("/gd/bayesian_RT/Alignments/SQC_20180621_2/ev_updated.txt")
-ev <- read_tsv("/gd/bayesian_RT/Alignments/SQC_20180724_3/ev_updated.txt")
+#ev <- read_tsv("/gd/bayesian_RT/Alignments/SQC_20180724_3/ev_updated.txt")
+#ev <- read_tsv('/gd/bayesian_RT/Alignments/SQC_20180813_with_PI/ev_updated.txt')
+ev <- read_tsv('/gd/bayesian_RT/Alignments/SQC_20180815_2/ev_updated.txt')
 
 ## Add percolator data --------
 
@@ -16,9 +18,9 @@ ev <- ev %>%
   # ceil PEPs to 1
   mutate_at(c('PEP', 'pep_updated'), funs(ifelse(. > 1, 1, .))) %>%
   # calculate q-values
-  mutate(qval=(cumsum(PEP[order(PEP)]) / 
+  mutate(qval=(cumsum(PEP[order(PEP)]) /
                  seq(1, nrow(ev)))[order(order(PEP))],
-         qval_updated=(cumsum(pep_updated[order(pep_updated)]) / 
+         qval_updated=(cumsum(pep_updated[order(pep_updated)]) /
                          seq(1, nrow(ev)))[order(order(pep_updated))])
 
 # flag peptides that don't have a single confident ID across all sets
@@ -26,8 +28,9 @@ new_peptides <- ev %>%
   #filter(!is.na(pep_new)) %>%
   group_by(`Modified sequence`) %>%
   summarise(min_pep=min(qval),
-            min_pep_new=min(qval_updated)) %>%
-  dplyr::select(c('Modified sequence', 'min_pep', 'min_pep_new')) %>%
+            min_pep_new=min(qval_updated),
+            n=n()) %>%
+  dplyr::select(c('Modified sequence', 'min_pep', 'min_pep_new', 'n')) %>%
   filter(min_pep > 0.01 & min_pep_new < 0.01) %>%
   pull(`Modified sequence`)
 
@@ -92,26 +95,24 @@ df$Method <- factor(df$Method, levels=c('Spectra', 'Percolator', 'Percolator (co
 
 # fold change of IDs at FDR thresh ----------------------------------------
 
-pdf(file='manuscript/Figs/fdr_fold_change_v3.pdf', width=2.25, height=3)
+pdf(file='manuscript/Figs/fdr_fold_change_v4.pdf', width=1.75, height=3)
 
 layout(c(1, 2), heights=c(1.8, 2))
 
-par(oma=c(0, 0, 1.15, 0),
+par(oma=c(0, 0, 1.5, 0),
     mar=c(0.1,2.15,0,0.25),
     #pty='s', 
     las=1,
-    cex.axis=0.75, cex.lab=1, cex.main=1)
+    cex.axis=0.65, cex.lab=1, cex.main=1)
 
 plot(0, 0, type='n',
-     xlim=c(-3.1, -0.5), ylim=c(-15, 130),
-     xlab=NA, ylab=NA,
-     xaxs='i', yaxs='i',
-     xaxt='n', yaxt='n')
+     xlim=c(-3.1, -0.3), ylim=c(-15, 130),
+     xlab=NA, ylab=NA, xaxs='i', yaxs='i', xaxt='n', yaxt='n')
 
 abline(v=-2, col='black', lty=2, lwd=1)
 
 methods <- c('Spectra', 'Percolator', 'Percolator (conf only)', 'DART-ID', 'DART-ID (conf only)')
-cols <- c(av[1], av[3], paste0(av[3], 'CC'), av[2], paste0(av[2], 'CC'))
+cols <- c(cb[1], cb[3], paste0(cb[3], 'CC'), cb[2], paste0(cb[2], 'CC'))
 ltys <- c(1, 1, 2, 1, 2)
 for(i in 1:length(methods)) {
   df_a <- df %>% filter(Method == methods[i])
@@ -131,21 +132,19 @@ axis(2, tck=-0.02,
      mgp=c(0, 0.3, 0))
 
 legend('topright', c('Spectra', 'Percolator', 'DART-ID'),
-       lwd=2, lty=1, col=c(av[1], av[3], av[2]), seg.len=1,
-       bty='n', cex=0.7, x.intersp=0.9, y.intersp=1, inset=c(0, -0.02))
+       lwd=2, lty=1, col=c(cols[1], cols[2], cols[4]), seg.len=0.8,
+       bty='n', cex=0.65, x.intersp=0.6, y.intersp=1.2, inset=c(-0.01, -0.02))
 
 #mtext('FDR Threshold', 1, line=1, cex=1)
 
 mtext('% Increase', 2, line=1.4, cex=0.85, las=3)
-mtext('    Increase in confident PSMs', 3, line=0.2, cex=0.9, font=2, outer=T)
+mtext('      Increase in confident PSMs', 3, line=0.2, cex=0.7, font=2, outer=T)
 
 par(mar=c(1.75, 2.15, 0.1, 0.25))
 
 plot(0, 0, type='n',
-     xlim=c(-3.1, -0.5), ylim=c(0.18, 1.02),
-     xlab=NA, ylab=NA,
-     xaxs='i', yaxs='i',
-     xaxt='n', yaxt='n')
+     xlim=c(-3.1, -0.3), ylim=c(0.18, 1.02),
+     xlab=NA, ylab=NA, xaxs='i', yaxs='i', xaxt='n', yaxt='n')
 
 abline(v=-2, col='black', lty=2)
 
@@ -161,7 +160,7 @@ axis(1, tck=-0.02,
      at=rng, 
      #labels=fancy_scientific(10^rng), 
      labels=c('0.1%', '1%', '10%', '100%'),
-     mgp=c(0, 0.02, 0))
+     mgp=c(0, -0.05, 0))
 axis(2, tck=-0.02,
      at=seq(0, 1, by=0.2),
      labels=seq(0, 1, by=0.2)*100, 

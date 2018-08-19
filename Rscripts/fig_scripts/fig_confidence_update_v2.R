@@ -4,7 +4,7 @@ source('Rscripts/lib.R')
 
 ## Peptide Update ------
 
-pdf(file='manuscript/Figs/confidence_update_v9.pdf', width=3.5, height=2.5)
+pdf(file='manuscript/Figs/confidence_update_v10.pdf', width=3.5, height=2.5)
 
 layout(rbind(c(1, 2),
              c(1, 3)),
@@ -102,7 +102,7 @@ plot(0, 0, type='n',
      xaxt='n', yaxt='n')
 
 barplot(-log10(c(5e-2, 0.3)), width=1, space=0.25, add=T,
-        col=c(av[1], av[2]),
+        col=c('white', 'black'),
         xaxt='n', yaxt='n')
 #arrows(x0=0.6, x1=2, y0=2, y1=1, col='black', length=0.075, code=2)
 
@@ -121,12 +121,12 @@ plot(0, 0, type='n',
      xaxt='n', yaxt='n')
 
 barplot(-log10(c(5e-2, 3e-3)), width=1, space=0.25, add=T,
-        col=c(av[1], av[2]),
+        col=c('white', 'black'),
         xaxt='n', yaxt='n')
 #arrows(x0=0.6, x1=1.2, y0=1.5, y1=2.5, col='black', length=0.075, code=2)
 
 legend(x=-0.75, y=0, c('Spectra', 'DART-ID'), 
-       pch=22, pt.cex=2, pt.bg=c(av[1], av[2]), cex=0.9, col='black',
+       pch=22, pt.cex=2, pt.bg=c('white', 'black'), cex=0.9, col='black',
        y.intersp=1, bty='n', xpd=NA)
 
 mtext('     PSM 2', side=3, line=0.1, cex=0.8, font=2)

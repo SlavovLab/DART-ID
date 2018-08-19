@@ -3,7 +3,9 @@ library(ggridges)
 source('Rscripts/lib.R')
 source('Rscripts/validate.lib.3.R')
 
-ev <- read_tsv("/gd/bayesian_RT/Alignments/SQC_20180621_2/ev_updated.txt")
+#ev <- read_tsv("/gd/bayesian_RT/Alignments/SQC_20180621_2/ev_updated.txt")
+#ev <- read_tsv('/gd/bayesian_RT/Alignments/SQC_20180813_with_PI/ev_updated.txt')
+ev <- read_tsv('/gd/bayesian_RT/Alignments/SQC_20180815_2/ev_updated.txt')
 
 ## add percolator data
 
@@ -12,12 +14,17 @@ source('Rscripts/add_percolator.R')
 ## run validation script -------
 
 cvs_all <- validate.lib.3(ev, exclude.cols=c(1:4, 11))
-save(cvs_all, file='dat/cvs_all_20180712.rds')
+
+#save(cvs_all, file='dat/cvs_all_20180712.rds')
+#save(cvs_all, file='dat/cvs_all_20180813.rds')
+save(cvs_all, file='dat/cvs_all_20180815.rds')
 
 
 # load data ---------------------------------------------------------------
 
-load('dat/cvs_all_20180712.rds')
+#load('dat/cvs_all_20180712.rds')
+#load('dat/cvs_all_20180813.rds')
+load('dat/cvs_all_20180815.rds')
 
 ## --------
 
@@ -26,36 +33,6 @@ boxs <- list(Spectra=cvs_all$value[cvs_all$Method=='Spectra'],
              Percolator=cvs_all$value[cvs_all$Method=='Percolator'],
              DART=cvs_all$value[cvs_all$Method=='Spectra+RT'],
              Decoy=cvs_all$value[cvs_all$Method=='Null'])
-
-## boxplot --------
-
-#pdf(file='manuscript/Figs/cv_validation.pdf', width=2, height=2.75)
-pdf(file='manuscript/Figs/cv_validation_v3.pdf', width=1.5, height=5)
-
-par(mar=c(4,3,0.25,0.5),
-    oma=c(0, 0, 3, 0),
-    pty='m', las=1,
-    cex.axis=0.75, cex.lab=0.75)
-
-boxplot(boxs, 
-        col=c(av[1], av[3], av[2], av[5]),
-        ylim=c(0.07, 0.4),
-        xlab=NA, ylab=NA, xaxt='n', yaxt='n',
-        outpch='x', outcex=1, outcol=rgb(0,0,0,0))
-
-axis(1, at=seq(0, 6), tck=-0.02, labels=NA,
-     #labels=c('Spectra', 'Percolator', 'DART-ID'),
-     srt=45)
-axis(2, at=seq(0, 1, 0.05), tck=-0.02, 
-     mgp=c(0, 0.3, 0), las=1)
-text(c(1, 2, 3, 4), par('usr')[3]-0.01, srt=45, adj=c(1, 0.5), xpd=T,
-     labels=c('Spectra', 'Percolator', 'DART-ID', 'Decoy'), cex=0.85)
-
-mtext('CV of Relative Quantitation', 2, line=1.75, las=3, cex=1)
-mtext('Consistency of\nProtein Quantitation', 3, line=0, cex=0.85, font=2, outer=T)
-
-dev.off()
-
 
 # ridgeplot ---------------------------------------------------------------
 
@@ -66,11 +43,11 @@ p <- ggplot(cvs_all) +
   scale_y_discrete(limits=rev(levels(cvs_all$Method)), 
                    labels=c('Decoy', 'DART-ID', 'Percolator', 'Spectra'),
                    expand=c(0.01, 0)) +
-  scale_fill_manual(values=rev(c(av[5], av[2], av[3], av[1])), guide=F) +
-  labs(y=NULL, x='CV of Relative Quantitation',
-       title='Consistency of Protein Quantitation') +
+  scale_fill_manual(values=rev(c(cb[4], cb[2], cb[3], cb[1])), guide=F) +
+  labs(y=NULL, x='CV of Relative Quantification',
+       title='Consistency of Protein Quantification') +
   theme_ridges() + theme(
-    plot.margin=margin(0.25, 0.75, 0.25, 0.75, 'cm'),
+    plot.margin=margin(0.25, 0.75, 0.25, 0.4, 'cm'),
     axis.title.x=element_text(hjust=0.5, size=12),
     #axis.title.y=element_text(hjust=0.5, size=12),
     axis.text.x=element_text(size=12),
@@ -78,7 +55,7 @@ p <- ggplot(cvs_all) +
     plot.title=element_text(size=12, hjust=0, vjust=1, lineheight=2, 
                             margin=margin(0,0,0.3,0,'cm'))
   )
-ggsave('manuscript/Figs/cv_ridges.pdf', p, 'pdf', width=4, height=2.25, units='in')
+ggsave('manuscript/Figs/cv_ridges_v2.pdf', p, 'pdf', width=4, height=2.25, units='in')
 
 # scatter of cvs ----------------------------------------------------------
 
@@ -97,7 +74,7 @@ get_density <- function(x, y, n = 100) {
   return(dens$z[ii])
 }
 
-pdf(file='manuscript/Figs/cv_scatters_v3.pdf', width=4, height=2)
+pdf(file='manuscript/Figs/cv_scatters_v4.pdf', width=4, height=2)
 
 par(oma=c(0,1.25,0.5,0), 
     pty='s',
@@ -119,14 +96,14 @@ par(mar=c(3.25, 2.25, 0.25, 0.25))
 
 dens <- get_density(cvs_spectra$value, cvs_dart$value, k)
 
-plot(cvs_spectra$value, cvs_dart$value, pch=16, cex=0.3,
+plot(cvs_spectra$value, cvs_dart$value, pch=16, cex=0.5,
      #col=rgb(0,0,0,0.2),
      col=contour_cols[findInterval(dens, seq(0, max(dens), length.out=k))],
-     xlim=c(0, 0.6), ylim=c(0, 0.6), xlab=NA, ylab=NA, xaxt='n', yaxt='n')
+     xlim=c(0.05, 0.6), ylim=c(0.05, 0.6), xlab=NA, ylab=NA, xaxt='n', yaxt='n')
 abline(a=0, b=1, col='red')
 
 cor_text <- formatC(cor(cvs_spectra$value, cvs_dart$value), digits=3, format='f')
-text(0.33, 0.03, bquote(rho*.(' = ')*.(cor_text)), adj=c(0, 0.5), cex=0.85)
+text(0.1, 0.55, bquote(rho*.(' = ')*.(cor_text)), adj=c(0, 0.5), cex=1)
 
 axis(1, at=seq(0, 0.6, by=0.1), tck=-0.02, 
      #labels=NA,
@@ -142,14 +119,14 @@ par(mar=c(3.25, 2.25, 0.25, 0.25), cex.axis=0.85)
 
 dens <- get_density(cvs_spectra$value, cvs_decoy$value, k)
 
-plot(cvs_spectra$value, cvs_decoy$value, pch=16, cex=0.3,
+plot(cvs_spectra$value, cvs_decoy$value, pch=16, cex=0.5,
      #col=rgb(0,0,0,0.1),
      col=contour_cols[findInterval(dens, seq(0, max(dens), length.out=k))],
-     xlim=c(0, 0.6), ylim=c(0, 0.6), xlab=NA, ylab=NA, xaxt='n', yaxt='n')
+     xlim=c(0.05, 0.6), ylim=c(0.05, 0.6), xlab=NA, ylab=NA, xaxt='n', yaxt='n')
 abline(a=0, b=1, col='red')
 
 cor_text <- formatC(cor(cvs_spectra$value, cvs_decoy$value), digits=3, format='f')
-text(0.33, 0.03, bquote(rho*.(' = ')*.(cor_text)), adj=c(0, 0.5), cex=0.85)
+text(0.1, 0.55, bquote(rho*.(' = ')*.(cor_text)), adj=c(0, 0.5), cex=1)
 
 axis(1, at=seq(0, 0.6, by=0.1), tck=-0.02,
      mgp=c(0, 0.1, 0))

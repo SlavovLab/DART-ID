@@ -1,9 +1,13 @@
 library(tidyverse)
+library(RColorBrewer)
 source('Rscripts/lib.R')
 
 #ev <- read_tsv("/gd/bayesian_RT/Alignments/SQC_20180621_2/ev_updated.txt")
 #ev <- read_tsv("/gd/bayesian_RT/Alignments/SQC_20180724_3/ev_updated.txt")
-ev <- read_tsv("/gd/bayesian_RT/Alignments/SQC_20180803_5exp_parametric_mixture_v2/ev_updated.txt")
+#ev <- read_tsv("/gd/bayesian_RT/Alignments/SQC_20180803_5exp_parametric_mixture_v2/ev_updated.txt")
+#ev <- read_tsv("/gd/bayesian_RT/Alignments/SQC_20180808_5exp_parametric/ev_updated.txt")
+#ev <- read_tsv('/gd/bayesian_RT/Alignments/SQC_20180813_with_PI/ev_updated.txt')
+ev <- read_tsv('/gd/bayesian_RT/Alignments/SQC_20180815_2/ev_updated.txt')
 
 ## --------
 
@@ -32,11 +36,13 @@ freq[,2] <- as.numeric(freq[,2])
 freq2D <- diag(nbins)*0
 freq2D[cbind(freq[,1], freq[,2])] <- freq[,3]
 
-colfunc <- colorRampPalette(c('white', 'blue'))
+#hi.color <- 'blue'
+#hi.color <- brewer.pal(4, 'Dark2')[1]
+hi.color <- brewer.pal(8, 'Set1')[2]
 
-## -------
+colfunc <- colorRampPalette(c('white', hi.color))
 
-pdf(file='manuscript/Figs/pep_scatter_v7.pdf', width=3.5, height=3)
+pdf(file='manuscript/Figs/pep_scatter_v8.pdf', width=3.5, height=3)
 
 layout(t(c(1, 2)), widths=c(5, 1))
 
@@ -59,9 +65,9 @@ abline(v=-2, col='black', lty=2, lwd=1)
 #segments(x0=-2, x1=0, y0=-2, y1=-2, col='black', lty=2)
 
 rect(xleft=-2, xright=0, ybottom=log10(conf_limit), ytop=-2,
-     border=NA, col=rgb(1,0,0,0.1))
+     border=NA, col=rgb(1,0,0,0.05))
 rect(xleft=log10(conf_limit), xright=-2, ybottom=-2, ytop=0,
-     border=NA, col=rgb(0,0,1,0.1))
+     border=NA, col=rgb(0,0,1,0.05))
 
 text(-7, -1, 'Downgraded', cex=1, adj=c(0, 0.5))
 text(-1, -4.5, 'Upgraded', cex=1, adj=c(0, 0), srt=270)
@@ -80,8 +86,8 @@ axis(2, tck=-0.02,
 
 mtext('Spectra', 1, line=1.15, cex=1)
 mtext('DART-ID', 2, line=1.85, cex=1, las=3)
-#mtext('Error Probability (PEP)', 3, line=0.1, cex=1, font=2)
-mtext('PEP - Parametric Bootstrap (Mixture)', 3, line=0.1, cex=1, font=2)
+mtext('Error Probability (PEP)', 3, line=0.1, cex=1, font=2)
+#mtext('PEP - Parametric Bootstrap (Mixture)', 3, line=0.1, cex=1, font=2)
 
 
 #x0 <- -4.5

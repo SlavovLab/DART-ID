@@ -6,13 +6,15 @@ library(viridis)
 source('Rscripts/lib.R')
 
 #ev <- read_tsv('/gd/bayesian_RT/Alignments/SQC_20180621_2/ev_updated.txt')
-ev <- read_tsv('/gd/bayesian_RT/Alignments/SQC_20180803_5exp_parametric_mixture_v2/ev_updated.txt')
+#ev <- read_tsv('/gd/bayesian_RT/Alignments/SQC_20180803_5exp_parametric_mixture_v2/ev_updated.txt')
+#ev <- read_tsv('/gd/bayesian_RT/Alignments/SQC_20180813_with_PI/ev_updated.txt')
+ev <- read_tsv('/gd/bayesian_RT/Alignments/SQC_20180815_2/ev_updated.txt')
 
 ## load cormat data -----
 
 source('Rscripts/validation_cormats.R')
 
-## validation procedure ------
+## validation procedure ----------------------------
 # need slightly different form of data. want to compare proteins now,
 # don't want different proteins, but want different PSMs.
 
@@ -112,7 +114,7 @@ cor_ratio_b <- cor(log2(ratio_mat_b))
 ## log2 j/u ratio scatter -------
 
 #pdf(file='manuscript/Figs/fig_ratio_scatter.pdf', width=5, height=5)
-png(file='manuscript/Figs/ratio_scatter_v2.png', width=7, height=6, units='in', res=250)
+png(file='manuscript/Figs/ratio_scatter_v4.png', width=7, height=6, units='in', res=250)
 
 par(mar=c(0.2,0.2,0.2,0.2),
     oma=c(3, 7, 4, 7), cex.axis=1,
@@ -142,14 +144,16 @@ for(i in 1:4) {
     dens <- get_density(log2(ratio_mat_a)[,i], log2(ratio_mat_b)[,j], k)
     
     points(log2(ratio_mat_a)[,i], log2(ratio_mat_b)[,j],
-         pch=16, cex=0.5, 
+         pch=16, cex=0.75, 
          #col=rgb(0,0,0,0.2),
-         col=contour_cols[findInterval(dens, seq(0, max(dens), length.out=k))])
+         #col=contour_cols[findInterval(dens, seq(0, max(dens), length.out=k))]
+         col=rgb(0,0,0,0.5)
+         )
     
     abline(a=0, b=1, col='red', lwd=0.75)
     
     cor_text <- formatC(cor(log2(ratio_mat_a)[,i], log2(ratio_mat_b)[,j], method='pearson'), digits=3)
-    text(-2.75, 2.5, bquote(.(as.name('rho'))*.('=')*.(cor_text)), adj=c(0, 0.5))
+    text(-2.95, 2.5, bquote(.(as.name('rho'))*.(' = ')*.(cor_text)), adj=c(0, 0.5))
     
     # draw axes for marginal squares
     if(i == 4) {
@@ -163,20 +167,19 @@ for(i in 1:4) {
     # label rows and columns on marginal squares
     if(i == 1) {
       mtext(parse(text=paste0('J[',floor((j-1) / 2)+1,']/U[',((j-1) %% 2)+1,']')), 
-            side=3, cex=0.75, line=0.15)
+            side=3, cex=1, line=0.15)
     }
     if(j==4) {
       mtext(parse(text=paste0('J[',floor((i-1) / 2)+1,']/U[',((i-1) %% 2)+1,']')), 
-            side=4, cex=0.75, line=0.5, las=1)
+            side=4, cex=1, line=0.5, las=1)
     }
   }
 }
 
-mtext('Log2 Jurkat / U937 Ratio − Spectra. PEP < 0.01', side=1, outer=T, cex=1, las=1, line=1.75)
-mtext('Log2 Jurkat / U937 Ratio − DART-ID. PEP < 0.01', side=2, outer=T, cex=1, las=0, line=1.5)
-mtext(paste0('Protein RI intensity, distinct peptides. n=', nrow(dmat_a2)), side=3, outer=T, cex=1, las=1, line=2, font=2)
-#mtext('Top', side=3, outer=T, cex=1)
-#mtext('Right', side=4, outer=T, cex=1, las=0)
+mtext('Spectral PEP < 0.01', side=1, outer=T, cex=1, las=1, line=1.75)
+mtext('Spectral PEP > 0.01  &  DART-ID PEP < 0.01', side=2, outer=T, cex=1, las=0, line=1.5)
+mtext(paste0('Log2 Jurkat / U-937 Reporter Ion Intensities'), side=3, 
+      outer=T, cex=1, las=1, line=2, font=2)
 
 dev.off()
 

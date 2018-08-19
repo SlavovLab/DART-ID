@@ -1,5 +1,11 @@
+library(tidyverse)
 library(ggridges)
 library(viridis)
+source('Rscripts/lib.R')
+
+ev <- read_tsv('/gd/bayesian_RT/Alignments/SQC_20180815_2/ev_updated.txt')
+
+## -----
 
 ev.fa <- ev %>%
   filter(!is.na(muij)) %>%
@@ -43,10 +49,11 @@ ggsave(ggplot(ev.fa, aes(residual, rt_bin)) +
 
 ev.fb <- ev %>% 
   filter(!is.na(muij)) %>%
+  #mutate(residual=(`Retention time`-muij)^2) %>%
   mutate(residual=`Retention time`-muij) %>%
   filter(!is.na(residual)) %>%
   group_by(`Raw file`) %>% 
-  summarise(res=median(abs(residual)),
+  summarise(res=mean(abs(residual)),
             sigma=sd(residual-mean(residual)),
             res_10=quantile(abs(residual), 0.10),
             res_90=quantile(abs(residual), 0.90),
@@ -70,7 +77,7 @@ pdf(file='manuscript/Figs/fig_residual_rt_exp.pdf', width=3.5, height=3)
 par(mar=c(2.25,2.5,1.5,1), cex.axis=0.85)
 
 plot(ev.fb$x, ev.fb$res, type='l', lwd=2, col='red',
-     xlim=c(0, max(ev.fb$x)), ylim=c(0, 1),
+     xlim=c(0, max(ev.fb$x)), ylim=c(0, 8),
      xaxt='n', yaxt='n', xlab=NA, ylab=NA, xaxs='i', yaxs='i')
 polygon(c(ev.fb$x, rev(ev.fb$x)), c(ev.fb$res_10, rev(ev.fb$res_90)), 
         col=rgb(1,0,0,0.1), border=NA)

@@ -28,6 +28,10 @@ validate.lib.3 <- function(ev, exclude.cols=c(1:4, 7:11)) {
     filter(!grepl('SQC9', `Raw file`)) %>%
     filter(!is.na(Protein))
   
+  # filter protein at 1% FDR, using protein inference data
+  ev.f <- ev.f %>% filter(!is.na(prot_fdr))
+  ev.f <- ev.f %>% filter(prot_fdr < 0.01)
+  
   cat("Removing proteins without single-cell RI data\n")
   ev.f <- ev.f %>% filter(apply(ev.f[,data.cols]!=0, 1, sum, na.rm=T) == length(data.cols))
   
