@@ -18,7 +18,7 @@ unsaturate <- function(color, factor=1.4) {
 
 ## ----------
 
-pdf(file='manuscript/Figs/alignment_demo_v7.pdf', width=3.5, height=2.5)
+pdf(file='manuscript/Figs/alignment_demo_v8.pdf', width=3.5, height=2.5)
 par(oma=c(0,0,0,0),
     mar=c(2,2.5,1.25,5.5),
     cex.lab=0.85, cex.axis=0.85, cex.main=1,
@@ -43,6 +43,9 @@ pep_cols <- brewer.pal(6, 'Set1')
 # swap 1 and 2
 pep_cols[1] <- brewer.pal(6, 'Set1')[2]
 pep_cols[2] <- brewer.pal(6, 'Set1')[1]
+
+# just make 3 and 4 grey
+pep_cols[3:4] <- rgb(0.55, 0.55, 0.55)
 
 # randomly set some rts to 0 to simulate missing data
 #num_to_remove <- 0.2

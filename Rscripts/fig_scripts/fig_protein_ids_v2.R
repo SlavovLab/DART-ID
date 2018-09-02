@@ -18,7 +18,7 @@ source('Rscripts/protein_quant.R')
 no_conf_ids <- apply(dmat, 1, sum) == 0
 boxs <- list(Spectra=apply(dmat, 2, sum), 
              Percolator=apply(dmat_perc, 2, sum),
-             Percolator_prev=apply(dmat_perc[!no_conf_ids,], 2, sum),
+             #Percolator_prev=apply(dmat_perc[!no_conf_ids,], 2, sum),
              DART=apply(dmat_new, 2, sum),
              DART_prev=apply(dmat_new[!no_conf_ids,], 2, sum))
 
@@ -30,22 +30,28 @@ load('dat/peptide_ids_20180816.rds')
 
 # horizontal boxplot ------------------------------------------------------
 
-pdf(file='manuscript/Figs/peps_per_exp_v8.pdf', width=1.75, height=1.5)
+pdf(file='manuscript/Figs/peps_per_exp_v8.pdf', width=1.75, height=1.75)
 
-par(mar=c(1,2.5,0.1,0.25),
-    oma=c(0,0.25,1.15,0),
+par(mar=c(1,3,0,0.25),
+    oma=c(0,0,1.4,0),
     pty='m', las=1, cex.axis=0.6)
 
 boxplot(rev(boxs), horizontal=T,
-        col=rev(c(cb[1], cb[3], paste0(cb[3], '44'), cb[2], paste0(cb[2], '88'))), 
-        xaxt='n', yaxt='n', ylim=c(50, 2550),
+        col=rev(c(cb[1], cb[3], cb[2], paste0(cb[2], '44'))), 
+        xaxt='n', yaxt='n', ylim=c(50, 2650),
         outwex=1, outcex=0.75, outpch='x', outcol=rgb(0, 0, 0, 0))
 axis(1, at=seq(0, 2500, by=500), labels=c(0, NA, 1000, NA, 2000, NA), tck=-0.02, 
      mgp=c(0, -0.1, 0))
-axis(2, at=c(1.5, 3.5, 5), labels=c('DART-ID', 'Percolator', 'Spectra'),
-     tck=-0.02, mgp=c(0, 0.3, 0), las=1)
+#axis(2, at=seq(1,4), labels=NA, #labels=c(expression('DART-ID'[2]), expression('DART-ID'[1]), 
+                              #expression('Percolator'[2]), expression('Percolator'[1]),
+                              #'Percolator',
+                              #'Spectra'),
+#     tck=-0.02, mgp=c(0, 0.3, 0), las=1)
+text(x=rep(-150, 4), y=seq(0.85,4,by=1),
+     labels=c(expression('DART-ID'[1]), expression('DART-ID'[1+2]),'Percolator','Spectra'),
+     xpd=T, srt=-30, cex=0.65, adj=c(1, 0.5))
 
-mtext('    Peptides ID\'d per Experiment', side=3, line=0, las=1, font=2, cex=0.7, outer=T)
+mtext('        Peptides/Experiment', side=3, line=0.25, las=1, font=2, cex=0.85, outer=T)
 
 dev.off()
 

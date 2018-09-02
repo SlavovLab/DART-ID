@@ -3,12 +3,12 @@ library(rmutil)
 source('Rscripts/lib.R')
 
 #ev <- read_tsv("/gd/bayesian_RT/Alignments/SQC_20180724_3/ev_updated.txt")
-ev <- read_tsv('/gd/bayesian_RT/Alignments/SQC_20180813_with_PI/ev_updated.txt')
+#ev <- read_tsv('/gd/bayesian_RT/Alignments/SQC_20180813_with_PI/ev_updated.txt')
+ev <- read_tsv('/gd/bayesian_RT/Alignments/SQC_20180815_2/ev_updated.txt')
 
 ev.f <- ev %>%
   filter(!is.na(pep_new)) %>%
-  mutate(dRT=`Retention time`-muij) %>%
-  filter(dRT > -2 & dRT < 2)
+  mutate(dRT=`Retention time`-muij)
 
 # laplace dist -----------------------------------------------------------------------
 
@@ -16,12 +16,12 @@ pdf(file='manuscript/Figs/dist_laplace_v2.pdf', width=3.5, height=3.5)
 
 par(mar=c(2.5,3,2,1), cex.axis=1)
 
-hist(ev.f$dRT, breaks=seq(-2, 2, length.out=100), freq=F,
+hist(ev.f$dRT[abs(ev.f$dRT) <= 2], breaks=seq(-2, 2, length.out=100), freq=F,
      xlab=NA, ylab=NA, main=NA, xaxt='n', yaxt='n')
 
-#x <- seq(-2, 2, length.out=1000)
-#y <- rmutil::dlaplace(x, m=median(ev.f$dRT), s=sd(ev.f$dRT))
-#lines(x, y, col='red', lwd=1)
+x <- seq(-2, 2, length.out=1000)
+y <- dlaplace(x, m=median(ev.f$dRT), s=mad(ev.f$dRT))
+lines(x, y, col='red', lwd=2)
 
 axis(1, at=seq(-2, 2, by=0.5), mgp=c(0, 0.25, 0), tck=-0.02)
 axis(2, at=seq(0, 4, by=1), mgp=c(0, 0.4, 0), tck=-0.02, las=1)

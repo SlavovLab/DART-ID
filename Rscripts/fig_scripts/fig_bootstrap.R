@@ -21,7 +21,7 @@ null_sds <- rnorm(n, 10, 0.5)
 
 # panel a
 
-pdf(file='manuscript/Figs/bootstrap_demo_v2.pdf', width=7, height=5)
+pdf(file='manuscript/Figs/bootstrap_demo_v3.pdf', width=7, height=5)
 
 par(mar=c(0,0,0,0),
     oma=c(0,3.5,0,1.5),
@@ -69,20 +69,21 @@ for(i in 1:n) {
 }
 points(ref_rts, rep(0, n), pch=4, cex=ptcex, lwd=ptlwd, col=rgb(0,0,1,1))
 
-text(30.2, 11, expression(delta*' = '*1), adj=c(0, 0.5), cex=1.5)
+text(30.15, 10, expression(delta[' '*ik]*' = '*1), adj=c(0, 0.5), cex=1.5)
 
 axis(1, at=seq(29, 31, by=0.1), mgp=c(0, 0.5, 0), tck=-0.05)
 axis(2, at=seq(0, max(y)+2, by=4), las=1, mgp=c(0, 0.6, 0), tck=-0.05)
 
 mtext('Density', side=2, line=3, at=-2, cex=1)
 mtext('Conditional densities', side=3, line=0.25, cex=1, font=1)
-mtext(expression(''%*% (1-'PEP'[i])), side=4, las=1, cex=0.85, xpd=T, line=0.2)
+mtext(expression(''%*% (1-lambda[' '*ik])), 
+      side=4, las=1, cex=1, xpd=T, line=0.2)
 
 # panel b2
 
 par(mar=c(ip_space, 2, 1, 6))
 
-plot(0, 0, type='n', xlim=c(5, 55), ylim=c(-0.0025, max(y_null)+0.01), 
+plot(0, 0, type='n', xlim=c(5, 55), ylim=c(-0.0025, max(y_null)+0.012), 
      xaxt='n', yaxt='n', xlab=NA, ylab=NA)
 
 abline(h=0, col=rgb(0,0,0,0.5))
@@ -95,16 +96,17 @@ for(i in 1:n) {
 }
 #points(ref_rts, rep(0, n), pch=4, cex=ptcex, lwd=ptlwd, col=rgb(0,0,1,0.5))
 
-text(40, 0.02, expression(delta*' = '*0), adj=c(0, 0), cex=1.5)
+text(37, 0.018, expression(delta[' '*ik]*' = '*0), adj=c(0, 0), cex=1.5)
 
 axis(1, at=seq(10, 60, by=10), mgp=c(0, 0.5, 0), tck=-0.05)
 axis(2, at=seq(0, max(y_null)+0.02, by=0.01), las=1, mgp=c(0, 0.5, 0), tck=-0.05)
 
 mtext('Aligned RT (min)', side=1, line=2, cex=1)
-mtext(expression(''%*%'PEP'[i]), side=4, las=1, cex=0.85, xpd=T, line=0.2)
+mtext(expression(''%*%(lambda[' '*ik])), 
+      side=4, las=1, cex=1, xpd=T, line=0.2)
 
 mtext(expression(''%->%''), side=4, cex=2, xpd=T, las=1, line=1, at=0.035)
-mtext('Combine', side=4, cex=0.85, xpd=T, las=1, line=4.5, at=0.036)
+mtext('Combine', side=4, cex=1, xpd=T, las=1, line=4.5, at=0.036)
 
 # panel c
 
@@ -183,7 +185,7 @@ axis(2, at=seq(0, max(y_all)+4, by=1), las=1, mgp=c(0, 0.4, 0), tck=-0.02)
 
 mtext('Observed RT (min)', side=1, line=2, cex=1, at=30.35)
 mtext('Density', side=2, line=1.5, cex=1)
-mtext(expression('Combine '*mu*' samples'), side=3, line=0., cex=1, font=2)
+mtext(expression('Combine '*mu[' '*i]*' samples'), side=3, line=0., cex=1, font=2)
 
 # panel e
 
@@ -198,11 +200,11 @@ abline(h=0)
 lines(x, y_bootstrap_all, col=rgb(1,0,0), lwd=2)
 polygon(x, y_bootstrap_all, border=NA, col=rgb(1,0,0,0.25))
 
-abline(v=30.12, lwd=2, lty=2)
-points(30.12, approx(x, y_bootstrap_all, 30.12)$y, pch=4, cex=ptcex, lwd=ptlwd)
+#abline(v=30.12, lwd=2, lty=2)
+points(30.12, approx(x, y_bootstrap_all, 30.12)$y, pch=1, cex=ptcex*2, lwd=ptlwd*1.5)
 
-text(30.15, 2, expression(P(RT*' | '*delta == 1)), adj=c(0, 0.5), cex=1.5)
-text(29.69, 5, 'Evaluate Observed RT', cex=1.2, adj=c(0, 0.5))
+#text(29.71, 4.8, expression('Evaluate '*P(rho[' '*i*' '==' '*alpha*', '*k*' = '*A]*' | '*delta[' '*i*' '==' '*alpha*', '*k*' = '*A] == 1)), cex=1.5, adj=c(0, 0.5))
+text(29.83, 4.8, expression('Evaluate '*P(rho[' '*ik]*' | '*delta[' '*ik] == 1)), cex=1.5, adj=c(0, 0.5))
 
 axis(1, at=seq(29, 31, by=0.2), labels=seq(29, 31, by=0.2)+5,
      mgp=c(0, 0.5, 0), tck=-0.02)

@@ -65,8 +65,7 @@ dmat_b <- ev_b %>%
 j_channels=c(3, 5, 7)
 u_channels=c(4, 6, 8)
 
-dmat_c <- cbind(dmat_a[,j_channels], dmat_b[,j_channels],
-                dmat_a[,u_channels], dmat_b[,u_channels])
+dmat_c <- cbind(dmat_a[,j_channels], dmat_b[,j_channels], dmat_a[,u_channels], dmat_b[,u_channels])
 colnames(dmat_c) <- NA
 
 # run t-test for each protein

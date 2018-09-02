@@ -29,21 +29,22 @@ load('dat/cvs_all_20180815.rds')
 ## --------
 
 methods <- as.character(unique(cvs_all$Method))
-boxs <- list(Spectra=cvs_all$value[cvs_all$Method=='Spectra'],
+boxs <- list(DART=cvs_all$value[cvs_all$Method=='Spectra+RT'],
              Percolator=cvs_all$value[cvs_all$Method=='Percolator'],
-             DART=cvs_all$value[cvs_all$Method=='Spectra+RT'],
+             Spectra=cvs_all$value[cvs_all$Method=='Spectra'],
              Decoy=cvs_all$value[cvs_all$Method=='Null'])
 
 # ridgeplot ---------------------------------------------------------------
 
-p <- ggplot(cvs_all) +
-  geom_density_ridges(aes(x=value, y=Method, group=Method, fill=Method), 
-                      rel_min_height=0.01, bandwidth=0.01) +
+#p <- 
+ggplot(cvs_all) +
+  geom_density_ridges(aes(x=value, y=rev(Method), group=rev(Method), fill=rev(Method)), 
+                      rel_min_height=0.01, bandwidth=0.02) +
   scale_x_continuous(limits=c(0, 0.6)) +
   scale_y_discrete(limits=rev(levels(cvs_all$Method)), 
-                   labels=c('Decoy', 'DART-ID', 'Percolator', 'Spectra'),
+                   labels=rev(c('Decoy', 'Spectra', 'Percolator', 'DART-ID')),
                    expand=c(0.01, 0)) +
-  scale_fill_manual(values=rev(c(cb[4], cb[2], cb[3], cb[1])), guide=F) +
+  scale_fill_manual(values=c(cb[4], cb[1], cb[3], cb[2]), guide=F) +
   labs(y=NULL, x='CV of Relative Quantification',
        title='Consistency of Protein Quantification') +
   theme_ridges() + theme(

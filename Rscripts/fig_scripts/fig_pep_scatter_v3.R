@@ -38,7 +38,8 @@ freq2D[cbind(freq[,1], freq[,2])] <- freq[,3]
 
 #hi.color <- 'blue'
 #hi.color <- brewer.pal(4, 'Dark2')[1]
-hi.color <- brewer.pal(8, 'Set1')[2]
+#hi.color <- brewer.pal(8, 'Set1')[2]
+hi.color <- 'black'
 
 colfunc <- colorRampPalette(c('white', hi.color))
 

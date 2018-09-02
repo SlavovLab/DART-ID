@@ -106,14 +106,15 @@ par(oma=c(0, 0, 1.5, 0),
     cex.axis=0.65, cex.lab=1, cex.main=1)
 
 plot(0, 0, type='n',
-     xlim=c(-3.1, -0.3), ylim=c(-15, 130),
+     xlim=c(-3.1, -0.15), ylim=c(-15, 130),
      xlab=NA, ylab=NA, xaxs='i', yaxs='i', xaxt='n', yaxt='n')
 
 abline(v=-2, col='black', lty=2, lwd=1)
 
 methods <- c('Spectra', 'Percolator', 'Percolator (conf only)', 'DART-ID', 'DART-ID (conf only)')
-cols <- c(cb[1], cb[3], paste0(cb[3], 'CC'), cb[2], paste0(cb[2], 'CC'))
-ltys <- c(1, 1, 2, 1, 2)
+cols <- c(cb[1], cb[3], paste0(cb[3], '44'), cb[2], paste0(cb[2], '44'))
+#ltys <- c(1, 1, 2, 1, 2)
+ltys <- c(1, 1, 1, 1, 1)
 for(i in 1:length(methods)) {
   df_a <- df %>% filter(Method == methods[i])
   lines(log10(df_a$x), (df_a$ratio-1)*100, col=cols[i], lty=ltys[i], lwd=2)
@@ -131,19 +132,19 @@ axis(2, tck=-0.02,
      at=c(-25,seq(0, 125, 25)), 
      mgp=c(0, 0.3, 0))
 
-legend('topright', c('Spectra', 'Percolator', 'DART-ID'),
-       lwd=2, lty=1, col=c(cols[1], cols[2], cols[4]), seg.len=0.8,
-       bty='n', cex=0.65, x.intersp=0.6, y.intersp=1.2, inset=c(-0.01, -0.02))
+legend('topright', c('Spectra', 'Percolator', expression('DART-ID'[1+2]), expression('DART-ID'[1])),
+       lwd=2, lty=1, col=c(cols[1], cols[2], cols[4], paste0(cols[4], '44')), seg.len=0.6,
+       bty='n', cex=0.65, x.intersp=0.6, y.intersp=1.2, inset=c(-0.02, -0.02))
 
 #mtext('FDR Threshold', 1, line=1, cex=1)
 
 mtext('% Increase', 2, line=1.4, cex=0.85, las=3)
-mtext('      Increase in confident PSMs', 3, line=0.2, cex=0.7, font=2, outer=T)
+mtext('         Increase in PSMs', 3, line=0.2, cex=0.85, font=2, outer=T)
 
 par(mar=c(1.75, 2.15, 0.1, 0.25))
 
 plot(0, 0, type='n',
-     xlim=c(-3.1, -0.3), ylim=c(0.18, 1.02),
+     xlim=c(-3.1, -0.15), ylim=c(0.18, 1.02),
      xlab=NA, ylab=NA, xaxs='i', yaxs='i', xaxt='n', yaxt='n')
 
 abline(v=-2, col='black', lty=2)

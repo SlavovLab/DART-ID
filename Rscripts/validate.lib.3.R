@@ -20,42 +20,29 @@ validate.lib.3 <- function(ev, exclude.cols=c(1:4, 7:11)) {
       else if(length(unlist(p)) == 3) return(p[2])
       else return(p[1])
     })) %>%
-    filter(!grepl("REV__", Protein)) %>%
-    filter(!grepl("CON__", Proteins)) %>%
+    filter(!is.na(Protein)) %>%
+    filter(!grepl("REV__|CON__", Protein)) %>%
     # only take SQC experiments
     filter(grepl("SQC", `Raw file`)) %>%
     # remove SQC9* experiments
-    filter(!grepl('SQC9', `Raw file`)) %>%
-    filter(!is.na(Protein))
+    filter(!grepl('SQC9', `Raw file`))
   
   # filter protein at 1% FDR, using protein inference data
-  ev.f <- ev.f %>% filter(!is.na(prot_fdr))
-  ev.f <- ev.f %>% filter(prot_fdr < 0.01)
-  
-  cat("Removing proteins without single-cell RI data\n")
-  ev.f <- ev.f %>% filter(apply(ev.f[,data.cols]!=0, 1, sum, na.rm=T) == length(data.cols))
-  
-  cat(nrow(ev.f), "observations remaining\n")
+  # ev.f <- ev.f %>% filter(!is.na(prot_fdr))
+  # ev.f <- ev.f %>% filter(prot_fdr < 0.01)
   
   ev.f[,data.cols] <- data.matrix(ev.f %>% select(data.cols))
   
-  # set zeroes to NA
-  ev.f[,data.cols][ev.f[,data.cols]==0] <- NA
-  
-  ## normalize data
-  
   cat("Normalizing data...\n")
-  # first normalize by column, by median
-  ev.f[,data.cols] <- t(t(ev.f[,data.cols]) / apply(ev.f[,data.cols], 2, median, na.rm=T))
-  # now normalize across rows, by mean
-  ev.f[,data.cols] <- ev.f[,data.cols] / apply(ev.f[,data.cols], 1, mean, na.rm=T)
+  # normalize data (by col, then by row)
+  ev.f <- normalize_ri_data_table(ev.f, data.cols)
+
   
   # this data has 6 columns, with alternating J, U cells
   # select peptides with some solid signal, and differences between the two cell types
   
-  
-  pep_thresh <- 0.01
-  prot.psm.thresh <- 50
+  pep_thresh <- 1e-3
+  prot.psm.thresh <- 10
   
   prots_orig <- ev.f %>% 
     filter(PEP < pep_thresh) %>% 
@@ -74,14 +61,26 @@ validate.lib.3 <- function(ev, exclude.cols=c(1:4, 7:11)) {
     pull(Protein)
   
   # only take the intersection with original proteins
-  prots_new <- prots_new[prots_new %in% prots_orig]
+  prots <- prots_new[prots_new %in% prots_orig]
   
-  prots <- prots_new
+  # take high fold-change proteins (high signal-to-noise)
+  # run t-test for each protein
+  prot_sigs <- sapply(1:length(prots), function(i) {
+    e <- (ev.f$Protein == prots[i])
+    t.test(apply(ev.f[e,data.cols[c(1, 3, 5)]], 1, mean), apply(ev.f[e,data.cols[c(2, 4, 6)]], 1, mean),
+           alternative='two.sided', var.equal=T)$p.value
+  })
+  
+  # only take proteins with high fold-change
+  # i.e., significance of < 0.05 after applying bonferroni correction
+  prots <- prots[(prot_sigs*length(prots)) < 0.05]
   
   prot_cvs_orig <- zeros(length(prots), length(data.cols))
   prot_cvs_new  <- zeros(length(prots), length(data.cols))
   prot_cvs_perc <- zeros(length(prots), length(data.cols))
   prot_cvs_null <- zeros(length(prots), length(data.cols))
+  
+  set.seed(1)
   
   for(i in 1:length(prots)) {
     cat('\r', i, '/', length(prots), '-', prots[i], '                           ')
@@ -90,7 +89,7 @@ validate.lib.3 <- function(ev, exclude.cols=c(1:4, 7:11)) {
     ev.a <- ev.f %>% filter(Protein==prots[i])
     dmat <- data.matrix(ev.a %>% filter(PEP < pep_thresh) %>% select(data.cols))
     prot_cvs_orig[i,] <- apply(dmat, 2, sd) / apply(dmat, 2, mean)
-    dmat <- data.matrix(ev.a %>% filter(PEP > pep_thresh & pep_new < pep_thresh) %>% select(data.cols))
+    dmat <- data.matrix(ev.a %>% filter(PEP > pep_thresh & pep_updated < pep_thresh) %>% select(data.cols))
     prot_cvs_new[i,] <- apply(dmat, 2, sd) / apply(dmat, 2, mean)
     dmat <- data.matrix(ev.a %>% filter(PEP > pep_thresh & pep_perc < pep_thresh) %>% select(data.cols))
     prot_cvs_perc[i,] <- apply(dmat, 2, sd) / apply(dmat, 2, mean)

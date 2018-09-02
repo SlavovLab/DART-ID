@@ -45,13 +45,13 @@ cols <- c(brewer.pal(9, 'Blues')[5], brewer.pal(9, 'BuGn')[5], brewer.pal(9, 'Bl
           brewer.pal(9, 'Reds')[4], brewer.pal(9, 'PuRd')[5], brewer.pal(9, 'Reds')[7])
 
 #pdf(file='manuscript/Figs/alignment_residual_scatter.pdf', width=4, height=6)
-png(file='manuscript/Figs/alignment_residual_scatter_v5.png', width=3.5, height=5, units='in', res=250)
+png(file='manuscript/Figs/alignment_residual_scatter_v5.png', width=3.5, height=5.25, units='in', res=250)
 
 layout(rbind(c(1,4),c(3,5),c(2,6)))
 
-par(oma=c(2.5, 2.5, 2, 0),
-    mar=c(0.25, 0, 0.25, 0),
-    cex.axis=1, pty='s')
+par(oma=c(4, 2.5, 1.75, 0.5),
+    mar=c(0.4, 0, 0.4, 0),
+    cex.axis=1.15, pty='s')
 
 for(i in 1:6) {
   
@@ -97,7 +97,7 @@ for(i in 1:6) {
   }
 }
 
-mtext('Observed RT (min)', outer=T, side=2, line=1.2, cex=1)
+mtext('Observed RT (min)', outer=T, side=2, line=1.25, cex=1)
 mtext('Predicted RT (min)', outer=T, side=1, line=1.4, cex=0.9, adj=0.1)
 mtext('Aligned RT (min)', outer=T, side=1, line=1.4, cex=0.9, adj=0.9)
 mtext('Prediction', outer=T, side=3, line=0.1, cex=1, adj=0.18, font=2)
@@ -116,7 +116,7 @@ errors <- df_a %>% group_by(type) %>% summarise(err=mean(abs(error), na.rm=T)) %
 p <- 
 ggplot(df_a) +
   geom_density_ridges(aes(error, type, fill=type),
-                      stat='binline', bins=50, 
+                      #stat='binline', bins=50, 
                       size=0.5, color=NA,
                       rel_min_height=0.01, scale=1.25) +
   scale_x_continuous(limits=c(-10, 10), breaks=seq(-10, 10, by=5)) +
@@ -130,24 +130,25 @@ ggplot(df_a) +
                    #         bquote(atop(SSRCalc, sigma*.('=')*.(formatC(errors[1], digits=2, format='f'))*.(' min')))
                   #          ),
                   labels=c('ELUDE', 'BioLCCC', 'SSRCalc'),
-                   expand=c(0.02,0)) +
+                  expand=c(0.02,0)) +
   scale_fill_manual(values=cols, guide=F) +
   labs(x='Residual RT (min)', y=NULL) +
   theme_ridges() + #theme_bert()
   theme(
+    plot.margin=margin(0.1, 0.2, 0.2, 0.2, 'cm'),
     axis.title.x=element_text(hjust=0.5, size=10),
     axis.text=element_text(size=8),
     axis.title.y=element_text(hjust=0.5)
   )
 
-ggsave('manuscript/Figs/alignment_binline_pred_v3.pdf', p, device='pdf', width=1.75, height=2.5, units='in')
+ggsave('manuscript/Figs/alignment_binline_pred_v2.pdf', p, device='pdf', width=1.75, height=2.5, units='in')
 
 df_b <- error_df %>% filter(type %in% c('iRT', 'MaxQuant MBR', 'DART-ID'))
 errors <- df_b %>% group_by(type) %>% summarise(err=mean(abs(error), na.rm=T)) %>% pull(err)
 p <- 
   ggplot(df_b) +
   geom_density_ridges(aes(error, type, fill=type),
-                      stat='binline', bins=50, 
+                      #stat='binline', bins=50, 
                       size=0.5, color=NA, panel_scaling=F,
                       rel_min_height=0.01, scale=1.25) +
   scale_x_continuous(limits=c(-2, 2), breaks=seq(-2, 2, by=1)) +
@@ -162,13 +163,13 @@ p <-
   labs(x='Residual RT (min)', y=NULL) +
   theme_ridges() + #theme_bert()
   theme(
-    plot.margin=margin(1, 0.2, 0.2, 0.2, 'cm'),
+    plot.margin=margin(1.2, 0.2, 0.2, 0.2, 'cm'),
     axis.title.x=element_text(hjust=0.5, size=10),
     axis.text=element_text(size=8),
     axis.title.y=element_text(hjust=0.5)
   )
 
-ggsave('manuscript/Figs/alignment_binline_align_v3.pdf', p, device='pdf', width=1.75, height=2.5, units='in')
+ggsave('manuscript/Figs/alignment_binline_align_v2.pdf', p, device='pdf', width=1.75, height=2.5, units='in')
 
 # boxplots -----------------------------------------------------------------
 
@@ -198,6 +199,52 @@ text(seq(1, 6), par('usr')[3]-1.1, srt=25, adj=c(1, 0.5), xpd=T,
      labels=types, cex=0.75)
 
 mtext('Residual RT (min)', side=2, line=1.5, cex=1)
+
+dev.off()
+
+
+# two-col boxplot ---------------------------------------------------------
+
+types <- levels(error_df$type)
+
+pdf(file='manuscript/Figs/alignment_residual_boxplot_v4.pdf', width=3.5, height=2.5)
+
+layout(rbind(c(1, 2)))
+
+par(mar=c(0,0,0,0),
+    oma=c(0,0,0,0))
+
+#par(mar=c(2.75, 2.5, 0.25, 0.25))
+
+error_df_a <- error_df %>% filter(type %in% c('SSRCalc', 'BioLCCC', 'ELUDE'))
+error_df_a$type <- as.factor(as.character(error_df_a$type))
+error_df_b <- error_df %>% filter(!(type %in% c('SSRCalc', 'BioLCCC', 'ELUDE')))
+error_df_b$type <- as.factor(as.character(error_df_b$type))
+
+#boxplot(error~type, data=error_df, horizontal=T)
+boxplot(error~type, data=error_df_a, #horizontal=T,
+        xlab=NA, ylab=NA, xaxt='n', yaxt='n',
+        col=cols, ylim=c(-10, 10), range=1,
+        outpch=16, outcex=0.5, outcol=rgb(0,0,0,0.1))
+
+axis(2, 
+     #at=seq(-10, 10, by=4), 
+     at=c(-10, -6, -3, 0, 3, 6, 10),
+     tck=-0.02,
+     mgp=c(0, 0.5, 0), las=1)
+#axis(1, at=seq(1,6), labels=types, tck=-0.02,
+#     mgp=c(0, 0.5, 0), las=2)
+axis(1, at=seq(1,6), labels=NA, tck=-0.02)
+text(seq(1, 6), par('usr')[3]-1.1, srt=25, adj=c(1, 0.5), xpd=T,
+     labels=types, cex=0.75)
+
+mtext('Residual RT (min)', side=2, line=1.5, cex=1)
+
+boxplot(error~type, data=error_df_b, #horizontal=T,
+        xlab=NA, ylab=NA, xaxt='n', yaxt='n',
+        col=cols[4:6], ylim=c(-1.5, 1.5), range=1,
+        outpch=4, outcex=0.5, outcol=rgb(0,0,0,0.1))
+
 
 dev.off()
 

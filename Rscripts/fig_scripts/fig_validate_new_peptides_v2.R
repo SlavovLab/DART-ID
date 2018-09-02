@@ -85,6 +85,7 @@ conf_x <- ev_fa$`Retention time`
 conf_y <- ev_fb$rt[match(ev_fa$`Modified sequence`, ev_fb$`Modified sequence`)]
 
 # scramble
+set.seed(1)
 random_x <- ev_fa$`Retention time`
 random_y <- ev_fb$rt[sample(match(ev_fa$`Modified sequence`, ev_fb$`Modified sequence`),
                             size=nrow(ev_fa))]
@@ -97,7 +98,7 @@ pdf(file='manuscript/Figs/rt_validation_v8.pdf', width=3.5, height=2)
 #             c(2,3)))
 
 par(pty='s', 
-    mar=c(1.75,1,0.25,5.5), 
+    mar=c(1.75,1.5,0.25,6.5), 
     cex.axis=0.85)
 
 #plot(ev_c$rt_b, ev_c$rt_a, pch=16, cex=0.75,
@@ -127,11 +128,11 @@ mtext(expression(RT[A]*' (min)'),
 
 #'A^1: Boosted peptides\nwithout confident\nspectral PSMs'
 par(lheight=0.9)
-legend(x=53, y=53, 
-       c(expression('Subset '*a[1]*':'),
-         'Peptides\nwith confident\nspectral PSMs', 
-         expression('Subset '*a[2]*':'),
-         'Boosted peptides\nwithout confident\nspectral PSMs', 
+legend(x=52, y=53, 
+       c(expression('Subset '*bold(a[1])*':'),
+         'Peptides\nwith confident\nspectra', 
+         expression('Subset '*bold(a[2])*':'),
+         'Upgraded peptides\nwithout confident\nspectra', 
          'Decoy PSMs'),
        pch=16, pt.cex=1, col=c('blue', NA, 'red', NA, rgb(0,0,0,0.4)),
        xjust=0, yjust=1, bty='n', cex=0.85, y.intersp=c(1, 2.1, 2, 2.2, 2.1), 
@@ -160,7 +161,7 @@ boxplot(boxs, horizontal=T, xlab=NA, ylab=NA,
         outpch=4, outcol=rgb(0,0,0,0.1), outcex=0.75)
 axis(1, at=seq(-16, 10, by=1), tck=-0.02, mgp=c(0, 0.1, 0))
 axis(2, at=1:3, 
-     labels=c('Decoy', expression('Subset '*a[2]), expression('Subset '*a[1])), 
+     labels=c('Decoy', expression('Subset '*A[2]), expression('Subset '*A[1])), 
      las=1, tck=-0.02, mgp=c(0, 0.5, 0))
 #mtext('log10 | Residual RT |  (min)', side=1, cex=0.8, line=1.25)
 mtext(expression('log'[10]*'  | '*RT[A]-RT[B]*' |'), side=1, cex=0.8, line=1.25)

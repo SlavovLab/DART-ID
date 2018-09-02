@@ -412,7 +412,7 @@ normalize_ri_data_table <- function(ev, dcols, remove.empty.rows=T) {
   if(remove.empty.rows) {
     ev <- ev[!apply(apply(ev[,dcols], 1, is.na), 2, sum) > 0,]
   }
-  ev
+  return(ev)
 }
 
 extract_uniprot_id <- function(leading_protein) {

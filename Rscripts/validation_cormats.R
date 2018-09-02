@@ -4,6 +4,7 @@ source('Rscripts/lib.R')
 
 #ev <- read_tsv('/gd/bayesian_RT/Alignments/SQC_20180621_2/ev_updated.txt')
 #ev <- read_tsv('/gd/bayesian_RT/Alignments/SQC_20180813_with_PI/ev_updated.txt')
+#ev <- read_tsv('/gd/bayesian_RT/Alignments/SQC_20180815_2/ev_updated.txt')
 
 ## load data -------
 
@@ -31,17 +32,19 @@ ev.f <- ev %>%
   filter(!grepl('SQC9', `Raw file`)) %>%
   # select 1% protein fdr
   filter(!is.na(prot_fdr)) %>%
-  filter(prot_fdr < 0.01) %>%
-  dplyr::select(c('Sequence', 'Modified sequence', 'Protein', 'Raw file', 'Retention time', 
-           'PEP', 'pep_new', 'pep_updated', 'qval', 'qval_updated', dcols))
+  filter(prot_fdr < 0.01)
+  #dplyr::select(c('Sequence', 'Modified sequence', 'Protein', 'Raw file', 'Retention time', 
+  #                'Intensity', 'PIF',
+  #         'PEP', 'pep_new', 'pep_updated', 'qval', 'qval_updated', dcols))
   
+ev.fi <- ev.f
 
 ev.f <- ev.f %>%
-  # remove empty channels
-  dplyr::select(-grep('Reporter intensity corrected', colnames(ev.f))[c(3, 4)])
+  # remove empty channels, carrier channels
+  dplyr::select(-grep('Reporter intensity corrected', colnames(ev.f))[c(1, 2, 3, 4)])
 
 # only take rows w/ quantitation
-ev.f <- ev.f[apply(ev.f[,grep('Reporter', colnames(ev.f))] == 0, 1, sum) == 0,]
+#ev.f <- ev.f[apply(ev.f[,grep('Reporter', colnames(ev.f))] == 0, 1, sum) == 0,]
 
 # normalize data (by col, then by row)
 dcols <- grep('Reporter intensity corrected', colnames(ev.f))
@@ -103,16 +106,35 @@ dmat_b <- ev_b %>%
 # cast to matrix, and manually cluster (J, then U)
 dmat_a <- data.matrix(dmat_a)
 dmat_b <- data.matrix(dmat_b)
-dmat_a <- dmat_a[,c(1, 3, 5, 7, 2, 4, 6, 8)]
-dmat_b <- dmat_b[,c(1, 3, 5, 7, 2, 4, 6, 8)]
+dmat_a <- dmat_a[,c(1, 3, 5, 2, 4, 6)]
+dmat_b <- dmat_b[,c(1, 3, 5, 2, 4, 6)]
+
+
+# filter for high fold-change proteins ------------------------------------
+
+# j_channels=1:3
+# u_channels=4:6
+# 
+# # run t-test for each protein
+# prot_sigs <- sapply(1:length(old_prots), function(i) {
+#   t.test(dmat_a[i,1:(length(j_channels))], 
+#          dmat_a[i,((length(j_channels))+1):((length(j_channels)) + (length(u_channels)))], 
+#          alternative='two.sided', var.equal=T)$p.value
+# })
+# 
+# prot_sigs <- sapply(1:length(new_prots), function(i) {
+#   t.test(dmat_b[i,1:(length(j_channels))], 
+#          dmat_b[i,((length(j_channels))+1):((length(j_channels)) + (length(u_channels)))], 
+#          alternative='two.sided', var.equal=T)$p.value
+# })
 
 ## get correlation matrices ------
 
 cor_type_a <- cor(dmat_a)
 cor_type_b <- cor(dmat_b)
 
-j_channels <- c(2, 3, 4)
-u_channels <- c(6, 7, 8)
+j_channels <- c(1, 2, 3)
+u_channels <- c(4, 5, 6)
 
 ratio_mat_a <- zeros(nrow(dmat_a), length(j_channels) * length(u_channels))
 ratio_mat_b <- zeros(nrow(dmat_b), length(j_channels) * length(u_channels))

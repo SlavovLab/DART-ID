@@ -21,15 +21,15 @@ df <- df[df$pep > 1e-15,]
 p <- ggplot(df) +
   geom_density_ridges(aes(x=log10(pep), y=method, group=method, fill=method), 
                       rel_min_height=0.01, scale=2) +
-  scale_x_continuous(limits=c(-10, 0.3), breaks=seq(-10, 0, by=2)) +
+  scale_x_continuous(limits=c(-8, 0.3), breaks=seq(-10, 0, by=2)) +
   scale_y_discrete(expand=c(0.01, 0.01)) +
   scale_fill_manual(values=c(cb[2], cb[1]), guide=F) +
   labs(x='log10 PEP', y=NULL) +
   theme_ridges() + theme(
     plot.margin = margin(t=0.1, r=0.1, b=0, l=0.1, unit='cm'),
-    axis.text.y = element_text(size=8),
-    axis.text.x = element_text(size=8),
+    axis.text.y = element_text(size=9, angle=-30),
+    axis.text.x = element_text(size=9),
     axis.title.x = element_text(size=9, hjust=0.5, vjust=0.5)
   )
 
-ggsave(filename='manuscript/Figs/pep_dists.pdf', plot=p, device='pdf', width=1.75, height=1.5)
+ggsave(filename='manuscript/Figs/pep_dists.pdf', plot=p, device='pdf', width=1.75, height=1.25)
