@@ -85,3 +85,10 @@ tools/fido/*
 psm_graph.txt
 target_decoy.txt
 fido_out.txt
+
+# personal shell scripts
+update.sh
+figures.sh
+converter.sh
+collator.sh
+align.sh
