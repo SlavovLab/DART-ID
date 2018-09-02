@@ -46,8 +46,8 @@ input:
 sep: \t
 
 low_memory: false
-params_folder: /gd/bayesian_RT/Alignments/SQC_20180802_5exp_point
-#params_folder: ~
+#params_folder: /gd/bayesian_RT/Alignments/SQC_20180802_5exp_point
+params_folder: ~
 
 ## Alignment Options
 ## ==========================
@@ -66,13 +66,32 @@ rt_distortion: 1
 ## Update Options
 ## ==========================
 
-# parametric, non-parametric
-bootstrap_method: 'parametric'
-bootstrap_iters: 100
+# parametric, non-parametric, parametrix_mixture
+bootstrap_method: 'parametric_mixture'
+bootstrap_iters: 300
 
 # mean, median, weighted_mean
 mu_estimation: 'median'
 
+## Protein Inference Options
+## ==========================
+
+run_pi: true
+
+# optional
+pi_gamma: 0.5
+pi_alpha: 0.1
+pi_beta:  0.01
+
+pi_connected_protein_thresh: 14
+pi_clean_peptide_name: false
+pi_use_all_psms: false
+pi_group_proteins: false
+pi_prune_low_scores: true
+pi_parameter_accuracy: 3
+
+pi_protein_delimiter: ';'
+pi_decoy_tag: 'REV__'
 
 ## Output
 ## ==========================
@@ -83,6 +102,7 @@ save_params: true
 add_diagnostic_cols: true
 overwrite_pep: false
 #psm_fdr_threshold: 0.01
+#protein_fdr_threshold: 0.01
 
 save_combined_output: true
 combined_output_name: ev_updated.txt
@@ -120,7 +140,8 @@ col_names:
 ## ==========================
 
 pep_threshold: 0.5
-num_experiments: 5
+num_experiments: 3
+min_psms_per_exp: 100
 
 filters:
   #- name: include_filename
