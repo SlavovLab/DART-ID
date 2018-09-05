@@ -36,7 +36,7 @@ boxs <- list(DART=cvs_all$value[cvs_all$Method=='Spectra+RT'],
 
 # ridgeplot ---------------------------------------------------------------
 
-#p <- 
+p <- 
 ggplot(cvs_all) +
   geom_density_ridges(aes(x=value, y=rev(Method), group=rev(Method), fill=rev(Method)), 
                       rel_min_height=0.01, bandwidth=0.02) +
@@ -56,7 +56,7 @@ ggplot(cvs_all) +
     plot.title=element_text(size=12, hjust=0, vjust=1, lineheight=2, 
                             margin=margin(0,0,0.3,0,'cm'))
   )
-ggsave('manuscript/Figs/cv_ridges_v2.pdf', p, 'pdf', width=4, height=2.25, units='in')
+ggsave('manuscript/Figs/cv_ridges_v3.pdf', p, 'pdf', width=4, height=2.25, units='in')
 
 # scatter of cvs ----------------------------------------------------------
 

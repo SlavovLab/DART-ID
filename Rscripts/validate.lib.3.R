@@ -28,10 +28,10 @@ validate.lib.3 <- function(ev, exclude.cols=c(1:4, 7:11)) {
     filter(!grepl('SQC9', `Raw file`))
   
   # filter protein at 1% FDR, using protein inference data
-  # ev.f <- ev.f %>% filter(!is.na(prot_fdr))
-  # ev.f <- ev.f %>% filter(prot_fdr < 0.01)
+  ev.f <- ev.f %>% filter(!is.na(prot_fdr))
+  ev.f <- ev.f %>% filter(prot_fdr < 0.01)
   
-  ev.f[,data.cols] <- data.matrix(ev.f %>% select(data.cols))
+  #ev.f[,data.cols] <- data.matrix(ev.f %>% select(data.cols))
   
   cat("Normalizing data...\n")
   # normalize data (by col, then by row)
@@ -47,16 +47,16 @@ validate.lib.3 <- function(ev, exclude.cols=c(1:4, 7:11)) {
   prots_orig <- ev.f %>% 
     filter(PEP < pep_thresh) %>% 
     group_by(Protein) %>%
-    summarise(n=n()) %>%
-    filter(n > prot.psm.thresh) %>%
+    summarise(n=n(), seqs=length(unique(`Modified sequence`))) %>%
+    filter(n > prot.psm.thresh & seqs > 1) %>%
     arrange(desc(n)) %>%
     pull(Protein)
   
   prots_new <- ev.f %>%
     filter(PEP > pep_thresh & pep_new < pep_thresh) %>%
     group_by(Protein) %>%
-    summarise(n=n()) %>%
-    filter(n > prot.psm.thresh) %>%
+    summarise(n=n(), seqs=length(unique(`Modified sequence`))) %>%
+    filter(n > prot.psm.thresh & seqs > 1) %>%
     arrange(desc(n)) %>%
     pull(Protein)
   
@@ -82,20 +82,41 @@ validate.lib.3 <- function(ev, exclude.cols=c(1:4, 7:11)) {
   
   set.seed(1)
   
+  all_seqs <- unique(ev.f %>% filter(PEP < pep_thresh) %>% pull(`Modified sequence`))
+  
   for(i in 1:length(prots)) {
     cat('\r', i, '/', length(prots), '-', prots[i], '                           ')
     flush.console()
     
     ev.a <- ev.f %>% filter(Protein==prots[i])
-    dmat <- data.matrix(ev.a %>% filter(PEP < pep_thresh) %>% select(data.cols))
+    dmat <- data.matrix(ev.a %>% 
+      filter(PEP < pep_thresh) %>% 
+      group_by(`Modified sequence`) %>%
+      summarise_at(colnames(ev.a)[data.cols], mean, na.rm=T) %>%
+      select(-`Modified sequence`))
     prot_cvs_orig[i,] <- apply(dmat, 2, sd) / apply(dmat, 2, mean)
-    dmat <- data.matrix(ev.a %>% filter(PEP > pep_thresh & pep_updated < pep_thresh) %>% select(data.cols))
+    dmat <- data.matrix(ev.a %>% 
+      filter(PEP > pep_thresh & pep_updated < pep_thresh) %>% 
+      group_by(`Modified sequence`) %>%
+      summarise_at(colnames(ev.a)[data.cols], mean, na.rm=T) %>%
+      select(-`Modified sequence`))
     prot_cvs_new[i,] <- apply(dmat, 2, sd) / apply(dmat, 2, mean)
-    dmat <- data.matrix(ev.a %>% filter(PEP > pep_thresh & pep_perc < pep_thresh) %>% select(data.cols))
+    dmat <- data.matrix(ev.a %>% 
+      filter(PEP > pep_thresh & pep_perc < pep_thresh) %>% 
+      group_by(`Modified sequence`) %>%
+      summarise_at(colnames(ev.a)[data.cols], mean, na.rm=T) %>%
+      select(-`Modified sequence`))
     prot_cvs_perc[i,] <- apply(dmat, 2, sd) / apply(dmat, 2, mean)
     
     # generate null distribution
-    dmat <- data.matrix(ev.f %>% filter(PEP < pep_thresh) %>% sample_n(50) %>% select(data.cols))
+    # get some random peptides
+    random_seqs <- sample(all_seqs, size=10)
+    dmat <- data.matrix(ev.f %>% 
+      filter(`Modified sequence` %in% random_seqs) %>%
+      filter(PEP < pep_thresh) %>% 
+      group_by(`Modified sequence`) %>%
+      summarise_at(colnames(ev.a)[data.cols], mean, na.rm=T) %>%
+      select(-`Modified sequence`))
     prot_cvs_null[i,] <- apply(dmat, 2, sd) / apply(dmat, 2, mean)
   }
   
