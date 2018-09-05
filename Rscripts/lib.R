@@ -399,20 +399,26 @@ normalize_ri_data <- function(dmat) {
   dmat <- dmat[!apply(apply(dmat, 1, is.na), 2, sum) > 0,]
   dmat
 }
-normalize_ri_data_table <- function(ev, dcols, remove.empty.rows=T) {
-  ev[,dcols][ev[,dcols]==0] <- NA
+normalize_ri_data_table <- function(ev.f, dcols, remove.empty.rows=T, impute.data) {
+  ev.f[,dcols][ev.f[,dcols]==0] <- NA
   
   ## normalize data
   
   # first normalize by column, by median
-  ev[,dcols] <- t(t(ev[,dcols]) / apply(ev[,dcols], 2, median, na.rm=T))
+  ev.f[,dcols] <- t(t(ev.f[,dcols]) / apply(ev.f[,dcols], 2, median, na.rm=T))
   # now normalize across rows, by mean
-  ev[,dcols] <- ev[,dcols] / apply(ev[,dcols], 1, mean, na.rm=T)
+  ev.f[,dcols] <- ev.f[,dcols] / apply(ev.f[,dcols], 1, mean, na.rm=T)
   # remove rows without quant
   if(remove.empty.rows) {
-    ev <- ev[!apply(apply(ev[,dcols], 1, is.na), 2, sum) > 0,]
+    ev.f <- ev.f[!apply(apply(ev.f[,dcols], 1, is.na), 2, sum) > 0,]
   }
-  return(ev)
+  #if(impute.data) {
+  #  library(VIM)
+  #  # remove rows with more than half NA
+  #  ev.f <- ev.f[!apply(apply(ev.f[,dcols], 1, is.na), 2, sum) > floor(length(dcols) / 2),]
+  #  VIM::kNN(ev.f[,dcols], imp_var=F)
+  #}
+  return(ev.f)
 }
 
 extract_uniprot_id <- function(leading_protein) {

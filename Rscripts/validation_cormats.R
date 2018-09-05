@@ -25,9 +25,9 @@ ev.f <- ev %>%
          qval_updated=(cumsum(pep_updated[order(pep_updated)]) / 
                          seq(1, nrow(ev)))[order(order(pep_updated))]) %>%
   # exclude CON, REV proteins
-  filter(!grepl("CON__|REV__", Protein)) %>%
+  filter(!grepl('CON__|REV__', Protein)) %>%
   # only select SQC master sets
-  filter(grepl("SQC", `Raw file`)) %>%
+  filter(grepl('SQC', `Raw file`)) %>%
   # filter out non J/U sets (QC40E,F, QC42A)
   filter(!grepl('SQC9', `Raw file`)) %>%
   # select 1% protein fdr
