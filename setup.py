@@ -59,9 +59,10 @@ setup(
   },
   package_data={
     'dart_id': [
-      'fits/*.stan',        # STAN fits
-      'figure_gen/*',       # figure generation scripts
-      'figure_resources/*'  # figure generation resources
+      'fits/*.stan',         # STAN fits
+      'figure_gen/*',        # figure generation scripts
+      'figure_resources/*',  # figure generation resources
+      'fido/*'               # fido scripts
     ]
   },
   # data outside the package
