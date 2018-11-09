@@ -253,7 +253,8 @@ def update(dfa, params, config):
         #  loc=model['ref_to_rt'](exp, mu_k[:,j][pep_inds], params), \
         #  scale=exp['sigmaij'])
         rt_plus = rt_plus + laplace.pdf(exp['mu_pred'],\
-          loc=mu_k[:,j][pep_inds], scale=exp['sigma_pred'])
+          loc=mu_k[:,j][pep_inds], \
+          scale=exp['sigma_pred'])
 
       # divide total likelihood by # of iterations to normalize to area of 1
       rt_plus = rt_plus / k
@@ -407,6 +408,10 @@ def main():
   # sort by ID, and reset index
   df_adjusted = df_adjusted.sort_values(['id'])
   df_adjusted = df_adjusted.reset_index(drop=True)
+
+  # add residual RT (alignment error) column
+  df_adjusted['residual'] = np.abs(\
+    df_adjusted[config['col_names']['retention_time']] - df_adjusted['muij'])
 
   # add pep_updated column - which is pep_new, with the NaNs filled in
   # with the old PEPs.
