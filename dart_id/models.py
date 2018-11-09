@@ -6,7 +6,6 @@ import logging
 import numpy as np
 import os
 import pandas as pd
-import path
 
 from dart_id.exceptions import *
 from dart_id.helper import *
