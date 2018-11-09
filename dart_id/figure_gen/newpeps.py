@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
-from rtlib.helper import *
+from dart_id.helper import *
 from scipy.stats import norm, lognorm, laplace, gaussian_kde
 
 logger = logging.getLogger('root')

@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
-from rtlib.helper import *
+from dart_id.helper import *
 from scipy.stats import norm, lognorm
 
 logger = logging.getLogger('root')
@@ -22,7 +22,8 @@ def gen(df, config, params, output_path):
   # ceil PEP to 1
   df[config['col_names']['pep']][df[config['col_names']['pep']] > 1] = 1
   # split PEP into 10 bins, for coloring points later
-  pep_col_code = pd.cut(df[config['col_names']['pep']], 10)
+  #pep_col_code = pd.cut(df[config['col_names']['pep']], 10)
+  pep_col_code = pd.cut(df[config['col_names']['pep']], np.linspace(0, 1, 11))
 
   # generate figures for each experiment
   for exp in range(0, num_experiments):
