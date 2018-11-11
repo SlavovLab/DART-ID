@@ -2,7 +2,7 @@
 
 ## Getting Python 3.6
 
-DART-ID is tested on Ubuntu 14.04 (Trusty64), but ideally should run on most distros. 
+DART-ID is tested on Ubuntu 14.04 (Trusty64), but should run on most distros. 
 
 The most important step is getting Python >=3.6, as DART-ID and some of its dependencies will fail to build on earlier versions.
 
