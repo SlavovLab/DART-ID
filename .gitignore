@@ -15,6 +15,7 @@ pd_exclude.txt
 # notes, personal files
 notes.txt
 todo.txt
+todo_new.txt
 rsync_exclude.txt
 copy_to_gdrive.sh
 
@@ -92,3 +93,7 @@ figures.sh
 converter.sh
 collator.sh
 align.sh
+
+# spyder project
+.spy*
+test/**/*
