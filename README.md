@@ -9,7 +9,7 @@ The DART-ID code goal is to make the process as simple as possible. Run ```dart_
 # Installation
 
 ```
-pip install git+https://github.com/SlavovLab/DART-ID
+pip install git+https://github.com/SlavovLab/DART-ID --user
 ```
 
 Uninstall the package with:
@@ -17,6 +17,8 @@ Uninstall the package with:
 ```
 pip uninstall dart_id
 ```
+
+The installation requires Python >= 3.6, and has been tested on Windows 8 / OSX Mojave 10.14 / Ubuntu 14.04. Ubuntu/Linux instructions can be found in linux_install.md
 
 # Known bugs:
 
