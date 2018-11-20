@@ -4,6 +4,7 @@ source('Rscripts/lib.R')
 
 #ev <- read_tsv('/gd/bayesian_RT/Alignments/SQC_varied_20180613_5/ev_updated.txt')
 ev <- read_tsv('/gd/bayesian_RT/Alignments/SQC_varied_20180711_4/ev_updated.txt')
+ev_all <- read_tsv('/gd/bayesian_RT/Alignments/SQC_20180815_2/ev_updated.txt')
 
 ev.f <- ev %>%
   filter(!is.na(pep_new)) %>%
@@ -127,13 +128,24 @@ set.seed(1)
 training_seqs <- sort(sample(seqs, floor(length(seqs) / 2)))
 testing_seqs <- seqs[!seqs %in% training_seqs]
 
-ev.training <- ev.f %>% filter(Sequence %in% training_seqs) %>% select(c('Sequence', 'Retention time'))
-write_tsv(ev.training, path='/gd/bayesian_RT/Alignments/SQC_varied_20180613_5/elude_training.txt', col_names=F)
+ev.training <- ev.f %>% 
+  filter(Sequence %in% training_seqs) %>% 
+  select(c('Sequence', 'Retention time'))
+#write_tsv(ev.training, path='/gd/bayesian_RT/Alignments/SQC_varied_20180613_5/elude_training.txt', col_names=F)
+write_tsv(ev.training, path='/gd/bayesian_RT/Alignments/SQC_20180815_2/elude_training.txt', col_names=F)
 
 ev.testing <- ev.f %>% filter(Sequence %in% testing_seqs) %>% select(c('Sequence', 'Retention time'))
-write_tsv(ev.testing, path='/gd/bayesian_RT/Alignments/SQC_varied_20180613_5/elude_testing.txt', col_names=F)
+#ev.testing <- ev_all %>% select(c('Sequence', 'Retention time'))
+#write_tsv(ev.testing, path='/gd/bayesian_RT/Alignments/SQC_varied_20180613_5/elude_testing.txt', col_names=F)
+write_tsv(ev.testing, path='/gd/bayesian_RT/Alignments/SQC_20180815_2/elude_testing.txt', col_names=F)
 
 # /usr/local/bin/elude.app/Contents/MacOS/elude -t /gd/bayesian_RT/Alignments/SQC_varied_20180613_5/elude_training.txt -e /gd/bayesian_RT/Alignments/SQC_varied_20180613_5/elude_testing.txt -s /gd/bayesian_RT/Alignments/SQC_varied_20180613_5/elude.model -o /gd/bayesian_RT/Alignments/SQC_varied_20180613_5/elude_out.txt -y -g -v 10
+
+# /usr/local/bin/elude.app/Contents/MacOS/elude -t /gd/bayesian_RT/Alignments/SQC_20180815_2/elude_training.txt -e /gd/bayesian_RT/Alignments/SQC_20180815_2/elude_testing.txt -s /gd/bayesian_RT/Alignments/SQC_20180815_2/elude.model -o /gd/bayesian_RT/Alignments/SQC_20180815_2/elude_out.txt -y -g -v 10
+
+write_tsv(ev %>% select(c('Sequence', 'Retention time')), path='/gd/bayesian_RT/Alignments/SQC_20180815_2/elude_in.txt', col_names=F)
+
+# /usr/local/bin/elude.app/Contents/MacOS/elude -e /gd/bayesian_RT/Alignments/SQC_20180815_2/elude_in.txt -l /gd/bayesian_RT/Alignments/SQC_20180815_2/elude.model -o /gd/bayesian_RT/Alignments/SQC_20180815_2/elude_out.txt -y -g -v 10
 
 ## elude output ---------
 

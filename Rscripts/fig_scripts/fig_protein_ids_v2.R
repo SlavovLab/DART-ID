@@ -30,7 +30,7 @@ load('dat/peptide_ids_20180816.rds')
 
 # horizontal boxplot ------------------------------------------------------
 
-pdf(file='manuscript/Figs/peps_per_exp_v8.pdf', width=1.75, height=1.75)
+pdf(file='manuscript/Figs/peps_per_exp_v8_harrison.pdf', width=1.75, height=1.75)
 
 par(mar=c(1,3,0,0.25),
     oma=c(0,0,1.4,0),
@@ -52,6 +52,33 @@ text(x=rep(-150, 4), y=seq(0.85,4,by=1),
      xpd=T, srt=-30, cex=0.65, adj=c(1, 0.5))
 
 mtext('        Peptides/Experiment', side=3, line=0.25, las=1, font=2, cex=0.85, outer=T)
+
+dev.off()
+
+# horizontal boxplot - HUPO ------------------------------------------------------
+
+pdf(file='manuscript/Figs/peps_per_exp_v8_harrison.pdf', width=3, height=2.5)
+
+par(mar=c(1.5,4.25,0,0.5),
+    oma=c(0,0,1.6,0),
+    pty='m', las=1, cex.axis=1)
+
+boxplot(rev(boxs[1:3]), horizontal=T,
+        col=rev(c(cb[1], cb[3], cb[2])), 
+        xaxt='n', yaxt='n', ylim=c(0, 2700),
+        outwex=1, outcex=0.75, outpch='x', outcol=rgb(0, 0, 0))
+axis(1, at=seq(0, 2500, by=500), labels=c(0, NA, 1000, NA, 2000, NA), tck=-0.02, 
+     mgp=c(0, 0.3, 0))
+#axis(2, at=seq(1,4), labels=NA, #labels=c(expression('DART-ID'[2]), expression('DART-ID'[1]), 
+#expression('Percolator'[2]), expression('Percolator'[1]),
+#'Percolator',
+#'Spectra'),
+#     tck=-0.02, mgp=c(0, 0.3, 0), las=1)
+text(x=rep(-180, 4), y=seq(0.95,4,by=1),
+     labels=c(expression('DART-ID'),'Percolator','Spectra'),
+     xpd=T, srt=-30, cex=1, adj=c(1, 0.5))
+
+mtext(' Peptides per 60 min LC-MS/MS run', side=3, line=0.4, las=1, font=2, cex=1, outer=T)
 
 dev.off()
 

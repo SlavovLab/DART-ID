@@ -40,14 +40,19 @@ rts <- ev %>%
   filter(`Retention time` < 60) %>% 
   pull(`Retention time`)
 
-pdf(file='manuscript/Figs/dist_normal.pdf', width=3.5, height=3.5)
+pdf(file='manuscript/Figs/dist_normal_v2.pdf', width=3.5, height=3.5)
 
 par(mar=c(2.5,4,2,1), cex.axis=1)
 
 hist(rts, breaks=seq(0, 60, length.out=50), freq=F,
-  xlab=NA, ylab=NA, main=NA, xaxt='n', yaxt='n')
+  xlab=NA, ylab=NA, main=NA, xaxt='n', yaxt='n', ylim=c(0, 0.035))
+
+x <- seq(0, 100, length.out=1000)
+y <- dnorm(x, m=mean(ev.f$`Retention time`), s=sd(ev.f$`Retention time`))
+lines(x, y, col='red', lwd=2)
+
 axis(1, at=seq(0, 60, by=10), mgp=c(0, 0.25, 0), tck=-0.02)
-axis(2, at=seq(0, 0.025, by=0.005), mgp=c(0, 0.4, 0), tck=-0.02, las=1)
+axis(2, at=seq(0, 0.04, by=0.01), mgp=c(0, 0.4, 0), tck=-0.02, las=1)
 
 mtext('Observed RT (min)', side=1, cex=1, line=1.3)
 mtext('Density', side=2, cex=1, line=2.75)
