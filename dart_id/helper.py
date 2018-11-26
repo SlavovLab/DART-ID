@@ -84,18 +84,18 @@ def load_params_from_file(params_folder):
   return params
 
 def add_global_args(parser, add_config_file=True):
-  parser.add_argument('-i', '--input', type=argparse.FileType('r'), nargs='+', default=None, help='Input file(s) from search engine')
+  parser.add_argument('-i', '--input', type=argparse.FileType('r'), nargs='+', default=None, help='Input file(s) from search engine output (e.g., MaxQuant evidence.txt). Not required if input files are specified in the config file')
   #parser.add_argument('-o', '--output', help='Path to converted file. Default: prints to stdout')
-  parser.add_argument('-o', '--output', type=str, default=None, help='Path to output data. Default: None')
+  parser.add_argument('-o', '--output', type=str, default=None, help='Path to output folder')
   parser.add_argument('-v', '--verbose', action='store_true', default=False)
   parser.add_argument('--version', action='version', version='%(prog)s {version}'.format(version=__version__), help='Display the program\'s version')
 
   if add_config_file:
-    parser.add_argument('-c', '--config-file', required=True, type=argparse.FileType('r', encoding='UTF-8'), help='Path to config file. See example/config_example.yaml')
+    parser.add_argument('-c', '--config-file', required=True, type=argparse.FileType('r', encoding='UTF-8'), help='Path to config file (required). See example/config_example.yaml')
 
 def read_default_config_file():
   # load input file types
-  default_config = pkg_resources.resource_stream('rtlib', '/'.join(('config', 'default.yaml')))
+  default_config = pkg_resources.resource_stream('dart_id', '/'.join(('config', 'default.yaml')))
   default_config = yaml.load(default_config)
   return default_config
 
