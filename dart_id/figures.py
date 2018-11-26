@@ -42,7 +42,7 @@ def generate_html(fig_data, output_path):
 
   # load HTML template and inject data variable
   logger.info('Loading template HTML and injecting variables...')
-  template = pkg_resources.resource_string('rtlib', '/'.join((
+  template = pkg_resources.resource_string('dart_id', '/'.join((
     'figure_resources', 'template.html')))
   template = template.decode('utf-8')
   template = Template(template).safe_substitute(fig_data)
@@ -57,11 +57,12 @@ def generate_html(fig_data, output_path):
   logger.info('Moving HTML resource files')
   resource_files = [
     'bootstrap.min.css', 'bootstrap.min.js', 
-    'jquery-3.3.1.slim.min.js', 'styles.css'
-  ]
+    'jquery-3.3.1.slim.min.js', 'styles.css'] #,
+    #'jquery.dataTables.min.css', 'jquery.dataTables.min.js'
+  #]
   for i in resource_files:
     copyfile(pkg_resources.resource_filename(
-      'rtlib', '/'.join(('figure_resources', i))), 
+      'dart_id', '/'.join(('figure_resources', i))), 
     os.path.join(output_path, 'figures', i))
 
 
