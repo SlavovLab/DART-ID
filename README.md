@@ -34,24 +34,33 @@ Input and output files are optional in the command line, and can be specified in
 An example config file, annotated and unannotated, can be found at ```example/config.yaml```
 
 ```
-usage: dart_id [-h] [-i INPUT [INPUT ...]] [-o OUTPUT] [-v] [--version]
-                 --config-file CONFIG_FILE
+usage: dart_id [-h] [-i INPUT [INPUT ...]] [-o OUTPUT] [-v] [--version] -c
+                 CONFIG_FILE
 
 optional arguments:
   -h, --help            show this help message and exit
   -i INPUT [INPUT ...], --input INPUT [INPUT ...]
-                        Input file(s) from search engine
+                        Input file(s) from search engine output (e.g.,
+                        MaxQuant evidence.txt). Not required if input files
+                        are specified in the config file
   -o OUTPUT, --output OUTPUT
-                        Path to output data. Default: None
+                        Path to output folder
   -v, --verbose
   --version             Display the program's version
-  --config-file CONFIG_FILE
-                        Path to config file. See example/config_example.yaml
+  -c CONFIG_FILE, --config-file CONFIG_FILE
+                        Path to config file (required). See
+                        example/config_example.yaml
 ```
 
 Example runs
 ============
 
 ```
-dart_id -i /gd/SingleCell_Data/FP17/evidence.txt -o ~/git/RTLib/Alignments/FP17_20180527_1 -v --config-file path_to_config_file.yaml
+dart_id -i /path/to/search_engine_output/evidence.txt -o /path/to/output/folder -v -c /path/to/config/file.yaml
+```
+
+If, for example, the input files are already listed out in the config file, then you can skip the ```-i``` option.
+
+```
+dart_id -c /path/to/config/file.yaml -o /path/to/output/folder
 ```
