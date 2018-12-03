@@ -1,6 +1,6 @@
 body {
-  background-color: #4A849F;
-  color: #FFFFFF;
+  /*background-color: #4A849F;
+  color: #FFFFFF;*/
 }
 
 h1 {
@@ -19,7 +19,7 @@ h3 {
 .alignment-carousel .d-block {
   height: 450px;
   width: auto !important;
-  margin: 0 auto;
+  margin: 10px auto;
 }
 .alignment-carousel ol.carousel-indicators {
   margin-bottom: 0px;
