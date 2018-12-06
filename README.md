@@ -55,12 +55,26 @@ optional arguments:
 Example runs
 ============
 
+ 
+Test that your installation is working by running DART-ID.
+
+An example configuration file can be downloaded from GitHub: [https://github.com/SlavovLab/DART-ID/blob/master/config_files/example_sqc_67_95_varied.yaml](https://github.com/SlavovLab/DART-ID/blob/master/config_files/example_sqc_67_95_varied.yaml).
+
+The first few lines of the above configuration file specify the path to the input file:
+
 ```
-dart_id -i /path/to/search_engine_output/evidence.txt -o /path/to/output/folder -v -c /path/to/config/file.yaml
+## Input
+## ==========================
+
+input: 
+  - /path/to/SQC_67_95_Varied/evidence.txt
 ```
 
-If, for example, the input files are already listed out in the config file, then you can skip the ```-i``` option.
+You can download the ```evidence.txt``` file from MassIVE: [ftp://massive.ucsd.edu/MSV000083149/other/MaxQuant/SQC_67_95_Varied/evidence.txt](ftp://massive.ucsd.edu/MSV000083149/other/MaxQuant/SQC_67_95_Varied/evidence.txt). 
+
+Then edit the path to the file downloaded, and run the following command:
 
 ```
-dart_id -c /path/to/config/file.yaml -o /path/to/output/folder
+dart_id -c config_files/example_sqc_67_95_varied.yaml -o ~/DART_ID/SQC_67_95_varied_20181206
 ```
+
