@@ -1,4 +1,4 @@
-name: rtlib
+name: dart_id
 channels:
   defaults
 dependencies:
