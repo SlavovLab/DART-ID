@@ -6,6 +6,8 @@ Intro
 
 The DART-ID code goal is to make the process as simple as possible. Run ```dart_id```, point it at the inputs, and expect an additional PEP_new column at the end. There are still some parameters that you will need to tweak manually as the default settings have not been fully generalized yet.
 
+The bottom of this document contains links to an example configuration file and data that you can use to test the installation and performance of DART-ID.
+
 # Installation
 
 ```
@@ -19,6 +21,21 @@ pip uninstall dart_id
 ```
 
 The installation requires Python >= 3.6, and has been tested on Windows 8 / OSX Mojave 10.14 / Ubuntu 14.04. Ubuntu/Linux instructions can be found in linux_install.md
+
+## Install from source
+
+If installation of ```pip``` is not working, download the source code from git and run DART-ID with the provided shell script.
+
+### Linux/OSX:
+```
+git clone https://github.com/SlavovLab/DART-ID
+cd DART-ID
+./dart_id.sh
+```
+
+### Windows:
+
+Instead of running ```dart_id.sh``` from the command line, run it directly with ```python``` instead.
 
 # Known bugs:
 
