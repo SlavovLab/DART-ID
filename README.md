@@ -11,7 +11,7 @@ The bottom of this document contains links to an example configuration file and 
 # Installation
 
 ```
-pip install git+https://github.com/SlavovLab/DART-ID --user --no-cache-dir
+pip install git+https://github.com/SlavovLab/DART-ID
 ```
 
 Uninstall the package with:
@@ -73,7 +73,7 @@ Example runs
 ============
 
  
-Test that your installation is working by running DART-ID.
+Test that your installation is working by running ```dart_id```.
 
 An example configuration file can be downloaded from GitHub: [https://github.com/SlavovLab/DART-ID/blob/master/config_files/example_sqc_67_95_varied.yaml](https://github.com/SlavovLab/DART-ID/blob/master/config_files/example_sqc_67_95_varied.yaml).
 
