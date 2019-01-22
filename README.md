@@ -96,3 +96,7 @@ Then edit the path to the file downloaded, and run the following command:
 dart_id -c config_files/example_sqc_67_95_varied.yaml -o ~/DART_ID/SQC_67_95_varied_20181206
 ```
 
+An example analysis of the data and configuration file specified above is available publicly at [ftp://massive.ucsd.edu/MSV000083149/other/Alignments/SQC_varied_20180711_4/](ftp://massive.ucsd.edu/MSV000083149/other/Alignments/SQC_varied_20180711_4/). 
+
+
+The current analysis heavily uses random number generation and cannot be directly compared. To compare the results of your analysis and the provided example analysis, download the folder above and inspect the ```figures.html``` report to compare results. We are working to affix the random number generation and improve the figures outputted to improve readability and reproducibility.
