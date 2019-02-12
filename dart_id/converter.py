@@ -317,10 +317,14 @@ def filter_psms(df, config):
   # each filter has a specified required column from the dataframe
   # make sure these columns exist before proceeding
   for i, f in enumerate(filters):
+    # make sure filter has required field of 'name'
+    if 'name' not in f or f['name'] is None or len(f['name']) == 0:
+      raise ConfigFileError('Filter {} does not have the required field name or it is empty. Please provide a name (type) for this filter. Available filters are listed in the example config file, under example/config.yaml'.format(str(f)))
+
     # for each required column in the filter, check if it exists
     for j in required_cols[f['name']]:
       if j not in df.columns:
-        raise ConfigFileError('Filter {} required a column {}, but this was not found in the input dataframe.'.format(f['name'], j))
+        raise ConfigFileError('Filter {} required a data column {}, but this was not found in the input dataframe.'.format(f['name'], j))
 
   # by default, filter out nothing. we'll use binary ORs (|) to
   # gradually add more and more observations to this filter out blacklist
