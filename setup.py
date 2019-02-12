@@ -13,7 +13,7 @@ setup(
   name=name,
   version='1.0.0',
   description='RT Alignment and Peptide ID Confidence Updating for LC-MS/MS Data',
-  url='https://github.com/blahoink/DART-ID',
+  url='https://github.com/SlavovLab/DART-ID',
   author='Albert Chen',
   author_email='chen.alb@husky.neu.edu',
   license='MIT',
@@ -34,9 +34,9 @@ setup(
   ],
   keywords='bayesian retention time psm peptide spectra update',
   project_urls={
-    'Documentation': 'https://github.com/blahoink/DART-ID',
-    'Source': 'https://github.com/blahoink/DART-ID',
-    'Tracker': 'https://github.com/blahoink/DART-ID/issues',
+    'Documentation': 'https://github.com/SlavovLab/DART-ID',
+    'Source': 'https://github.com/SlavovLab/DART-ID',
+    'Tracker': 'https://github.com/SlavovLab/DART-ID/issues',
     'Lab Page': 'https://web.northeastern.edu/slavovlab/'
   },
   packages=['dart_id'],
@@ -74,7 +74,7 @@ setup(
       ('dart_id_convert=dart_id.converter:main'),
       ('dart_id_align=dart_id.align:main'),
       ('dart_id_update=dart_id.update:main'),
-      ('dart_id_fiures=dart_id.figures:main'),
+      ('dart_id_figures=dart_id.figures:main'),
       ('dart_id_collate=dart_id.collate:main')
     ]
   }
