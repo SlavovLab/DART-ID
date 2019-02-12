@@ -335,7 +335,7 @@ def write_output(df, out_path, config):
 
   # filter by protein FDR?
   if 'protein_fdr_threshold' in config and type(config['protein_fdr_threshold']) == float:
-    if 'prot_fdr' in columns:
+    if 'prot_fdr' in df.columns:
       if config['protein_fdr_threshold'] <= 0:
         logger.warning('Protein FDR threshold equal to or below 0. Please provide a value between 0 and 1. Ignoring...')
       elif config['protein_fdr_threshold'] >= 1:
