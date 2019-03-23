@@ -43,7 +43,7 @@ mu_estimation: 'median'
 ## Protein Inference Options
 ## ==========================
 
-run_pi: true
+run_pi: false
 
 # optional
 pi_gamma: 0.5

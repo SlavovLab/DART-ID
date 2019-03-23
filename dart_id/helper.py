@@ -107,12 +107,12 @@ def read_config_file(args, create_output_folder=True):
   # if they were specified on the command-line
   if args.input is not None:
     if config['input'] is not None:
-      logger.info('Input files specified in both the config file and the command line. Using command-line input files instead.')
+      logger.warning('Input files specified in both the config file and the command line. Using command-line input files instead.')
     config['input'] = [f.name for f in args.input]
 
   if args.output is not None:
-    if config['output'] is not None:
-      logger.info('Output folder specified in both the config file and the command line. Using command-line output folder instead.')
+    if 'output' in config and config['output'] is not None:
+      logger.warning('Output folder specified in both the config file and the command line. Using command-line output folder instead.')
     config['output'] = args.output
 
   if args.verbose:
@@ -124,7 +124,7 @@ def read_config_file(args, create_output_folder=True):
   if config['input'] is None:
     raise ConfigFileError('No input files specified, in either the config file or the command line. Please provide input files.')
 
-  if config['output'] is None:
+  if 'output' not in config or config['output'] is None:
     raise ConfigFileError('No output folder specified, in either the config file or the command line. Please provide output folder.')
 
   # expand user or any vars
