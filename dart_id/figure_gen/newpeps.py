@@ -58,9 +58,9 @@ def gen(df, config, params, output_path):
   inds = ~pd.isnull(df['pep_new'])
 
   for i, j in enumerate(x):
-      y[i] = np.sum(df['pep_updated'] < j) / np.sum(df[col_names['pep']] < j)
+      y[i] = np.sum(df['dart_PEP'] < j) / np.sum(df[col_names['pep']] < j)
       y2[i] = np.sum(df[col_names['pep']] < j) / df.shape[0]
-      y3[i] = np.sum(df['pep_updated'] < j) / df.shape[0]
+      y3[i] = np.sum(df['dart_PEP'] < j) / df.shape[0]
 
   f, (ax1, ax2) = plt.subplots(2, 1)
 

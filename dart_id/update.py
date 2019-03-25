@@ -329,19 +329,19 @@ def write_output(df, out_path, config):
     elif config['psm_fdr_threshold'] >= 1:
       logger.warning('PSM FDR threshold equal to or greater than 1. Please provide a value between 0 and 1. Ignoring...')
     else:
-      to_remove = (df['q-value'] > config['psm_fdr_threshold'])
+      to_remove = (df['dart_qval'] > config['psm_fdr_threshold'])
       logger.info('{}/{} ({:.2%}) PSMs removed at a threshold of {:.2%} FDR.'.format(np.sum(to_remove), df.shape[0], np.sum(to_remove) / df.shape[0], config['psm_fdr_threshold']*100))
       df = df[~to_remove].reset_index(drop=True)
 
   # filter by protein FDR?
   if 'protein_fdr_threshold' in config and type(config['protein_fdr_threshold']) == float:
-    if 'prot_fdr' in df.columns:
+    if 'razor_protein_fdr' in df.columns:
       if config['protein_fdr_threshold'] <= 0:
         logger.warning('Protein FDR threshold equal to or below 0. Please provide a value between 0 and 1. Ignoring...')
       elif config['protein_fdr_threshold'] >= 1:
         logger.warning('Protein FDR threshold equal to or greater than 1. Please provide a value between 0 and 1. Ignoring...')
       else:
-        to_remove = ((df['prot_fdr'] > config['protein_fdr_threshold']) | pd.isnull(df['prot_fdr']))
+        to_remove = ((df['razor_protein_fdr'] > config['protein_fdr_threshold']) | pd.isnull(df['razor_protein_fdr']))
         logger.info('{}/{} ({:.2%}) PSMs removed at a threshold of {:.2%} Protein FDR.'.format(np.sum(to_remove), df.shape[0], np.sum(to_remove) / df.shape[0], config['protein_fdr_threshold']*100))
         df = df[~to_remove].reset_index(drop=True)
     else:
@@ -413,13 +413,13 @@ def main():
   df_adjusted['residual'] = np.abs(\
     df_adjusted[config['col_names']['retention_time']] - df_adjusted['muij'])
 
-  # add pep_updated column - which is pep_new, with the NaNs filled in
+  # add dart_PEP column - which is pep_new, with the NaNs filled in
   # with the old PEPs.
-  df_adjusted['pep_updated'] = df_adjusted['pep_new']
-  df_adjusted['pep_updated'][pd.isnull(df_adjusted['pep_new'])] = \
+  df_adjusted['dart_PEP'] = df_adjusted['pep_new']
+  df_adjusted['dart_PEP'][pd.isnull(df_adjusted['pep_new'])] = \
     df_adjusted[config['col_names']['pep']][pd.isnull(df_adjusted['pep_new'])]
   # make sure that updated PEP does not exceed 1
-  df_adjusted['pep_updated'][df_adjusted['pep_updated'] > 1] = 1
+  df_adjusted['dart_PEP'][df_adjusted['dart_PEP'] > 1] = 1
 
   # add q-value (FDR) column
   # rank-sorted, cumulative sum of PEPs is expected number of false positives
@@ -429,35 +429,38 @@ def main():
   # q-value, without fixing # of false positives to a discrete number
   #df_adjusted['q-value'] = \
   #  ( \
-  #    np.cumsum(df_adjusted['pep_updated'][np.argsort(df_adjusted['pep_updated'])]) / \
+  #    np.cumsum(df_adjusted['dart_PEP'][np.argsort(df_adjusted['dart_PEP'])]) / \
   #    np.arange(1, df_adjusted.shape[0]+1) \
-  #  )[np.argsort(np.argsort(df_adjusted['pep_updated']))]
+  #  )[np.argsort(np.argsort(df_adjusted['dart_PEP']))]
   
   # q-value, by fixing # of false positives to a discrete number
   # for now, set all null PEPs to 1. we'll remember the index and set them back to nan later
-  null_peps = pd.isnull(df_adjusted['pep_updated'])
+  null_peps = pd.isnull(df_adjusted['dart_PEP'])
   if null_peps.sum() > 0:
-    df_adjusted['pep_updated'][null_peps] = 1
+    df_adjusted['dart_PEP'][null_peps] = 1
 
   # get the index order of sorted PEPs
-  pep_order = np.argsort(df_adjusted['pep_updated'])
+  pep_order = np.argsort(df_adjusted['dart_PEP'])
   # Take the ceiling of the cumulative sum of the sorted PEPs to get the pessimistic
   # estimate of the number of false positives when selecting at that level.
   # because using ceiling, PSMs with different PEPs but within the same relative interval
   # will get the same "num_fp" value.
-  num_fp = np.ceil(np.cumsum(df_adjusted['pep_updated'][pep_order])).astype(int)
+  num_fp = np.ceil(np.cumsum(df_adjusted['dart_PEP'][pep_order])).astype(int)
   # count the number of occurrences of num_fp and sum them up to get the sample size for each
   # discrete false positive # threshold
   fp_counts = np.cumsum(num_fp.value_counts().sort_index()).values
   # divide # of false positivies by sample size to get q-value. sorting the index order brings
   # the order of values back to their original form
-  df_adjusted['q-value'] = (num_fp / fp_counts[num_fp-1]).values[np.argsort(pep_order.values)]
+  df_adjusted['dart_qval'] = (num_fp / fp_counts[num_fp-1]).values[np.argsort(pep_order.values)]
 
   # set null PEPs and q-values back to nan
   if null_peps.sum() > 0:
-    df_adjusted['pep_updated'][null_peps] = np.nan
-    df_adjusted['q-value'][null_peps] = np.nan
+    df_adjusted['dart_PEP'][null_peps] = np.nan
+    df_adjusted['dart_qval'][null_peps] = np.nan
 
+  # rename 'remove' column - which indicates whether or not the PSM participated in the
+  # DART-ID alignment and update
+  df_adjusted['participated'] = ~df_adjusted['remove']
 
   ## Run protein inference (fido)?
   if 'run_pi' in config and config['run_pi']:
@@ -483,7 +486,10 @@ def main():
 
       'sequence_column':         config['col_names']['sequence'],
       #'error_prob_column':       config['col_names']['pep']
-      'error_prob_column':       'pep_updated'
+      'error_prob_column':       'dart_PEP',
+
+      # pass in output folder so fido can save some intermediate and output files
+      'output': config['output']
     }
     logger.info('parameter_map for fido:')
     logger.info(str(parameter_map))
@@ -492,7 +498,7 @@ def main():
     df_adjusted = run_internal(df_adjusted, parameter_map)
 
     logger.info('Fido finished')
-    logger.info('Protein FDR placed in \"prot_fdr\" column')
+    logger.info('FDR for PSM\'s razor protein, from protein inference, placed in \"razor_protein_fdr\" column')
 
   # print figures?
   if config['print_figures']:
@@ -500,13 +506,13 @@ def main():
 
   # overwrite PEP?
   # if true, then store old PEP in "Spectra PEP" column,
-  # and put the updated PEP in "PEP" column.
-  # then drop the pep_new and pep_updated columns
+  # and put the dart PEP in "PEP" column.
+  # then drop the pep_new and dart_PEP columns
   if config['overwrite_pep']:
     logger.info('Overwriting PEP column with new PEP. Saving old PEP in \"Spectra PEP\" column.')
     df_adjusted['Spectra PEP'] = df_adjusted[config['col_names']['pep']]
-    df_adjusted[config['col_names']['pep']] = df_adjusted['pep_updated']
-    df_adjusted = df_adjusted.drop(['pep_new', 'pep_updated'], axis=1)
+    df_adjusted[config['col_names']['pep']] = df_adjusted['dart_PEP']
+    df_adjusted = df_adjusted.drop(['pep_new', 'dart_PEP'], axis=1)
 
   # tell the user whether or not to expect diagnostic columns
   if config['add_diagnostic_cols']:

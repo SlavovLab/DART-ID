@@ -11,6 +11,7 @@ import io
 import itertools
 import logging
 import networkx as nx
+import os
 import pandas as pd
 import random
 import sys
@@ -1034,16 +1035,21 @@ def run_internal(df, parameter_map):
   out_df = pd.DataFrame({'prot': ids, 'prob': probs})\
     .sort_values('prob', ascending=False).reset_index(drop=True)
 
-  #out_df.to_csv('~/git/RTLib/fido_out.txt', sep='\t', index=False)
   #print(np.percentile(out_df['prob'], np.arange(10, 100, 10)))
 
   out_df['error'] = 1 - out_df['prob']
   out_df['fdr'] = np.cumsum(out_df['error'].values) / np.arange(1, out_df.shape[0]+1, 1)
 
-  fdr_series = pd.Series(out_df['fdr'].values, index=out_df['prot'].values)
+  # save output from fido to a file, protein_fdr.txt
+  logger.info('Writing Fido protein inference output to file')
+  out_df.to_csv(os.path.join(parameter_map['output'], 'protein_fdr.txt'), 
+    sep='\t', index=False)
 
-  df['prot_fdr'] = df[parameter_map['leading_protein_column']].map(fdr_series)
-  #df['prot_fdr'] = df['Leading razor protein'].map(fdr_series)
+  # attach PSM razor protein FDR to the input dataframe
+  logger.info('Attaching razor protein FDR to output')
+  fdr_series = pd.Series(out_df['fdr'].values, index=out_df['prot'].values)
+  df['razor_protein_fdr'] = df[parameter_map['leading_protein_column']].map(fdr_series)
+
   #print(np.sum(df['prot_fdr'] < 0.1), df.shape[0])
 
   return df
@@ -1088,6 +1094,8 @@ def pd_main():
     help='column name for the peptide sequence of each PSM')
   parser.add_argument('--error-prob-column', type=str, default='PEP',
     help='column name for the error probability of each PSM')
+
+  parser.add_argument('-o', '--output', type=str, default=os.getcwd(), help='Folder to output protein_fdr list and intermediate fido files')
 
   args = parser.parse_args()
 
