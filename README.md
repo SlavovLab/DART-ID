@@ -26,21 +26,25 @@ The installation requires Python >= 3.6, and has been tested on Windows 8 / OSX 
 
 If installation of ```pip``` is not working, download the source code from git and run DART-ID with the provided shell script.
 
-### Linux/OSX:
 ```
 git clone https://github.com/SlavovLab/DART-ID
 cd DART-ID
 ./dart_id.sh
 ```
 
-### Windows:
+We recommend using a [conda environment](https://conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html) to run DART-ID from source, so as to avoid any package versioning issues. You can create the same environment as us by using either the provided ```environment.yml``` spec or ```spec-file.txt``` (Mac OSX only). 
 
-Instead of running ```dart_id.sh``` from the command line, run it directly with ```python``` instead.
+```
+conda env create -f environment.yml -n dart & source activate dart
+```
 
-# Known bugs:
+OR:
 
-- ```dart_id``` not found after install. Please check where ```pip``` has installed the executable and add the folder to your path. For Anaconda, this will typically be ```<anaconda_path>/bin```. For managed installations of python, set the ```--user``` flag to the install command to install in your user folder and not in the main Anaconda/Python folder.
-- I/O issues when outputting to a Google File Stream folder. Output to a local folder instead, and then drag it into Google File Stream later
+```
+conda create -name dart --file spec-file.txt & source activate dart
+```
+
+Alternatively, you can run the provided ```set_environment.sh``` script, which does this all for you.
 
 Usage
 ----------
