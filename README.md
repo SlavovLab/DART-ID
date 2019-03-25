@@ -37,11 +37,6 @@ cd DART-ID
 
 Instead of running ```dart_id.sh``` from the command line, run it directly with ```python``` instead.
 
-# Known bugs:
-
-- ```dart_id``` not found after install. Please check where ```pip``` has installed the executable and add the folder to your path. For Anaconda, this will typically be ```<anaconda_path>/bin```. For managed installations of python, set the ```--user``` flag to the install command to install in your user folder and not in the main Anaconda/Python folder.
-- I/O issues when outputting to a Google File Stream folder. Output to a local folder instead, and then drag it into Google File Stream later
-
 Usage
 ----------
 
