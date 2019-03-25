@@ -1032,25 +1032,25 @@ def run_internal(df, parameter_map):
   probs = [prots_to_posteriors[_id] for _id in ids]
   ids = [_id['id'] for _id in ids]
   
-  out_df = pd.DataFrame({'prot': ids, 'prob': probs})\
-    .sort_values('prob', ascending=False).reset_index(drop=True)
+  out_df = pd.DataFrame({'Protein': ids, 'Probability': probs})\
+    .sort_values('Probability', ascending=False).reset_index(drop=True)
 
-  #print(np.percentile(out_df['prob'], np.arange(10, 100, 10)))
+  #print(np.percentile(out_df['Probability'], np.arange(10, 100, 10)))
 
-  out_df['error'] = 1 - out_df['prob']
-  out_df['fdr'] = np.cumsum(out_df['error'].values) / np.arange(1, out_df.shape[0]+1, 1)
+  out_df['Error Probability'] = 1 - out_df['Probability']
+  out_df['q-value'] = np.cumsum(out_df['Error Probability'].values) / np.arange(1, out_df.shape[0]+1, 1)
 
   # save output from fido to a file, protein_fdr.txt
-  logger.info('Writing Fido protein inference output to file')
+  logger.info('Writing Fido protein inference output to file: {}'.format(os.path.join(parameter_map['output'], 'protein_fdr.txt')))
   out_df.to_csv(os.path.join(parameter_map['output'], 'protein_fdr.txt'), 
     sep='\t', index=False)
 
   # attach PSM razor protein FDR to the input dataframe
   logger.info('Attaching razor protein FDR to output')
-  fdr_series = pd.Series(out_df['fdr'].values, index=out_df['prot'].values)
+  fdr_series = pd.Series(out_df['q-value'].values, index=out_df['Protein'].values)
   df['razor_protein_fdr'] = df[parameter_map['leading_protein_column']].map(fdr_series)
 
-  #print(np.sum(df['prot_fdr'] < 0.1), df.shape[0])
+  #print(np.sum(df['razor_protein_fdr'] < 0.1), df.shape[0])
 
   return df
   
