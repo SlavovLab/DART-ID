@@ -18,7 +18,7 @@ def gen(df, config, params, output_path):
   num_experiments = len(df['exp_id'].unique())
   df['residual'] = df[config['col_names']['retention_time']] - df['muij']
 
-  plots_per_row = 20
+  plots_per_row = 30
   if num_experiments < plots_per_row:
     plots_per_row = num_experiments
 
@@ -46,7 +46,7 @@ def gen(df, config, params, output_path):
       ax.set_ylabel('Residual RT (min)')
       
   #plt.subplots_adjust(hspace=0.6, wspace=0.3)
-  plt.tight_layout()
+  #plt.tight_layout()
 
   # finalize and save figure
   f = plt.gcf()

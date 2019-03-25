@@ -18,20 +18,40 @@
       </button>
       <div class="nav nav-tabs" id="nav-tab" role="tablist">
         <a class="nav-item nav-link active" id="nav-home-tab" data-toggle="tab" href="#nav-home" role="tab" aria-controls="nav-home" aria-selected="true">Home</a>
-        <a class="nav-item nav-link" id="nav-profile-tab" data-toggle="tab" href="#nav-profile" role="tab" aria-controls="nav-profile" aria-selected="false">Experiment Summary</a>
+        <a class="nav-item nav-link" id="nav-experiment-summary-tab" data-toggle="tab" href="#nav-experiment-summary" role="tab" aria-controls="nav-experiment-summary" aria-selected="false">Experiment Summary</a>
       </div>
     </nav>
               
     <div class="tab-content" id="nav-tabContent">
+      
       <div class="tab-pane fade show active" id="nav-home" role="tabpanel" aria-labelledby="nav-home-tab">
-        ...
+
+
+        <h3>Residual Summary</h3>
+
+        <div class="figure-row">
+          <img class="figure-img" src="figures/residuals_violin.png">
+        </div>
+
+        <h3>PEP Update Summary</h3>
+
+        <div class="figure-row">
+          <div class="figure-col">
+            <img class="figure-img" src="figures/pep_new_scatterplot.png">
+          </div>
+          <div class="figure-col">
+            <img class="figure-img" src="figures/fold_change_ids.png">
+          </div>
+        </div>
+
       </div>
-      <div class="tab-pane fade" id="nav-profile" role="tabpanel" aria-labelledby="nav-profile-tab">
+
+      <div class="tab-pane fade" id="nav-experiment-summary" role="tabpanel" aria-labelledby="nav-experiment-summary-tab">
         
 
         <div class="row"><div class="col-xs-12">
           <!-- Summary Table -->
-          $exp_table_str
+          <!-- $exp_table_str -->
         </div></div>
       
         <div class="row"><div class="col-xs-12">
@@ -65,33 +85,6 @@
       </div>
     </div>
 
-    
-
-    
-
-    
-
-    <h3>Residual Summary</h3>
-
-    <div class="figure-row">
-      <img class="figure-img" src="figures/residuals_violin.png">
-    </div>
-
-    <h3>PEP Update Summary</h3>
-
-    <div class="figure-row">
-      <div class="figure-col">
-        <img class="figure-img" src="figures/pep_new_scatterplot.png">
-      </div>
-      <div class="figure-col">
-        <img class="figure-img" src="figures/fold_change_ids.png">
-      </div>
-    </div>
-    <div class="figure-row">
-      <div class="figure-col">
-        <img class="figure-img" src="figures/ms1_intensity_validation.png">
-      </div>
-    </div>
 
     <script type="text/javascript" src="figures/jquery-3.3.1.slim.min.js"></script>
     <script type="text/javascript" src="figures/bootstrap.min.js"></script>

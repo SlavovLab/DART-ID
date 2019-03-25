@@ -27,15 +27,15 @@ def gen(df, config, params, output_path):
   ax.set_xlim(interval)
   ax.set_ylim(interval)
   ax.set_xlabel('Spectral PEP', fontsize=16)
-  ax.set_ylabel('Spectral + RT PEP', fontsize=16)
+  ax.set_ylabel('DART-ID PEP', fontsize=16)
   interval = np.arange(-10, 1, 2)
   ax.set_xticks(interval)
   ax.set_yticks(interval)
   ax.set_xticklabels(['$10^{{{}}}$'.format(i) for i in interval], fontsize=12)
   ax.set_yticklabels(['$10^{{{}}}$'.format(i) for i in interval], fontsize=12)
 
-  f.set_size_inches(7, 7)
-  plt.tight_layout()
+  f.set_size_inches(7, 6)
+  # plt.tight_layout()
 
   cbar = plt.colorbar(hst[3], ax=ax)
   cbar.set_label('Frequency', fontsize=16, labelpad=20, ha='center', va='top')
@@ -50,8 +50,8 @@ def gen(df, config, params, output_path):
   f.clf()
 
   # Fold-change increase
-  num_points=50
-  x = np.logspace(-5, 0, num=num_points)
+  num_points=100
+  x = np.logspace(-3, -1, num=num_points)
   y = np.zeros(num_points)
   y2 = np.zeros(num_points)
   y3 = np.zeros(num_points)
@@ -67,26 +67,26 @@ def gen(df, config, params, output_path):
   ax1.semilogx(x, (y*100)-100, '-b')
   ax1.plot([np.min(x), np.max(x)], [0, 0], '-r', linestyle='dashed', linewidth=2)
   ax1.plot([1e-2, 1e-2], [-1000, 1000], '-k', linestyle='dashed')
-  ax1.set_xlim([1e-5, 1])
+  ax2.set_xlim([1e-3, 1e-1])
   ax1.set_ylim([-25, np.max(y)*100-50])
   ax1.set_xlabel('PEP Threshold', fontsize=16)
   ax1.set_ylabel('Increase (%)', fontsize=16)
-  ax1.set_title('Increase in confident PSMs\nas a function of confidence threshold', fontsize=16)
+  ax1.set_title('Increase in confident PSMs', fontsize=16)
 
   ax2.semilogx(x, y2, '-b', linewidth=1, label='Spectra PEP')
-  ax2.semilogx(x, y3, '-g', linewidth=1, label='Spectra+RT PEP')
+  ax2.semilogx(x, y3, '-g', linewidth=1, label='DART-ID PEP')
   #ax2.fill_between(x, 0, y2)
   ax2.plot([1e-2, 1e-2], [-1000, 1000], '-k', linestyle='dashed')
-  ax2.set_xlim([1e-5, 1])
+  ax2.set_xlim([1e-3, 1e-1])
   ax2.set_ylim([0, 1.05])
   ax2.set_xlabel('PEP Threshold', fontsize=16)
   ax2.set_ylabel('Fraction', fontsize=16)
-  ax2.set_title('Fraction of PSMs\nunder confidence threshold', fontsize=16)
+  ax2.set_title('Fraction of confident PSMs', fontsize=16)
   ax2.legend(fontsize=16)
   plt.subplots_adjust(hspace=0.6, wspace=0.3)
 
   f.set_size_inches(5, 7)
-  plt.tight_layout()
+  # plt.tight_layout()
 
   fname = os.path.join(figures_path, 'fold_change_ids.png')
   logger.info('Saving figure to {} ...'.format(fname))
