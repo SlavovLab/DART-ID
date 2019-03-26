@@ -17,18 +17,20 @@ def gen(df, config, params, output_path):
   col_names = config['col_names']
 
   # PEP vs. PEP.new scatterplot
-  inds = (~pd.isnull(df['pep_new'])) & (df['pep_new'] > 1e-10) & (df[col_names['pep']] > 1e-10)
+  inds = (~pd.isnull(df['pep_new'])) & (df['pep_new'] > 1e-5) & (df[col_names['pep']] > 1e-5)
 
   f, ax = plt.subplots()
-  hst = ax.hist2d(np.log10(df[col_names['pep']][inds]), np.log10(df['pep_new'][inds]), bins=(100, 100), cmap=plt.cm.Reds)
-  ax.plot([-10, 0], [-10, 0], '-r')
+  hst = ax.hist2d(np.log10(df[col_names['pep']][inds]), np.log10(df['pep_new'][inds]), bins=(50, 50), cmap=plt.cm.Reds)
+  ax.plot([-5, 0], [-5, 0], '-r')
 
-  interval = (-10, 0)
+  ax.grid()
+
+  interval = (-5, 0)
   ax.set_xlim(interval)
   ax.set_ylim(interval)
   ax.set_xlabel('Spectral PEP', fontsize=16)
   ax.set_ylabel('DART-ID PEP', fontsize=16)
-  interval = np.arange(-10, 1, 2)
+  interval = np.arange(-5, 1, 1)
   ax.set_xticks(interval)
   ax.set_yticks(interval)
   ax.set_xticklabels(['$10^{{{}}}$'.format(i) for i in interval], fontsize=12)
@@ -51,7 +53,7 @@ def gen(df, config, params, output_path):
 
   # Fold-change increase
   num_points=100
-  x = np.logspace(-3, -1, num=num_points)
+  x = np.logspace(-5, 0, num=num_points)
   y = np.zeros(num_points)
   y2 = np.zeros(num_points)
   y3 = np.zeros(num_points)
@@ -65,9 +67,10 @@ def gen(df, config, params, output_path):
   f, (ax1, ax2) = plt.subplots(2, 1)
 
   ax1.semilogx(x, (y*100)-100, '-b')
-  ax1.plot([np.min(x), np.max(x)], [0, 0], '-r', linestyle='dashed', linewidth=2)
+  # ax1.plot([np.min(x), np.max(x)], [0, 0], '-r', linestyle='dashed', linewidth=2)
   ax1.plot([1e-2, 1e-2], [-1000, 1000], '-k', linestyle='dashed')
-  ax2.set_xlim([1e-3, 1e-1])
+  ax1.grid()
+  ax1.set_xlim([3e-4, 3e-1])
   ax1.set_ylim([-25, np.max(y)*100-50])
   ax1.set_xlabel('PEP Threshold', fontsize=16)
   ax1.set_ylabel('Increase (%)', fontsize=16)
@@ -77,7 +80,8 @@ def gen(df, config, params, output_path):
   ax2.semilogx(x, y3, '-g', linewidth=1, label='DART-ID PEP')
   #ax2.fill_between(x, 0, y2)
   ax2.plot([1e-2, 1e-2], [-1000, 1000], '-k', linestyle='dashed')
-  ax2.set_xlim([1e-3, 1e-1])
+  ax2.grid()
+  ax2.set_xlim([3e-4, 3e-1])
   ax2.set_ylim([0, 1.05])
   ax2.set_xlabel('PEP Threshold', fontsize=16)
   ax2.set_ylabel('Fraction', fontsize=16)

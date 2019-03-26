@@ -85,7 +85,7 @@ def gen(df, config, params, output_path):
     plt.ylabel("Residual RT (min)")
 
     # add some space between subplots
-    plt.subplots_adjust(hspace=0.3, wspace=0.3)
+    plt.subplots_adjust(hspace=0.3, wspace=0.35, bottom=0.2, right=0.85)
 
     # finalize and save figure
     fig = plt.gcf()
