@@ -318,7 +318,7 @@ def update(dfa, params, config):
 def write_output(df, out_path, config):
   # remove diagnostic columns, unless they are specified to be kept
   if 'add_diagnostic_cols' not in config or config['add_diagnostic_cols'] == False:
-    df = df.drop(['pep_new', 'remove', 'exclude', 'mu', 'muij', 
+    df = df.drop(['pep_new', 'participated', 'exclude', 'mu', 'muij', 
       'rt_minus', 'rt_plus', 'sigmaij', 'residual',
       'input_id', 'exp_id', 'peptide_id', 'stan_peptide_id'], axis=1)
 
