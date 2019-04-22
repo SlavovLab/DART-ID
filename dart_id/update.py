@@ -370,7 +370,7 @@ def main():
 
   # load params, either from a defined folder or from running the alignment
   params = {}
-  if type(config['params_folder']) is str:
+  if 'params_folder' in config and type(config['params_folder']) is str:
     params = load_params_from_file(config['params_folder'])
   else:
     logger.info('Beginning alignment procedure')
