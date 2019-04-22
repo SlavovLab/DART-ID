@@ -35,13 +35,13 @@ cd DART-ID
 We recommend using a [conda environment](https://conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html) to run DART-ID from source, so as to avoid any package versioning issues. You can create the same environment as us by using either the provided ```environment.yml``` spec or ```spec-file.txt``` (Mac OSX only). 
 
 ```
-conda create -f environment.yml -n dart & source activate dart
+conda create -f environment.yml -n dart && source activate dart
 ```
 
 OR:
 
 ```
-conda create -name dart --file spec-file.txt & source activate dart
+conda create -name dart --file spec-file.txt && source activate dart
 ```
 
 Alternatively, you can run the provided ```set_environment.sh``` script, which does this all for you.
