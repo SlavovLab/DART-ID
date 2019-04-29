@@ -2,6 +2,7 @@
 # coding: utf-8
 
 import argparse
+import json
 import logging
 import numpy as np
 import os
@@ -61,21 +62,21 @@ def align(dfa, config):
   # STAN code is all 1-indexed, so add 1 to all indexed forms of data
   stan_data = {
     'num_experiments': num_experiments,
-    'num_peptides': num_peptides,
+    'num_peptides': num_peptides.tolist(),
     'num_pep_exp_pairs': num_pep_exp_pairs,
     'num_total_observations': num_observations,
-    'muij_map': muij_map+1,
+    'muij_map': (muij_map+1).tolist(),
     'muij_to_pep': (muij_to_pep+1).tolist(),
     'muij_to_exp': (muij_to_exp+1).tolist(),
     'experiment_id': (dff['exp_id']+1).tolist(),
     'peptide_id': (dff['stan_peptide_id']+1).tolist(),
     'retention_times': dff['retention_time'].tolist(),
-    'mean_log_rt': np.mean(np.log(dff['retention_time'])),
-    'sd_log_rt': np.std(np.log(dff['retention_time'])),
-    'rt_mean': np.mean(dff['retention_time']),
-    'rt_std': np.std(dff['retention_time']),
+    'mean_log_rt': np.mean(np.log(dff['retention_time'])).tolist(),
+    'sd_log_rt': np.std(np.log(dff['retention_time'])).tolist(),
+    'rt_mean': np.mean(dff['retention_time']).tolist(),
+    'rt_std': np.std(dff['retention_time']).tolist(),
     'pep': dff['pep'].tolist(),
-    'max_retention_time': dff['retention_time'].max()
+    'max_retention_time': dff['retention_time'].max().tolist()
   }
 
   logger.info('Initializing fit priors for {} peptides...'.format(num_peptides))
@@ -97,6 +98,19 @@ def align(dfa, config):
   # add sigma statistics to data list, to build sampling dist off of
   #stan_data['sigma_mean'] = np.mean(sigma_init)
   #stan_data['sigma_std'] = np.std(sigma_init)
+  
+  # allow user to save STAN input data to separate files, so they can run STAN standalone
+  # (with cmdstan). Useful for debugging alignment errors.
+  if 'save_stan_input' in config and config['save_stan_input']:
+    logger.info('Saving STAN input data, for standalone STAN runs, in JSON format.')
+
+    with open(os.path.join(config['output'], 'stan_input.json'), 'w') as f:
+      logger.info('Saving input data to stan_input.json')
+      f.write(json.dumps(stan_data))
+    
+    with open(os.path.join(config['output'], 'stan_init_list.json'), 'w') as f:
+      logger.info('Saving initial values to stan_init_list.json')
+      f.write(json.dumps(init_list))
 
   # run STAN, store optimization parameters
   sm = StanModel_cache(model)

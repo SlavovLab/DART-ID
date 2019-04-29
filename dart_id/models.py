@@ -76,7 +76,8 @@ def generate_inits_linear(dff, config):
     # calculate new set of canonical RTs based on linear regression params
     mu_pred = (rt_distorted - beta_init[0][dff['exp_id']]) / beta_init[1][dff['exp_id']] 
     # make sure new canonical RTs are within same range as distorted RTs
-    mu_pred[mu_pred <= 0] = rt_distorted.min()
+    mu_pred[mu_pred <= config['mu_min']] = config['mu_min']
+    #mu_pred[mu_pred <= 0] = rt_distorted.min()
     mu_pred[mu_pred >= rt_distorted.max()] = rt_distorted.max()
     dft['retention_time'] = np.copy(mu_pred)
 
@@ -107,12 +108,12 @@ def generate_inits_linear(dff, config):
 
   # create prior list for STAN
   init_list = {
-    'mu': mu_init,
+    'mu': mu_init.tolist(),
     #'sigma': sigma_init,
-    'beta_0': beta_0,
-    'beta_1': beta_1,
-    'sigma_slope': np.repeat(0.1, num_experiments),
-    'sigma_intercept': np.repeat(0.1, num_experiments)
+    'beta_0': beta_0.tolist(),
+    'beta_1': beta_1.tolist(),
+    'sigma_slope': np.repeat(0.1, num_experiments).tolist(),
+    'sigma_intercept': np.repeat(0.1, num_experiments).tolist()
   }
 
   return init_list
@@ -128,10 +129,10 @@ def generate_inits_two_piece_linear(dff, config):
   beta_2[beta_2 <= 0] = 1e-3
 
   # set beta_2
-  init_list['beta_2'] = beta_2
+  init_list['beta_2'] = beta_2.tolist()
   # set split point to be the median canonical RT
   init_list['split_point'] = np.repeat(np.median(init_list['mu']), 
-                                       len(init_list['beta_0']))
+                                       len(init_list['beta_0'])).tolist()
 
   return init_list
 

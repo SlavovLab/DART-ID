@@ -70,6 +70,15 @@ mu_min: 1
 # slowly increasing this value to give STAN more room to iterate.
 rt_distortion: 0
 
+# Save the input data that is fed to the STAN program?
+# If true, two new files will be created in the output folder: 
+# stan_input.json and stan_init_list.json
+# which contain the input data and initial values for STAN, respectively.
+# Needed to run STAN standalone (with cmdstan: https://mc-stan.org/users/interfaces/cmdstan)
+# Useful for debugging alignment errors and crashes. Set save_iterations to true to
+# get a copy of the optimization state at each iteration.
+save_stan_input: false
+
 ## Update Options
 ## ==========================
 

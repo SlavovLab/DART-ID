@@ -63,6 +63,8 @@ stan_attempts: 1
 mu_min: 1
 rt_distortion: 1
 
+save_stan_input: false
+
 ## Update Options
 ## ==========================
 
