@@ -2,6 +2,8 @@
 # coding: utf-8
 
 import logging
+import matplotlib
+matplotlib.use('PS')
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
