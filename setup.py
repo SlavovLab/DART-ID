@@ -44,7 +44,8 @@ setup(
   #setup_requires=[],
   install_requires=[
     'pyyaml>=3.12',
-    'pystan>=2.17.1.0',
+    #'pystan>=2.17.1.0',
+    'pystan @ git+https://github.com/blahoink/pystan@optim-error',
     'numpy>=1.14.3',
     'scipy>=1.0.0',
     'pandas>=0.22.0',
@@ -59,7 +60,7 @@ setup(
   },
   package_data={
     'dart_id': [
-      'models/*.stan',         # STAN fits
+      'models/*.stan',       # STAN fits
       'figure_gen/*',        # figure generation scripts
       'figure_resources/*',  # figure generation resources
       'fido/*'               # fido scripts
