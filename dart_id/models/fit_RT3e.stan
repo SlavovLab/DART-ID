@@ -43,10 +43,10 @@ parameters {
   // sigma_slope_global = average sigma slope for the set of pep-exp pairs.
   //                      "moving prior" for sigma_slopes of pairs moving forwards
   // sigma_slope = slope of line
-  // sigma_intercept = y-intercept of line
+  // sigma_intercept = y-intercept of line - i.e., the smallest sigma_ij possible in that experiment
   real<lower=0> sigma_slope_global;
   real<lower=0> sigma_slope[num_experiments];
-  real<lower=0> sigma_intercept[num_experiments];
+  real<lower=0.01> sigma_intercept[num_experiments];
 
 }
 transformed parameters {
@@ -54,7 +54,7 @@ transformed parameters {
   
   // sigma_ij is the spread of the laplace distribution of 
   // peptide i in experiment j
-  real<lower=0> sigma_ij[num_pep_exp_pairs];
+  real<lower=0.01> sigma_ij[num_pep_exp_pairs];
   
   // muij is the mean retention time for peptide i in experiment j 
   real<lower=0, upper=max_retention_time> muij[num_pep_exp_pairs];
