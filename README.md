@@ -38,12 +38,6 @@ We recommend using a [conda environment](https://conda.io/projects/conda/en/late
 conda env create -f environment.yml -n dart && source activate dart
 ```
 
-OR:
-
-```
-conda create -name dart --file spec-file.txt && source activate dart
-```
-
 Alternatively, you can run the provided ```set_environment.sh``` script, which does this all for you.
 
 Usage
