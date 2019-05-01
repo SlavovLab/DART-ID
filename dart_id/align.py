@@ -9,13 +9,21 @@ import os
 import pandas as pd
 import pickle
 import pkg_resources
-import pystan
+import platform
+#import pystan
 import time
+import sys
+
+#sys.path.append('/Users/albert/git/pystan')
+import pystan
+
 
 from dart_id.converter import process_files
 from dart_id.exceptions import *
 from dart_id.models import models, get_model_from_config
 from dart_id.helper import *
+from distutils.sysconfig import get_config_var
+from distutils.version import LooseVersion
 from hashlib import md5
 from scipy.stats import norm, lognorm
 
@@ -115,6 +123,7 @@ def align(dfa, config):
   # run STAN, store optimization parameters
   sm = StanModel_cache(model)
 
+  """
   logger.info('Running STAN for {} iterations and {} attempt(s) in case of failure'.format(config['stan_iters'], config['stan_attempts']))
 
   # sometimes STAN will error out due to bad RNG or bad priors
@@ -123,36 +132,54 @@ def align(dfa, config):
   counter = 1
   op = None
   while op is None and counter <= config['stan_attempts']:
+
     try:
       # run STAN and time it
       logger.info('Starting STAN Model | Attempt #{} ...'.format(counter))
       start = time.time()
 
-      op = sm.optimizing(data=stan_data, init=init_list, 
-        iter=config['stan_iters'], verbose=config['verbose'])
+      op = sm.optimizing(data=stan_data, init=init_list, as_vector=False,
+        iter=config['stan_iters'], verbose=config['verbose'],
+        save_iterations=True, tol_param=1e-8)
+      print(op)
 
       logger.info('STAN Model Finished. Run time: {:.3f} seconds.'.format(
         time.time() - start))
+
     except RuntimeError as e:
       logger.error(str(e))
       counter = counter + 1
 
-  #print(op)
-
   # if loop terminates without any optimization parameters, then STAN failed
   if op is None:
     raise STANError('Maximum number of tries exceeded for STAN. Please re-run process or choose different parameters.')
+  """
+
+  # run STAN and time it
+  logger.info('Starting STAN Model...')
+  start = time.time()
+
+  op = sm.optimizing(data=stan_data, init=init_list, as_vector=False,
+    iter=config['stan_iters'], verbose=config['verbose'])
+  print(op)
+
+  if op is None:
+    raise STANError('STAN did not return any parameters. Please check that pystan was installed correctly.')
+
+  logger.info('STAN Model Finished. Run time: {:.3f} seconds.'.format(
+    time.time() - start))
 
   # exp_params - contains regression parameters for each experiment
   # peptide_params - contains canonical RT (mu) for each peptide sequence
   # pair_params - contains muij and sigmaij for each peptide-experiment pair
   #               not exactly necessary as these can be extrapolated from 
   #               exp_params and peptide_params
-  # 
+  
+  pars = op['par']
   exp_params = pd.DataFrame({ 
-    key: op[key] for key in model['exp_keys']})
-  peptide_params = pd.DataFrame({ key: op[key] for key in model['peptide_keys']})
-  pair_params = pd.DataFrame({ key: op[key] for key in model['pair_keys']})
+    key: pars[key] for key in model['exp_keys']})
+  peptide_params = pd.DataFrame({ key: pars[key] for key in model['peptide_keys']})
+  pair_params = pd.DataFrame({ key: pars[key] for key in model['pair_keys']})
 
   # add exp_id to exp_params
   exp_params['exp_id'] = np.sort(dff['exp_id'].unique())
@@ -206,22 +233,43 @@ def StanModel_cache(model):
   code_hash = md5(model_code.encode('ascii')).hexdigest()
   cache_fn = os.path.join(dirname, 'models/cached-model-{}-{}.pkl'.format(
     model_name, code_hash))
-
+  
   try:
       # load cached model from file
       sm = pickle.load(open(cache_fn, 'rb'))
   except:
       # compile model
       logger.info('Compiling STAN Model {} ...'.format(model_name))
+
+      # https://github.com/pandas-dev/pandas/commit/459ebb2ad309938e9e68ae79e3bdb312efac0ca2
+      # For mac, ensure extensions are built for macos 10.9 when compiling on a
+      # 10.9 system or above, overriding distuitls behaviour which is to target
+      # the version that python was built for. This may be overridden by setting
+      # MACOSX_DEPLOYMENT_TARGET before calling setup.py
+      if sys.platform == 'darwin':
+        if 'MACOSX_DEPLOYMENT_TARGET' not in os.environ:
+          current_system = LooseVersion(platform.mac_ver()[0])
+          python_target = LooseVersion(
+            get_config_var('MACOSX_DEPLOYMENT_TARGET'))
+          if python_target < '10.9' and current_system >= '10.9':
+            os.environ['MACOSX_DEPLOYMENT_TARGET'] = '10.9'
+
       sm = pystan.StanModel(model_name=model_name, model_code=model_code)
       with open(cache_fn, 'wb') as f:
           # save model to file
           pickle.dump(sm, f)
   else:
       logger.info('Using cached StanModel: {}_{}'.format(model_name, code_hash))
-
+  
   return sm
 
+"""
+  logger.info('Compiling STAN Model {} ...'.format(model_name))
+  sm = pystan.StanModel(model_name=model_name, model_code=model_code)
+  with open(cache_fn, 'wb') as f:
+      # save model to file
+      pickle.dump(sm, f)
+"""
 
 def main():
   # load command-line args
