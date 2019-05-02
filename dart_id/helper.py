@@ -192,4 +192,8 @@ def weighted_median(values, weights):
     (np.cumsum(weights) - (0.5 * weights)) / np.sum(weights),
     values)
     
+def convert_numpy_scalar(x):
+  if type(x) == float or type(x) == int:
+    return x
+  else: return x.tolist()
 
