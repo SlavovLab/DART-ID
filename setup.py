@@ -42,6 +42,7 @@ setup(
   packages=['dart_id'],
   #libraries=[],
   #setup_requires=[],
+  python_requires='>=3.4,<3.7',
   install_requires=[
     'pyyaml==3.12',
     #'pystan==2.17.1.0',
