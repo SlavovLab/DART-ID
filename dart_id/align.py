@@ -84,23 +84,26 @@ def align(dfa, config):
   # build dictionary of data to feed to STAN
   # revert all data to primitive types to avoid problems later
   # STAN code is all 1-indexed, so add 1 to all indexed forms of data
+  #
+  # convert any numpy objects to base python types/lists, so they can
+  # be printed in non-binary form when this dict is converted to JSON
   stan_data = {
-    'num_experiments': num_experiments,
-    'num_peptides': num_peptides.tolist(),
-    'num_pep_exp_pairs': num_pep_exp_pairs,
-    'num_total_observations': num_observations,
+    'num_experiments': convert_numpy_scalar(num_experiments),
+    'num_peptides': convert_numpy_scalar(num_peptides),
+    'num_pep_exp_pairs': convert_numpy_scalar(num_pep_exp_pairs),
+    'num_total_observations': convert_numpy_scalar(num_observations),
     'muij_map': (muij_map+1).tolist(),
     'muij_to_pep': (muij_to_pep+1).tolist(),
     'muij_to_exp': (muij_to_exp+1).tolist(),
     'experiment_id': (dff['exp_id']+1).tolist(),
     'peptide_id': (dff['stan_peptide_id']+1).tolist(),
     'retention_times': dff['retention_time'].tolist(),
-    'mean_log_rt': np.mean(np.log(dff['retention_time'])).tolist(),
-    'sd_log_rt': np.std(np.log(dff['retention_time'])).tolist(),
-    'rt_mean': np.mean(dff['retention_time']).tolist(),
-    'rt_std': np.std(dff['retention_time']).tolist(),
+    'mean_log_rt': convert_numpy_scalar(np.mean(np.log(dff['retention_time']))),
+    'sd_log_rt': convert_numpy_scalar(np.std(np.log(dff['retention_time']))),
+    'rt_mean': convert_numpy_scalar(np.mean(dff['retention_time'])),
+    'rt_std': convert_numpy_scalar(np.std(dff['retention_time'])),
     'pep': dff['pep'].tolist(),
-    'max_retention_time': dff['retention_time'].max().tolist()
+    'max_retention_time': convert_numpy_scalar(dff['retention_time'].max())
   }
 
   logger.info('Initializing fit priors for {} peptides...'.format(num_peptides))
