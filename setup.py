@@ -44,14 +44,14 @@ setup(
   #setup_requires=[],
   python_requires='>=3.4,<3.7',
   install_requires=[
-    'pyyaml==3.12',
+    'pyyaml>=3.12',
     #'pystan==2.17.1.0',
     'pystan @ git+https://github.com/blahoink/pystan@optim-error',
-    'numpy==1.16.3',
-    'scipy==1.0.0',
-    'pandas==0.22.0',
-    'matplotlib==2.1.2',
-    'networkx==2.1'
+    'numpy>=1.16.3',
+    'scipy>=1.0.0',
+    'pandas>=0.22.0',
+    'matplotlib>=2.1.2',
+    'networkx>=2.1'
   ],
   #test_requires=[
   #  'pytest'
