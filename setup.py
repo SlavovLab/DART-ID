@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # coding: utf-8
 
+import glob
 import io
 import os
 
@@ -8,6 +9,17 @@ from os import path
 from setuptools import setup, find_packages, Command
 
 name = 'dart_id'
+test_name = 'dart_id-fresca'
+
+data_files = []
+
+# load cmdstan model binaries
+directories = glob.glob('dart_id/models/**/*')
+for directory in directories:
+    files = glob.glob(directory+'/*')
+    data_files.append((directory, files))
+# then pass data_files to setup()
+print(data_files)
 
 setup(
   name=name,
@@ -66,7 +78,7 @@ setup(
     ]
   },
   # data outside the package
-  # data_files=[('my_data', ['data/data_file'])],
+  data_files=data_files,
   
   entry_points={
     'console_scripts': [
