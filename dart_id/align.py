@@ -7,30 +7,46 @@ import logging
 import numpy as np
 import os
 import pandas as pd
-import pickle
 import pkg_resources
 import platform
-#import pystan
-import time
+import re
+try:
+  import subprocess32 as subprocess
+except ImportError:
+  import subprocess
 import sys
-
-#sys.path.append('/Users/albert/git/pystan')
-import pystan
-
+import time
 
 from dart_id.converter import process_files
-from dart_id.exceptions import *
+from dart_id.exceptions import STANError
 from dart_id.models import models, get_model_from_config
-from dart_id.helper import *
-from distutils.sysconfig import get_config_var
-from distutils.version import LooseVersion
-from hashlib import md5
-from scipy.stats import norm, lognorm
+from dart_id.helper import init_logger, add_global_args, read_config_file
 
 pd.options.mode.chained_assignment = None
 logger = logging.getLogger('root')
 
-dirname = os.path.dirname(__file__)
+def get_os():
+  x = platform.system()
+  if x == 'Linux': 
+    # get the linux distro
+    p = platform.platform()
+    if re.search(r'centos-7', p) is not None or re.search(r'rhel', p) is not None:
+      return 'rhel'
+    elif re.search(r'debian', p) is not None:
+      return 'debian'
+    else:
+      logger.warning('Linux distribution {} not recognized. Defaulting to generic linux tag...'.format(p))
+      return 'linux_generic'
+
+  elif x == 'Darwin': return 'mac'
+  elif x == 'Windows': return 'windows'
+  else: raise Exception('Operating system {} not identified'.format(x))
+
+def get_exec_name(model):
+  x = platform.system()
+  if x == 'Windows':
+    return '{}.exe'.format(model)
+  else: return model
 
 def align(dfa, config):
 
@@ -107,67 +123,123 @@ def align(dfa, config):
   #stan_data['sigma_mean'] = np.mean(sigma_init)
   #stan_data['sigma_std'] = np.std(sigma_init)
   
-  # allow user to save STAN input data to separate files, so they can run STAN standalone
-  # (with cmdstan). Useful for debugging alignment errors.
-  if 'save_stan_input' in config and config['save_stan_input']:
-    logger.info('Saving STAN input data, for standalone STAN runs, in JSON format.')
+  
+  logger.info('Preparing for STAN Alignment')
 
-    with open(os.path.join(config['output'], 'stan_input.json'), 'w') as f:
-      logger.info('Saving input data to stan_input.json')
-      f.write(json.dumps(stan_data))
-    
-    with open(os.path.join(config['output'], 'stan_init_list.json'), 'w') as f:
-      logger.info('Saving initial values to stan_init_list.json')
-      f.write(json.dumps(init_list))
+  logger.info('Saving data as JSON to pass to STAN executable...')
 
-  # run STAN, store optimization parameters
-  sm = StanModel_cache(model)
+  stan_input_path = os.path.join(config['output'], 'stan_input.json')
+  with open(stan_input_path, 'w') as f:
+    logger.info('Saving input data to stan_input.json')
+    f.write(json.dumps(stan_data))
+    f.close()
+  
+  stan_init_list_path = os.path.join(config['output'], 'stan_init_list.json')
+  with open(stan_init_list_path, 'w') as f:
+    logger.info('Saving initial values to stan_init_list.json')
+    f.write(json.dumps(init_list))
+    f.close()
 
-  """
-  logger.info('Running STAN for {} iterations and {} attempt(s) in case of failure'.format(config['stan_iters'], config['stan_attempts']))
+  exec_folder = get_os()
+  logger.info('Detected operating system: {} ({} | {})'.format(exec_folder, platform.system(), platform.platform()))
+  exec_name = get_exec_name(model['model_binary'])
+  
+  # find the model folder in models/
+  model_exists = pkg_resources.resource_exists('dart_id', '/'.join(['models', model['model_binary'], exec_folder, exec_name]))
+  if not model_exists:
+    raise Exception('Compiled model \"{}\" does not exist for operating system \"{}\". Please contact the authors for the executable or build it locally on your machine with cmdstan.'.format(model['model_binary'], exec_folder))
 
-  # sometimes STAN will error out due to bad RNG or bad priors
-  # set a limit on how many times we will try this stan configuration 
-  # before running it all the way back again
-  counter = 1
-  op = None
-  while op is None and counter <= config['stan_attempts']:
+  model_path = pkg_resources.resource_filename('dart_id', '/'.join(('models', model['model_binary'], exec_folder, exec_name)))
+  logger.info('Found executable for model \"{}\" in: {}'.format(model['model_name'], model_path))
 
-    try:
-      # run STAN and time it
-      logger.info('Starting STAN Model | Attempt #{} ...'.format(counter))
-      start = time.time()
 
-      op = sm.optimizing(data=stan_data, init=init_list, as_vector=False,
-        iter=config['stan_iters'], verbose=config['verbose'],
-        save_iterations=True, tol_param=1e-8)
-      print(op)
+  stan_output_path = os.path.join(config['output'], 'stan_output.csv')
 
-      logger.info('STAN Model Finished. Run time: {:.3f} seconds.'.format(
-        time.time() - start))
-
-    except RuntimeError as e:
-      logger.error(str(e))
-      counter = counter + 1
-
-  # if loop terminates without any optimization parameters, then STAN failed
-  if op is None:
-    raise STANError('Maximum number of tries exceeded for STAN. Please re-run process or choose different parameters.')
-  """
+  cmd = [
+    model_path,
+    'optimize', 'iter={}'.format(config['stan_iters']),
+    'algorithm=lbfgs',
+      'init_alpha={}'.format(config['init_alpha']),
+      'tol_obj={}'.format(config['tol_obj']),
+      'tol_rel_obj={}'.format(config['tol_rel_obj']),
+      'tol_grad={}'.format(config['tol_grad']),
+      'tol_rel_grad={}'.format(config['tol_rel_grad']),
+      'tol_param={}'.format(config['tol_param']),
+      'history_size={}'.format(config['history_size']),
+    'init={}'.format(stan_init_list_path),
+    'data', 'file={}'.format(stan_input_path),
+    'output', 'file={}'.format(stan_output_path)
+  ]
 
   # run STAN and time it
-  logger.info('Starting STAN Model...')
+  logger.info('Running STAN with command: {}'.format(' '.join(cmd)))
   start = time.time()
 
-  op = sm.optimizing(data=stan_data, init=init_list, as_vector=False,
-    iter=config['stan_iters'], verbose=config['verbose'])
-  print(op)
+  #stan_log_path = os.path.join(config['output'], 'stan_alignment.log')
+  #output_fd = open(stan_log_path, 'w')
+  proc = subprocess.Popen(cmd)
 
-  if op is None:
-    raise STANError('STAN did not return any parameters. Please check that pystan was installed correctly.')
+  while True:
+    try:
+      proc.wait(1)
+      break
+    except subprocess.TimeoutExpired:
+      continue
+    except KeyboardInterrupt:
+      break
+  
+  logger.info('STAN Model Finished. Run time: {:.3f} seconds.'.format(time.time() - start))
 
-  logger.info('STAN Model Finished. Run time: {:.3f} seconds.'.format(
-    time.time() - start))
+  #output_fd.close()
+
+  #stdout = ''
+  #with open(stan_log_path, 'r') as fd:
+  #  stdout = fd.read()
+
+  if proc.returncode != 0:
+    logger.warning('Stan model exited with error {}'.format(proc.returncode))
+  
+  # parse the output file
+  with open(stan_output_path, 'r') as f:
+    stan_out = f.readlines()
+    # we only need the parameters from the last iteration,
+    # so just read the headers and the last line
+    headers = stan_out[-2]
+    values = stan_out[-1]
+    f.close()
+
+  # transform into a dict
+  stan_results = dict()
+  headers = headers.split(',')
+  values = values.split(',')
+  
+  start = 0
+  cur_header = headers[0].split('.')[0]
+  for i, header in enumerate(headers):
+    header = header.split('.')[0]
+
+    if header != cur_header or i == (len(headers) - 1):
+      # where to end the slice
+      end = i
+      if i == (len(headers) - 1): end = i + 1
+      # store value slice for the previous header
+      stan_results[cur_header] = np.array(values[start:end])
+      # reset counter
+      start = i
+      # reset previous header
+      cur_header = header
+    else: continue
+
+  if len(stan_results) == 0:
+    raise STANError('STAN did not return any parameters, or the returned parameters could not be read. Please check your output folder for the file \"stan_output.csv\" and verify that it exists and holds the parameter data.')
+
+  # convert strings to ints or floats
+  for param in stan_results:
+    is_float = '.' in stan_results[param][0]
+    if is_float:
+      stan_results[param] = stan_results[param].astype(float)
+    else:
+      stan_results[param] = stan_results[param].astype(int)
 
   # exp_params - contains regression parameters for each experiment
   # peptide_params - contains canonical RT (mu) for each peptide sequence
@@ -175,11 +247,10 @@ def align(dfa, config):
   #               not exactly necessary as these can be extrapolated from 
   #               exp_params and peptide_params
   
-  pars = op['par']
   exp_params = pd.DataFrame({ 
-    key: pars[key] for key in model['exp_keys']})
-  peptide_params = pd.DataFrame({ key: pars[key] for key in model['peptide_keys']})
-  pair_params = pd.DataFrame({ key: pars[key] for key in model['pair_keys']})
+    key: stan_results[key] for key in model['exp_keys']})
+  peptide_params = pd.DataFrame({ key: stan_results[key] for key in model['peptide_keys']})
+  pair_params = pd.DataFrame({ key: stan_results[key] for key in model['pair_keys']})
 
   # add exp_id to exp_params
   exp_params['exp_id'] = np.sort(dff['exp_id'].unique())
@@ -217,59 +288,6 @@ def align(dfa, config):
   params['peptide'] = peptide_params
 
   return params
-
-# taken from: https://pystan.readthedocs.io/en/latest/avoiding_recompilation.html
-# #automatically-reusing-models
-def StanModel_cache(model):
-
-  model_name = model['model_name']
-  model_code = pkg_resources.resource_string('dart_id', '/'.join((
-    'models', model['stan_file'])))
-   
-  # convert from bytes to a string
-  model_code = model_code.decode('utf-8')
-
-  # Use just as you would `stan`
-  code_hash = md5(model_code.encode('ascii')).hexdigest()
-  cache_fn = os.path.join(dirname, 'models/cached-model-{}-{}.pkl'.format(
-    model_name, code_hash))
-  
-  try:
-      # load cached model from file
-      sm = pickle.load(open(cache_fn, 'rb'))
-  except:
-      # compile model
-      logger.info('Compiling STAN Model {} ...'.format(model_name))
-
-      # https://github.com/pandas-dev/pandas/commit/459ebb2ad309938e9e68ae79e3bdb312efac0ca2
-      # For mac, ensure extensions are built for macos 10.9 when compiling on a
-      # 10.9 system or above, overriding distuitls behaviour which is to target
-      # the version that python was built for. This may be overridden by setting
-      # MACOSX_DEPLOYMENT_TARGET before calling setup.py
-      if sys.platform == 'darwin':
-        if 'MACOSX_DEPLOYMENT_TARGET' not in os.environ:
-          current_system = LooseVersion(platform.mac_ver()[0])
-          python_target = LooseVersion(
-            get_config_var('MACOSX_DEPLOYMENT_TARGET'))
-          if python_target < '10.9' and current_system >= '10.9':
-            os.environ['MACOSX_DEPLOYMENT_TARGET'] = '10.9'
-
-      sm = pystan.StanModel(model_name=model_name, model_code=model_code)
-      with open(cache_fn, 'wb') as f:
-          # save model to file
-          pickle.dump(sm, f)
-  else:
-      logger.info('Using cached StanModel: {}_{}'.format(model_name, code_hash))
-  
-  return sm
-
-"""
-  logger.info('Compiling STAN Model {} ...'.format(model_name))
-  sm = pystan.StanModel(model_name=model_name, model_code=model_code)
-  with open(cache_fn, 'wb') as f:
-      # save model to file
-      pickle.dump(sm, f)
-"""
 
 def main():
   # load command-line args

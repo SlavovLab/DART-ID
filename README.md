@@ -20,17 +20,9 @@ Uninstall the package with:
 pip uninstall dart_id
 ```
 
-The installation requires Python >= 3.6, and has been tested on Windows 8 / OSX Mojave 10.14 / Ubuntu 14.04. Ubuntu/Linux instructions can be found in linux_install.md
+The installation requires Python >= 3.4, < 3.7, and has been tested on Windows 8 / OSX Mojave 10.14 / Centos 7. Ubuntu/Linux instructions can be found in linux_install.md
 
 ## Install from source
-
-If installation of ```pip``` is not working, download the source code from git and run DART-ID with the provided shell script.
-
-```
-git clone https://github.com/SlavovLab/DART-ID
-cd DART-ID
-./dart_id.sh
-```
 
 We recommend using a [conda environment](https://conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html) to run DART-ID from source, so as to avoid any package versioning issues. You can create the same environment as us by using either the provided ```environment.yml``` spec or ```spec-file.txt``` (Mac OSX only). 
 
@@ -38,7 +30,13 @@ We recommend using a [conda environment](https://conda.io/projects/conda/en/late
 conda env create -f environment.yml -n dart && source activate dart
 ```
 
-Alternatively, you can run the provided ```set_environment.sh``` script, which does this all for you.
+Then download the source code and run the provided shell script:
+
+```
+git clone https://github.com/SlavovLab/DART-ID
+cd DART-ID
+./dart_id.sh
+```
 
 Usage
 ----------

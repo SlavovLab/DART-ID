@@ -11,7 +11,7 @@ name = 'dart_id'
 
 setup(
   name=name,
-  version='1.0.0',
+  version='2.0.0',
   description='RT Alignment and Peptide ID Confidence Updating for LC-MS/MS Data',
   url='https://github.com/SlavovLab/DART-ID',
   author='Albert Chen',
@@ -29,6 +29,7 @@ setup(
     'Programming Language :: Python :: 3.4',
     'Programming Language :: Python :: 3.5',
     'Programming Language :: Python :: 3.6',
+    'Programming Language :: Python :: 3.7',
 
     'Topic :: Scientific/Engineering :: Bio-Informatics'
   ],
@@ -43,14 +44,12 @@ setup(
   #libraries=[],
   #setup_requires=[],
   install_requires=[
-    'pyyaml==3.12',
-    #'pystan==2.17.1.0',
-    'pystan @ git+https://github.com/blahoink/pystan@optim-error',
-    'numpy==1.14.3',
-    'scipy==1.0.0',
-    'pandas==0.22.0',
-    'matplotlib==2.1.2',
-    'networkx==2.1'
+    'pyyaml>=3.12',
+    'numpy>=1.14.3',
+    'scipy>=1.0.0',
+    'pandas>=0.22.0',
+    'matplotlib>=2.1.2',
+    'networkx>=2.1'
   ],
   #test_requires=[
   #  'pytest'
@@ -60,7 +59,7 @@ setup(
   },
   package_data={
     'dart_id': [
-      'models/*.stan',       # STAN fits
+      'models/*',            # STAN models
       'figure_gen/*',        # figure generation scripts
       'figure_resources/*',  # figure generation resources
       'fido/*'               # fido scripts
@@ -75,8 +74,8 @@ setup(
       ('dart_id_convert=dart_id.converter:main'),
       ('dart_id_align=dart_id.align:main'),
       ('dart_id_update=dart_id.update:main'),
-      ('dart_id_figures=dart_id.figures:main'),
-      ('dart_id_collate=dart_id.collate:main')
+      ('dart_id_figures=dart_id.figures:main')#,
+#      ('dart_id_collate=dart_id.collate:main')
     ]
   }
 

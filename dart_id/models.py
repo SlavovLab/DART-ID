@@ -7,8 +7,7 @@ import numpy as np
 import os
 import pandas as pd
 
-from dart_id.exceptions import *
-from dart_id.helper import *
+from dart_id.exceptions import ConfigFileError
 from scipy.stats import norm, lognorm, laplace
 
 logger = logging.getLogger('root')
@@ -208,8 +207,8 @@ models = {
     'name': 'linear',
     # model names must be valid C++ class names. no dashes, etc.
     'model_name': 'FitLinear',
-    # name of the .stan file in the models/ folder
-    'stan_file': 'fit_RT_linear.stan',
+    # name of the executable file-folder in the models/ folder
+    'model_binary': 'fit_RT_linear',
     # function to generate initial values
     # should return dict of initial values, where names of initial values
     # are the same as parameter names.
@@ -238,7 +237,7 @@ models = {
   'two_piece_linear': {
     'name': 'two_piece_linear',
     'model_name': 'FitTwoPieceLinear',
-    'stan_file': 'fit_RT3d.stan',
+    'model_binary': 'fit_RT3e',
     'init_func': generate_inits_two_piece_linear,
     'exp_keys': ['beta_0', 'beta_1', 'beta_2', 
       'split_point', 'sigma_intercept', 'sigma_slope'],
@@ -253,7 +252,7 @@ models = {
   'two_piece_linear_laplace': {
     'name': 'two_piece_linear_laplace',
     'model_name': 'FitTwoPieceLinearLaplace',
-    'stan_file': 'fit_RT3e.stan',
+    'model_binary': 'fit_RT3e',
     'init_func': generate_inits_two_piece_linear,
     'exp_keys': ['beta_0', 'beta_1', 'beta_2', 
       'split_point', 'sigma_intercept', 'sigma_slope'],
