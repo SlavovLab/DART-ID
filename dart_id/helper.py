@@ -77,11 +77,10 @@ def load_params_from_file(params_folder):
   for pf in param_files:
     pfp = os.path.join(params_folder, pf)
     if os.path.exists(pfp):
-      with open(pfp, 'rb') as f:
-        try:
-          params[pf.split('_')[0]] = pd.read_csv(pfp, sep='\t')
-        except:
-          logger.error('Error loading param file')
+      try:
+        params[pf.split('_')[0]] = pd.read_csv(pfp, sep='\t')
+      except:
+        logger.error('Error loading param file')
     else:
       raise ConfigFileError('Params file {} does not exist'.format(pfp))
 
@@ -146,6 +145,20 @@ def read_config_file(args, create_output_folder=True):
   if create_output_folder:
     logger.info('Copying config file to output folder')
     copyfile(args.config_file.name, os.path.join(config['output'], os.path.basename(args.config_file.name)))
+
+  # handle missing args and replace them with defaults
+  arg_defaults = {
+    'init_alpha': 0.001,
+    'tol_obj': 1.e-12,
+    'tol_rel_obj': 1.e4,
+    'tol_grad': 1.e-8,
+    'tol_rel_grad': 1.e7,
+    'tol_param': 1.e-8,
+    'history_size': 5
+  }
+  for key in arg_defaults:
+    if key not in config:
+      config[key] = arg_defaults[key]
 
   return config
 
