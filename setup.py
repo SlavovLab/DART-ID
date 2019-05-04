@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 # coding: utf-8
 
-import glob
 import io
 import os
 
@@ -11,19 +10,9 @@ from setuptools import setup, find_packages, Command
 name = 'dart_id'
 test_name = 'dart_id-fresca'
 
-data_files = []
-
-# load cmdstan model binaries
-directories = glob.glob('dart_id/models/**/*')
-for directory in directories:
-    files = glob.glob(directory+'/*')
-    data_files.append((directory, files))
-# then pass data_files to setup()
-print(data_files)
-
 setup(
-  name=name,
-  version='2.0.0',
+  name=test_name,
+  version='2.0.2',
   description='RT Alignment and Peptide ID Confidence Updating for LC-MS/MS Data',
   url='https://github.com/SlavovLab/DART-ID',
   author='Albert Chen',
@@ -69,16 +58,19 @@ setup(
   extras_require={
 
   },
-  package_data={
-    'dart_id': [
-      'models/*',            # STAN models
-      'figure_gen/*',        # figure generation scripts
-      'figure_resources/*',  # figure generation resources
-      'fido/*'               # fido scripts
-    ]
-  },
+  include_package_data=True,
+  # specified in MANIFEST.in instead
+  #package_data={
+  #  'dart_id': [
+  #    'models/*',            # STAN models
+  #    'figure_gen/*',        # figure generation scripts
+  #    'figure_resources/*',  # figure generation resources
+  #    'fido/*'               # fido scripts
+  #  ]
+  #},
+  #"""
   # data outside the package
-  data_files=data_files,
+  #data_files=data_files,
   
   entry_points={
     'console_scripts': [
@@ -90,5 +82,4 @@ setup(
 #      ('dart_id_collate=dart_id.collate:main')
     ]
   }
-
 )

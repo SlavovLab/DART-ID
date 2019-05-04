@@ -1,0 +1,20 @@
+include README.md LICENSE.txt setup.py
+
+# STAN files
+include dart_id/models/*
+
+# model binaries. have to do this manually for now...
+include dart_id/models/fit_RT3e/mac/*
+include dart_id/models/fit_RT3e/windows/*
+include dart_id/models/fit_RT3e/linux_generic/*
+include dart_id/models/fit_RT3e/rhel/*
+include dart_id/models/fit_RT3e/debian/*
+
+# figure generation scripts
+include dart_id/figure_gen/*
+
+# figure generation resources
+include dart_id/figure_resources/*
+
+# fido scripts
+include dart_id/fido/*
