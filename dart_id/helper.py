@@ -6,7 +6,12 @@ import os
 import pandas as pd
 import pkg_resources
 import sys
-import yaml
+from yaml import load as yaml_load, dump as yaml_dump
+try:
+    from yaml import CLoader as Loader, CDumper as Dumper
+except ImportError:
+    from yaml import Loader, Dumper
+
 
 from dart_id.exceptions import *
 from dart_id.version import __version__
@@ -96,12 +101,12 @@ def add_global_args(parser, add_config_file=True):
 def read_default_config_file():
   # load input file types
   default_config = pkg_resources.resource_stream('dart_id', '/'.join(('config', 'default.yaml')))
-  default_config = yaml.load(default_config)
+  default_config = yaml_load(default_config, loader=Loader)
   return default_config
 
 def read_config_file(args, create_output_folder=True):
   with open(args.config_file.name, 'r') as f:
-    config = yaml.load(f)
+    config = yaml_load(f, loader=Loader)
     
   # override config file's input, output, and verbose options
   # if they were specified on the command-line
