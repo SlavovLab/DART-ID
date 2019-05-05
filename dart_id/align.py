@@ -20,7 +20,7 @@ import time
 from dart_id.converter import process_files
 from dart_id.exceptions import STANError
 from dart_id.models import models, get_model_from_config
-from dart_id.helper import init_logger, add_global_args, read_config_file
+from dart_id.helper import init_logger, add_global_args, read_config_file, convert_numpy_scalar
 
 pd.options.mode.chained_assignment = None
 logger = logging.getLogger('root')
