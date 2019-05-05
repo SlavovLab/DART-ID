@@ -1,5 +1,12 @@
 include README.md LICENSE.txt setup.py
 
+# exclude OS-specific filesystem files
+# OSX files
+global-exclude .DS_Store Icon\r
+
+# Windows files
+global-exclude desktop.ini
+
 # STAN files
 include dart_id/models/*
 
