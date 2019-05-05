@@ -28,7 +28,13 @@ stan_attempts: 5
 mu_min: 1
 rt_distortion: 0
 
-save_stan_input: false
+init_alpha: 0.001
+tol_obj: 1.e-12
+tol_rel_obj: 10000
+tol_grad: 1.e-8
+tol_rel_grad: 10000000
+tol_param: 1.e-8
+history_size: 5
 
 ## Update Options
 ## ==========================

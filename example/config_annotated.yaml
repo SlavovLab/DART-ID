@@ -70,14 +70,31 @@ mu_min: 1
 # slowly increasing this value to give STAN more room to iterate.
 rt_distortion: 0
 
-# Save the input data that is fed to the STAN program?
-# If true, two new files will be created in the output folder: 
-# stan_input.json and stan_init_list.json
-# which contain the input data and initial values for STAN, respectively.
-# Needed to run STAN standalone (with cmdstan: https://mc-stan.org/users/interfaces/cmdstan)
-# Useful for debugging alignment errors and crashes. Set save_iterations to true to
-# get a copy of the optimization state at each iteration.
-save_stan_input: false
+
+# Advanced STAN parameters (with cmdstan: https://mc-stan.org/users/interfaces/cmdstan),
+# for the LBFGS optimization algorithm
+# we recommend leaving these at their defaults.
+
+# Line search step size for first iteration
+init_alpha: 0.001 
+
+# Convergence tolerance on absolute changes in objective function value
+tol_obj: 1.e-12
+
+# Convergence tolerance on relative changes in objective function value
+tol_rel_obj: 10000
+
+# Convergence tolerance on the norm of the gradient
+tol_grad: 1.e-8
+
+# Convergence tolerance on the relative norm of the gradient
+tol_rel_grad: 10000000
+
+# Convergence tolerance on changes in parameter value
+tol_param: 1.e-8
+
+# Amount of history to keep for L-BFGS
+history_size: 5
 
 ## Update Options
 ## ==========================
