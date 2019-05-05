@@ -4,22 +4,33 @@
 import io
 import os
 
+from dart_id.version import __version__
 from os import path
 from setuptools import setup, find_packages, Command
 
 name = 'dart_id'
 test_name = 'dart_id-fresca'
 
+version=__version__
+test_version='2.0.4'
+
+# read the contents of your README file
+this_directory = path.abspath(path.dirname(__file__))
+with open(path.join(this_directory, 'README.md'), encoding='utf-8') as f:
+    long_description = f.read()
+
 setup(
-  name=test_name,
-  version='2.0.2',
+  name=name,
+  version=version,
   description='RT Alignment and Peptide ID Confidence Updating for LC-MS/MS Data',
+  long_description=long_description,
+  long_description_content_type='text/markdown',
   url='https://github.com/SlavovLab/DART-ID',
   author='Albert Chen',
   author_email='chen.alb@husky.neu.edu',
   license='MIT',
   classifiers=[
-    'Development Status :: 3 - Alpha',
+    'Development Status :: 4 - Beta',
     'Environment :: Console',
     'Intended Audience :: Developers',
     'Intended Audience :: Science/Research',
@@ -68,7 +79,6 @@ setup(
   #    'fido/*'               # fido scripts
   #  ]
   #},
-  #"""
   # data outside the package
   #data_files=data_files,
   
