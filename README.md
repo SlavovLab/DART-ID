@@ -11,32 +11,10 @@ The bottom of this document contains links to an example configuration file and 
 # Installation
 
 ```
-pip install git+https://github.com/SlavovLab/DART-ID
+pip install dart-id
 ```
 
-Uninstall the package with:
-
-```
-pip uninstall dart_id
-```
-
-The installation requires Python >= 3.4, < 3.7, and has been tested on Windows 8 / OSX Mojave 10.14 / Centos 7. Ubuntu/Linux instructions can be found in linux_install.md
-
-## Install from source
-
-We recommend using a [conda environment](https://conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html) to run DART-ID from source, so as to avoid any package versioning issues. You can create the same environment as us by using either the provided ```environment.yml``` spec or ```spec-file.txt``` (Mac OSX only). 
-
-```
-conda env create -f environment.yml -n dart && source activate dart
-```
-
-Then download the source code and run the provided shell script:
-
-```
-git clone https://github.com/SlavovLab/DART-ID
-cd DART-ID
-./dart_id.sh
-```
+The installation requires Python >= 3.4, and has been tested on Windows 8 / OSX Mojave 10.14 / Centos 7 / Ubuntu 14.04.
 
 Usage
 ----------
@@ -96,3 +74,19 @@ An example analysis of the data and configuration file specified above is availa
 
 
 The current analysis heavily uses random number generation and cannot be directly compared. To compare the results of your analysis and the provided example analysis, download the folder above and inspect the ```figures.html``` report to compare results. We are working to affix the random number generation and improve the figures outputted to improve readability and reproducibility.
+
+## Install from source
+
+We recommend using a [conda environment](https://conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html) to run DART-ID from source, so as to avoid any package versioning issues. You can create the same environment as us by using either the provided ```environment.yml``` spec or ```spec-file.txt``` (Mac OSX only). 
+
+```
+conda env create -f environment.yml -n dart && source activate dart
+```
+
+Then download the source code and run the provided shell script:
+
+```
+git clone https://github.com/SlavovLab/DART-ID
+cd DART-ID
+./dart_id.sh
+```
