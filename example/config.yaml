@@ -7,10 +7,10 @@ verbose: true
 ## ==========================
 
 input:
-  - /path/to/dat/PS061A/evidence.txt
-  - /path/to/dat/PS062ABCD/evidence.txt
-  - /path/to/dat/PS063/evidence.txt
-  - /path/to/dat/PS064AG/evidence.txt
+  - /path/to/dat/FP061A/evidence.txt
+  - /path/to/dat/FP062ABCD/evidence.txt
+  - /path/to/dat/FP063/evidence.txt
+  - /path/to/dat/FP064AG/evidence.txt
 
 sep: \t
 low_memory: false

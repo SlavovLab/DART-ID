@@ -1,3 +1,13 @@
+---
+layout: default
+title: Configuration File
+nav_order: 3
+permalink: docs/config-file
+---
+
+# Example Configuration File
+
+```yaml
 ### DART-ID configuration
 ### =========================
 
@@ -325,5 +335,4 @@ filters:
   - name: smears
     dynamic: true
     value: 0.03333
-
-
+```
