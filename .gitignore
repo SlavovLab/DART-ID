@@ -108,4 +108,5 @@ dart_id.egg-info/**
 dart_id_fresca.egg-info/**
 build/**
 
-
+# old config files
+config_files/old_config_files/*
