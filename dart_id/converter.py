@@ -286,7 +286,7 @@ def convert(df, config):
   # loop thru all columns listed in the config file
   for col in list(config['col_names'].keys()):
     if config['col_names'][col] is None: 
-      logger.info('Column \"{}\" is left empty in the config file. Skipping...'.format(col))
+      logger.debug('Column \"{}\" is left empty in the config file. Skipping...'.format(col))
       continue
 
     # check if the column specified in the config file exists in the df or not

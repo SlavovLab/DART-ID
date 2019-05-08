@@ -212,11 +212,11 @@ def update(dfa, params, config):
           #mu_k[i] = (np.sum(samples * weights, axis=1) / np.sum(weights))
           t_medians += (time.time() - _time)
 
-        logger.info('laplace sampling: {:.1f} ms'.format(t_laplace_samples*1000))
-        logger.info('coin flips: {:.1f} ms'.format(t_coin_flips*1000))
-        logger.info('null sampling: {:.1f} ms'.format(t_null_samples*1000))
-        logger.info('loop indexing: {:.1f} ms'.format(t_loop_indexing*1000))
-        logger.info('taking medians: {:.1f} ms'.format(t_medians*1000))
+        logger.debug('laplace sampling: {:.1f} ms'.format(t_laplace_samples*1000))
+        logger.debug('coin flips: {:.1f} ms'.format(t_coin_flips*1000))
+        logger.debug('null sampling: {:.1f} ms'.format(t_null_samples*1000))
+        logger.debug('loop indexing: {:.1f} ms'.format(t_loop_indexing*1000))
+        logger.debug('taking medians: {:.1f} ms'.format(t_medians*1000))
 
       elif bootstrap_method == 'non-parametric':
         # non-parametric bootstrap
@@ -330,7 +330,7 @@ def write_output(df, out_path, config):
       logger.warning('PSM FDR threshold equal to or greater than 1. Please provide a value between 0 and 1. Ignoring...')
     else:
       to_remove = (df['dart_qval'] > config['psm_fdr_threshold'])
-      logger.info('{}/{} ({:.2%}) PSMs removed at a threshold of {:.2%} FDR.'.format(np.sum(to_remove), df.shape[0], np.sum(to_remove) / df.shape[0], config['psm_fdr_threshold']*100))
+      logger.info('{}/{} ({:.2%}) PSMs removed at a threshold of {:.2%} FDR.'.format(np.sum(to_remove), df.shape[0], np.sum(to_remove) / df.shape[0], config['psm_fdr_threshold']))
       df = df[~to_remove].reset_index(drop=True)
 
   # filter by protein FDR?
@@ -342,7 +342,7 @@ def write_output(df, out_path, config):
         logger.warning('Protein FDR threshold equal to or greater than 1. Please provide a value between 0 and 1. Ignoring...')
       else:
         to_remove = ((df['razor_protein_fdr'] > config['protein_fdr_threshold']) | pd.isnull(df['razor_protein_fdr']))
-        logger.info('{}/{} ({:.2%}) PSMs removed at a threshold of {:.2%} Protein FDR.'.format(np.sum(to_remove), df.shape[0], np.sum(to_remove) / df.shape[0], config['protein_fdr_threshold']*100))
+        logger.info('{}/{} ({:.2%}) PSMs removed at a threshold of {:.2%} Protein FDR.'.format(np.sum(to_remove), df.shape[0], np.sum(to_remove) / df.shape[0], config['protein_fdr_threshold']))
         df = df[~to_remove].reset_index(drop=True)
     else:
       raise ConfigFileError('Protein FDR threshold specified, but no protein inference run with this analysis. Please set \"run_pi\" to true and fill out all the respective parameters.')
@@ -490,8 +490,8 @@ def main():
       # pass in output folder so fido can save some intermediate and output files
       'output': config['output']
     }
-    logger.info('parameter_map for fido:')
-    logger.info(str(parameter_map))
+    logger.debug('parameter_map for fido:')
+    logger.debug(str(parameter_map))
 
     # run fido subroutine
     df_adjusted = run_internal(df_adjusted, parameter_map)
