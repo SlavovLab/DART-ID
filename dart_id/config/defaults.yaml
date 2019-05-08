@@ -69,10 +69,10 @@ pi_decoy_tag: 'REV__'
 #output: /path/to/output/folder
 print_figures: true
 save_params: true
-add_diagnostic_cols: true
-overwrite_pep: true
-psm_fdr_threshold: 0.01
-protein_fdr_threshold: 0.01
+add_diagnostic_cols: false
+overwrite_pep: false
+#psm_fdr_threshold: 0.01
+#protein_fdr_threshold: 0.01
 
 save_combined_output: true
 combined_output_name: ev_updated.txt
