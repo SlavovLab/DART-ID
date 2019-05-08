@@ -10,11 +10,11 @@ import time
 
 from dart_id.align import align
 from dart_id.converter import process_files
-from dart_id.exceptions import *
+from dart_id.exceptions import ConfigFileError
 from dart_id.fido.BayesianNetwork import run_internal
 from dart_id.figures import figures
 from dart_id.models import models, get_model_from_config
-from dart_id.helper import *
+from dart_id.helper import add_global_args, read_config_file, init_logger, load_params_from_file
 from scipy.stats import norm, lognorm, laplace, bernoulli, uniform
 
 logger = logging.getLogger('root')
@@ -399,7 +399,7 @@ def main():
     df_adjusted = pd.concat([ \
       df_adjusted, \
       df_original.loc[df_original['remove']]], 
-      axis=0, ignore_index=True)
+      axis=0, ignore_index=True, sort=True)
     # pd.concat reindexes the order of the columns, 
     # so just order it back to what it used to be
     df_adjusted = df_adjusted.reindex(df_cols, axis=1)
