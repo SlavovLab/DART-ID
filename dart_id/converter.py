@@ -372,6 +372,15 @@ def process_files(config):
     # re-index columns with '[dfa.columns.tolist()]' to preserve the general column order
     df_original = df_original.append(dfa)[dfa.columns.tolist()]
 
+    # if this input data already has DART-ID columns in it, then drop them,
+    # since they cause problems later
+    dart_cols = ['rt_minus', 'rt_plus', 'mu', 'muij', 'sigmaij', 'pep_new', 'exp_id', 'peptide_id', 'stan_peptide_id', 'exclude', 'residual', 'pep_updated', 'q-value']
+    # print a warning if we see any
+    if np.any(df_original.columns.isin(dart_cols)):
+      logger.warning('Columns {} are recognized as DART-ID output columns. Removing these columns before proceeding. In the future, please input original input data files, not output files from DART-ID.'.format(np.array_str(df_original.columns[df_original.columns.isin(dart_cols)])))
+    # drop existing dart cols
+    df_original = df_original.drop(dart_cols, axis=1)
+
     logger.info('Converting {} ({} PSMs)...'.format(f, dfa.shape[0]))
 
     # convert - takes subset of columns and renames them
