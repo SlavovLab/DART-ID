@@ -12,7 +12,7 @@ import pandas as pd
 import re
 
 from functools import reduce
-from dart_id.exceptions import ConfigFileError
+from dart_id.exceptions import ConfigFileError, FilteringError
 from dart_id.helper import add_global_args, read_config_file, init_logger
 
 logger = logging.getLogger('root')
@@ -437,11 +437,21 @@ def process_files(config):
   # map values to DataFrame. peptides without any value will get NaN,
   # which will then be assigned to 0.
   exps_per_pep = df['sequence'].map(exps_per_pep)
-  exps_per_pep[np.isnan(exps_per_pep)] = 0
+  exps_per_pep[pd.isnull(exps_per_pep)] = 0
 
   # flag these sequences for removal as well
   logger.info('Removing {} PSMs from peptide sequences not observed confidently in more than {} experiments'.format(np.sum(exps_per_pep < config['num_experiments']), config['num_experiments']))
   df['remove'] = (df['remove'] | (exps_per_pep < config['num_experiments']))
+
+  # check that every experiment has at least n PSMs available for alignment.
+  # if not, then exclude them from alignment
+  psms_per_exp = df.groupby('raw_file')['remove'].apply(lambda x: np.sum(x < config['pep_threshold']))
+  exclude_exps = psms_per_exp.index.values[psms_per_exp < config['min_psms_per_experiment']]
+  
+  logger.warning('Experiments {} have < {} confident PSMs (PEP < {}) remaining after filtering. All PSMs belonging to these experiments will be excluded from the retention time alignment'.format(np.array_str(exclude_exps), config['min_psms_per_experiment'], config['pep_threshold']))
+
+  # exclude experiments without enough PSMs
+  df['remove'] = (df['remove'] | df['raw_file'].isin(exclude_exps))
 
   logger.info('Total: {} / {} ({:.2%}) PSMs flagged for removal.'.format(np.sum(df['remove']), df.shape[0], np.sum(df['remove']) / df.shape[0]))
 
@@ -468,13 +478,6 @@ def process_files(config):
   # flag non-confident PSMs for exclusion from alignment process
   df['exclude'] = (df['pep'] > config['pep_threshold'])
   logger.info('Excluding {} / {} ({:.2%}) PSMs from alignment process after filtering at PEP threshold of {}'.format(np.sum(df['pep'] > config['pep_threshold']), df.shape[0], np.sum(df['pep'] > config['pep_threshold']) / df.shape[0], config['pep_threshold']))
-
-  # check that every experiment has PSMs that have passed the filter
-  # num_exclude = df.groupby('exp_id')['remove'].agg(['sum', 'count'])
-  # if np.any(num_exclude['sum'].astype(int) == num_exclude['count']):
-  #  exp_names = np.sort(df['raw_file'].unique())
-  #  no_psm_exps = exp_names[num_exclude['sum'].astype(int) == num_exclude['count']]
-  #  raise FilteringError('Experiments ' + np.array_str(no_psm_exps) + ' have no PSMs left for alignment after filtering. Exclude these experiments using the \"exclude_exps\" expression in the config file, or loosen the PSM filters.')
 
   # only take the four required columns (+ the IDs) with us
   # the rest were only needed for filtering and can be removed
