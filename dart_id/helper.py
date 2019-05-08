@@ -100,13 +100,17 @@ def add_global_args(parser, add_config_file=True):
 
 def read_default_config_file():
   # load input file types
-  default_config = pkg_resources.resource_stream('dart_id', '/'.join(('config', 'default.yaml')))
+  default_config = pkg_resources.resource_stream('dart_id', '/'.join(('config', 'defaults.yaml')))
   default_config = yaml_load(default_config, Loader=Loader)
   return default_config
 
 def read_config_file(args, create_output_folder=True):
+  # load defaults
+  config = read_default_config_file()
+
+  # override defaults with user config file
   with open(args.config_file.name, 'r') as f:
-    config = yaml_load(f, Loader=Loader)
+    config.update(yaml_load(f, Loader=Loader))
     
   # override config file's input, output, and verbose options
   # if they were specified on the command-line
@@ -145,20 +149,6 @@ def read_config_file(args, create_output_folder=True):
   if create_output_folder:
     logger.info('Copying config file to output folder')
     copyfile(args.config_file.name, os.path.join(config['output'], os.path.basename(args.config_file.name)))
-
-  # handle missing args and replace them with defaults
-  arg_defaults = {
-    'init_alpha': 0.001,
-    'tol_obj': 1.e-12,
-    'tol_rel_obj': 1.e4,
-    'tol_grad': 1.e-8,
-    'tol_rel_grad': 1.e7,
-    'tol_param': 1.e-8,
-    'history_size': 5
-  }
-  for key in arg_defaults:
-    if key not in config:
-      config[key] = arg_defaults[key]
 
   return config
 
