@@ -13,8 +13,8 @@ import time
 
 from dart_id.align import align
 from dart_id.converter import process_files
-from dart_id.figure_gen import *
-from dart_id.helper import *
+from dart_id.figure_gen import exp_alignment, residuals, newpeps
+from dart_id.helper import add_global_args, read_config_file, init_logger, load_params_from_file
 from shutil import copyfile
 from string import Template
 
@@ -26,9 +26,17 @@ def figures(df, config=None, params=None):
 
   fig_data = {}
 
-  fig_data['alignment'] = exp_alignment.gen(df, config, params, config['output'])
-  fig_data['residuals'] = residuals.gen(df, config, params, config['output'])
-  fig_data['newpeps'] = newpeps.gen(df, config, params, config['output'])
+  try:
+    fig_data['alignment'] = exp_alignment.gen(df, config, params, config['output'])
+  except: pass
+
+  try:
+    fig_data['residuals'] = residuals.gen(df, config, params, config['output'])
+  except: pass
+  
+  try:
+    fig_data['newpeps'] = newpeps.gen(df, config, params, config['output'])
+  except: pass
 
   generate_html(fig_data, config['output'])
 
