@@ -39,11 +39,14 @@ def init_logger(verbose, log_file_path, log_to_file=True):
   for handler in logging.root.handlers[:]:
     logging.root.removeHandler(handler) 
    
-  logFormatter = logging.Formatter('%(asctime)s [%(threadName)-12.12s] [%(levelname)-5.5s]  %(message)s')
+  logFormatter = logging.Formatter('%(asctime)s [%(threadName)-5.5s] [%(levelname)-8.8s]  %(message)s')
   logger = logging.getLogger('root')
 
-  if verbose: logger.setLevel(logging.DEBUG)
-  else: logger.setLevel(logging.WARNING)
+  if   verbose == 3: logger.setLevel(logging.DEBUG)
+  elif verbose == 2: logger.setLevel(logging.INFO)
+  elif verbose == 1: logger.setLevel(logging.WARNING)
+  elif verbose == 0: logger.setLevel(logging.ERROR)
+  else: logger.setLevel(logging.WARNING) # default
 
   if log_to_file:
     fileHandler = logging.FileHandler(log_file_path, mode='w')
@@ -92,7 +95,7 @@ def add_global_args(parser, add_config_file=True):
   parser.add_argument('-i', '--input', type=argparse.FileType('r'), nargs='+', default=None, help='Input file(s) from search engine output (e.g., MaxQuant evidence.txt). Not required if input files are specified in the config file')
   #parser.add_argument('-o', '--output', help='Path to converted file. Default: prints to stdout')
   parser.add_argument('-o', '--output', type=str, default=None, help='Path to output folder')
-  parser.add_argument('-v', '--verbose', action='store_true', default=False)
+  parser.add_argument('-v', '--verbose', type=int, default=1, help='Level of logging. 0 = ERROR, 1 = WARNING (default), 2 = INFO, 3 = DEBUG')
   parser.add_argument('--version', action='version', version='%(prog)s {version}'.format(version=__version__), help='Display the program\'s version')
 
   if add_config_file:
@@ -125,8 +128,8 @@ def read_config_file(args, create_output_folder=True):
     config['output'] = args.output
 
   if args.verbose:
-    if not config['verbose']:
-      logger.info('Verbose specified in the command-line but not the config file. Setting verbose to true anyways.')
+    if 'verbose' in config:
+      logger.info('Overwriting verbosity level in configuration file with the one provided on the command-line.')
       config['verbose'] = args.verbose
 
   # make sure that we have inputs and outputs before continuing

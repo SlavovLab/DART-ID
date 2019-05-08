@@ -1,7 +1,7 @@
 ### RTLib configuration
 ### =========================
 
-verbose: true
+verbose: 1
 
 ## Input
 ## ==========================

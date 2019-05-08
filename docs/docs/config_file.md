@@ -11,7 +11,12 @@ permalink: docs/config-file
 ### DART-ID configuration
 ### =========================
 
-verbose: true
+# Level of verbosity. Higher numbers = printing more information
+# 0 = ERROR
+# 1 = WARNING (default)
+# 2 = INFO
+# 3 = DEBUG
+verbose: 1
 
 ## Input
 ## ==========================
