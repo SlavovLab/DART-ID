@@ -271,10 +271,14 @@ col_names:
 # PSMs of the same sequence that have PEP below this value
 pep_threshold: 0.5
 
-
 # Peptide sequences need to be observed in at least this number of experiments,
 # at a PEP below the pep_threshold, in order to participate in the alignment process
 num_experiments: 3
+
+# Minimum number of confident PSMs per experiment, in order to participate in RT alignment
+# If an experiment has less than this number of confident PSMs, then all of its
+# PSMs will be excluded from the RT alignment process
+min_psms_per_experiment: 50
 
 # Filters are used to exclude certain observations (PSMs) from
 # the alignment process.

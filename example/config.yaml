@@ -19,7 +19,7 @@ params_folder: /path/to/output_folder_from_prev_run
 ## Alignment Options
 ## ==========================
 
-model: 'two_piece_linear'
+model: 'two_piece_linear_laplace'
 
 add_charge_to_sequence: false
 
@@ -117,6 +117,7 @@ col_names:
 
 pep_threshold: 0.5
 num_experiments: 3
+min_psms_per_experiment: 50
 
 filters:
   - name: exclude_filename 

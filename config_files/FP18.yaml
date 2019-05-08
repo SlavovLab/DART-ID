@@ -93,6 +93,7 @@ col_names:
 
 pep_threshold: 0.5
 num_experiments: 3
+min_psms_per_experiment: 50
 
 filters:
   - name: include_filename

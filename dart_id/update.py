@@ -392,8 +392,7 @@ def main():
 
   # add rows of PSMs originally removed from analysis
   if np.sum(df_original['remove']) > 0:
-    logger.info('Reattaching {} PSMs excluded from initial filters'.format( \
-      df_original['remove'].sum()))
+    logger.info('Reattaching {} PSMs excluded from initial filters'.format(df_original['remove'].sum()))
     # store a copy of the columns and their order for later
     df_cols = df_adjusted.columns
     # concatenate data frames
