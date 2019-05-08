@@ -6,9 +6,10 @@ import matplotlib
 matplotlib.use('PS')
 import matplotlib.pyplot as plt
 import numpy as np
+import os
 import pandas as pd
 
-from dart_id.helper import *
+from dart_id.helper import create_fig_folder
 from scipy.stats import norm, lognorm, laplace
 
 logger = logging.getLogger('root')
@@ -34,6 +35,9 @@ def gen(df, config, params, output_path):
     exp_params = params['exp'].iloc[exp]
     #exp_indices = params['pair']['muij_to_exp'] == exp
     exp_inds = (df['exp_id'] == exp) & (~pd.isnull(df['pep_new']))
+
+    # dont plot if there aren't any points
+    if np.sum(exp_inds) == 0: continue
 
     predicted = df['muij'][exp_inds].values
     predicted_sd = df['sigmaij'][exp_inds].values
