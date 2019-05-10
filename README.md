@@ -45,7 +45,7 @@ optional arguments:
 
 ### Example runs
 
-An example configuration file can be downloaded from GitHub: [https://github.com/SlavovLab/DART-ID/blob/master/config_files/example_sqc_67_95_varied.yaml](https://github.com/SlavovLab/DART-ID/blob/master/config_files/example_sqc_67_95_varied.yaml).
+An example configuration file can be downloaded from GitHub: [https://github.com/SlavovLab/DART-ID/blob/master/config_files/example_sqc_67_95_varied.yaml](https://raw.githubusercontent.com/SlavovLab/DART-ID/master/config_files/example_sqc_67_95_varied.yaml).
 
 The first few lines of the above configuration file specify the path to the input file:
 
