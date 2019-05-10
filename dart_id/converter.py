@@ -378,8 +378,12 @@ def process_files(config):
     # print a warning if we see any
     if np.any(df_original.columns.isin(dart_cols)):
       logger.warning('Columns {} are recognized as DART-ID output columns. Removing these columns before proceeding. In the future, please input original input data files, not output files from DART-ID.'.format(np.array_str(df_original.columns[df_original.columns.isin(dart_cols)])))
-    # drop existing dart cols
-    df_original = df_original.drop(dart_cols, axis=1)
+
+      # drop existing dart cols
+      for col in dart_cols:
+        if col in df_original.columns:
+          logger.debug('Removing column {}'.format(col))
+          df_original = df_original.drop(col, axis=1)
 
     logger.info('Converting {} ({} PSMs)...'.format(f, dfa.shape[0]))
 
