@@ -14,7 +14,7 @@ DART-ID is a computational tool that leverages reproducible retention times to i
 
 This method is particularly useful for methods relying on MS2-based quantification, i.e., isobaric tags such as TMT.
 
-[Get started now](#getting-started){: .btn .btn-primary .fs-5 .mb-4 .mb-md-0 .mr-2 } [View it on GitHub](https://github.com/SlavovLab/DART-ID){: .btn .fs-5 .mb-4 .mb-md-0 } [Manuscript on bioRxiv](https://www.biorxiv.org/content/10.1101/399121v3){: .btn .fs-5 .mb-4 .mb-md-0 }
+[Get started now](#getting-started){: .btn .btn-primary .fs-5 .mb-4 .mb-md-0 .mr-2 } [View it on GitHub](https://github.com/SlavovLab/DART-ID){: .btn .fs-5 .mb-4 .mb-md-0 .mr-2} [Manuscript on bioRxiv](https://www.biorxiv.org/content/10.1101/399121v3){: .btn .fs-5 .mb-4 .mb-md-0 }
 
 ---
 
