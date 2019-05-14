@@ -16,6 +16,11 @@ This method is particularly useful for methods relying on MS2-based quantificati
 
 [Get started now](#getting-started){: .btn .btn-primary .fs-5 .mb-4 .mb-md-0 .mr-2 } [View it on GitHub](https://github.com/SlavovLab/DART-ID){: .btn .fs-5 .mb-4 .mb-md-0 .mr-2} [Manuscript on bioRxiv](https://www.biorxiv.org/content/10.1101/399121v3){: .btn .fs-5 .mb-4 .mb-md-0 }
 
+![GitHub release](https://img.shields.io/github/release/SlavovLab/DART-ID.svg)
+![PyPI](https://img.shields.io/pypi/v/dart-id.svg)
+![PyPI - Downloads](https://img.shields.io/pypi/dm/dart-id.svg)
+![GitHub](https://img.shields.io/github/license/SlavovLab/DART-ID.svg)
+
 ---
 
 ## Getting started
