@@ -86,6 +86,7 @@ def update(dfa, params, config):
 
   logger.info('Updating PEPs...')
   for i, e in enumerate(np.sort(dfa['exp_id'].unique())):
+
     exp_name = exp_names[i]
 
     exp = dfa[dfa['exp_id'] == e]
@@ -252,14 +253,15 @@ def update(dfa, params, config):
         #rt_plus = rt_plus + laplace.pdf(exp['retention_time'], \
         #  loc=model['ref_to_rt'](exp, mu_k[:,j][pep_inds], params), \
         #  scale=exp['sigmaij'])
-        rt_plus = rt_plus + laplace.pdf(exp['mu_pred'],\
+
+        rt_plus = rt_plus + laplace.pdf(exp['mu_pred'], \
           loc=mu_k[:,j][pep_inds], \
           scale=exp['sigma_pred'])
 
       # divide total likelihood by # of iterations to normalize to area of 1
       rt_plus = rt_plus / k
 
-      logger.info('distribution building: {:.1f} ms'.format((time.time() - _t_dist_building)*1000))
+      logger.debug('distribution building: {:.1f} ms'.format((time.time() - _t_dist_building)*1000))
 
     else:
       # not using bootstrap, but using adjusted mu as a point estimate

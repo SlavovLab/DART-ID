@@ -446,7 +446,7 @@ def process_files(config):
   # count the number of experiments a peptide is observed in, but filter out
   # 1) PSMs removed from previous filters
   # 2) PSMs with PEP > pep_threshold
-  exps_per_pep = df[-((df['remove']) | (df['pep'] > config['pep_threshold']))].groupby('sequence')['raw_file'].unique().apply((lambda x: len(x)))
+  exps_per_pep = df[-((df['remove']) | (df['pep'] >= config['pep_threshold']))].groupby('sequence')['raw_file'].unique().apply((lambda x: len(x)))
   # map values to DataFrame. peptides without any value will get NaN,
   # which will then be assigned to 0.
   exps_per_pep = df['sequence'].map(exps_per_pep)
@@ -466,7 +466,19 @@ def process_files(config):
   # exclude experiments without enough PSMs
   df['remove'] = (df['remove'] | df['raw_file'].isin(exclude_exps))
 
-  logger.info('Total: {} / {} ({:.2%}) PSMs flagged for removal.'.format(np.sum(df['remove']), df.shape[0], np.sum(df['remove']) / df.shape[0]))
+  # recalculate exps_per_pep, since we removed some experiments and this
+  # number will change based on the set of experiments we consider
+  logger.info('Recalculating number of confident peptides across experiments...')
+
+  exps_per_pep = df[-((df['remove']) | (df['pep'] >= config['pep_threshold']))].groupby('sequence')['raw_file'].unique().apply((lambda x: len(x)))
+  exps_per_pep = df['sequence'].map(exps_per_pep)
+  exps_per_pep[pd.isnull(exps_per_pep)] = 0
+  logger.info('Additional {} PSMs from peptide sequences not observed confidently in more than {} experiments flagged for removal.'.format(np.sum(exps_per_pep < config['num_experiments']) - np.sum(df['remove']), config['num_experiments']))
+  df['remove'] = (df['remove'] | (exps_per_pep < config['num_experiments']))
+
+  ## --------------
+  ## DONE FILTERING
+  ## --------------
 
   # flag the observations in df_original that were removed
   df_original['remove'] = df['remove']
@@ -488,9 +500,16 @@ def process_files(config):
       ind: val for val, ind in enumerate(df['sequence'].unique())})
   logger.info('{} peptide sequences loaded'.format(np.max(df['peptide_id'])+1))
 
+  # EXCLUSION = PSM does not participate in alignment, but will participate in 
+  #             confidence update since the PSM's associated peptide will get
+  #             parameters from the alignment. 
+  #             This is NOT the same as "remove", which means that the PSM's
+  #             associated peptide does not have enough PSMs to participate
+  #             in alignment and therefore receive parameters.
+  
   # flag non-confident PSMs for exclusion from alignment process
-  df['exclude'] = (df['pep'] > config['pep_threshold'])
-  logger.info('Excluding {} / {} ({:.2%}) PSMs from alignment process after filtering at PEP threshold of {}'.format(np.sum(df['pep'] > config['pep_threshold']), df.shape[0], np.sum(df['pep'] > config['pep_threshold']) / df.shape[0], config['pep_threshold']))
+  df['exclude'] = (df['pep'] >= config['pep_threshold'])
+  logger.info('Excluding {} / {} ({:.2%}) PSMs from alignment process after filtering at PEP threshold of {}'.format(np.sum(df['pep'] >= config['pep_threshold']), df.shape[0], np.sum(df['pep'] >= config['pep_threshold']) / df.shape[0], config['pep_threshold']))
 
   # only take the four required columns (+ the IDs) with us
   # the rest were only needed for filtering and can be removed
