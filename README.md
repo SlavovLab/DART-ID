@@ -1,5 +1,10 @@
 # DART-ID
 
+![GitHub release](https://img.shields.io/github/release/SlavovLab/DART-ID.svg)
+![PyPI](https://img.shields.io/pypi/v/dart-id.svg)
+![PyPI - Downloads](https://img.shields.io/pypi/dm/dart-id.svg)
+![GitHub](https://img.shields.io/github/license/SlavovLab/DART-ID.svg)
+
 Website: [https://dart-id.slavovlab.net](https://dart-id.slavovlab.net)
 
 Manuscript: [https://www.biorxiv.org/content/10.1101/399121v3](https://www.biorxiv.org/content/10.1101/399121v3)
