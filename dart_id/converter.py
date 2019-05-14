@@ -370,7 +370,7 @@ def process_files(config):
     # modify dfa. we need to keep a copy of the original dataframe in order to append
     # the new columns back onto it later.
     # re-index columns with '[dfa.columns.tolist()]' to preserve the general column order
-    df_original = df_original.append(dfa)[dfa.columns.tolist()]
+    df_original = df_original.append(dfa, sort=True)[dfa.columns.tolist()]
 
     # if this input data already has DART-ID columns in it, then drop them,
     # since they cause problems later
