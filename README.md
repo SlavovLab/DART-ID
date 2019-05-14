@@ -1,6 +1,6 @@
 # DART-ID
 
-Website: [https://slavovlab.github.io/DART-ID/](https://slavovlab.github.io/DART-ID/)
+Website: [https://dart-id.slavovlab.net](https://dart-id.slavovlab.net)
 
 Manuscript: [https://www.biorxiv.org/content/10.1101/399121v3](https://www.biorxiv.org/content/10.1101/399121v3)
 
