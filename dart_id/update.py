@@ -130,7 +130,7 @@ def update(dfa, params, config):
       # will iterate over in the loop after the immediate one
       mu_k = np.zeros((num_peptides, k))
 
-      if bootstrap_method == 'parametric' or bootstrap_method == 'parametric_mixture':
+      if bootstrap_method == 'parametric' or bootstrap_method == 'parametric_mixture' or bootstrap_method == 'parametric-mixture':
 
         t_laplace_samples = 0
         t_coin_flips = 0
@@ -144,7 +144,7 @@ def update(dfa, params, config):
         # measured PEP
         _time = time.time()
         coin_flip_pool = 0
-        if bootstrap_method == 'parametric_mixture':
+        if bootstrap_method == 'parametric_mixture' or bootstrap_method == 'parametric-mixture':
           coin_flip_pool = uniform.rvs(size=(np.sum(obs_per_seq) * k))
 
         t_coin_flips += (time.time() - _time)
