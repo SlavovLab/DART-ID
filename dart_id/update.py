@@ -562,7 +562,7 @@ def main():
       # other data formats might have a different separator, or have an index column
       write_output(df_a, out_path, config)
 
-  logger.info('Done! Process took {:.3f} seconds'.format(time.time() - start))
+  print('Done! Process took {:.3f} seconds'.format(time.time() - start))
 
 if __name__ == '__main__':
   main()
