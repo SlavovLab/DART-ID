@@ -41,8 +41,8 @@ history_size: 5
 ## Update Options
 ## ==========================
 
-# parametric, non-parametric
-bootstrap_method: 'non-parametric'
+# parametric, parametric_mixture, non-parametric
+bootstrap_method: 'parametric_mixture'
 bootstrap_iters: 50
 
 # mean, median, weighted_mean
@@ -51,7 +51,7 @@ mu_estimation: 'median'
 ## Protein Inference Options
 ## ==========================
 
-run_pi: false
+run_pi: true
 
 # optional
 pi_gamma: 0.5
