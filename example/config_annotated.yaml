@@ -33,7 +33,7 @@ low_memory: false
 # outputted from a run with the "save_params" option on, and this run
 # needs to be run with the exact same filters as that previous run.
 # (exp_params.txt, peptide_params.txt, pair_params.txt)
-params_folder: /path/to/output_folder_from_prev_run
+#params_folder: /path/to/output_folder_from_prev_run
 
 ## Alignment Options
 ## ==========================
@@ -174,7 +174,7 @@ pi_decoy_tag: 'REV__'
 # optional parameters files and figures will be deposited here
 # this can also be specified on the command line. e.g.:
 # -o /path/to/output/folder
-output: /path/to/output/folder
+#output: /path/to/output/folder
 
 # Print diagnostic figures, as well as an HTML file that allows
 # for quick browsing
@@ -193,15 +193,15 @@ add_diagnostic_cols: true
 # Overwrite the original PEP column with the updated PEP, and save
 # the original PEP to the 'Spectra PEP' column.
 # Useful for workflows that rely on the PEP column
-overwrite_pep: true
+overwrite_pep: false
 
 # Remove PSMs that have an FDR (q-value) below this value.
 # 0.01 corresponds to selecting PSMs at an FDR of 1%
-psm_fdr_threshold: 0.01
+# psm_fdr_threshold: 0.01
 
 # Remove PSMs that have an associated protein FDR (q-value) below this value.
 # 0.01 corresponds to selecting proteins at an FDR of 1%
-protein_fdr_threshold: 0.01
+# protein_fdr_threshold: 0.01
 
 
 # If providing multiple input files, combine them all into one
@@ -212,12 +212,12 @@ combined_output_name: ev_updated.txt
 
 # If providing separate input files, then save the output files separately
 # as well. This can be used in conjunction with 'save_combined_output'
-save_separate_output: true
+save_separate_output: false
 # Save the separate output files into the same folder where they originally
 # came from. **WARNING** this program does not check to see if it will overwrite
 # an existing file. Please choose the options below carefully to avoid overwriting
 # your original data!
-save_in_input_folder: true
+save_in_input_folder: false
 # The suffix and extension of each of the separate output files. 
 # For example, if one of the inputs was "evidence.txt", 
 # the output would be "evidence_updated.txt"
@@ -282,25 +282,25 @@ filters:
   # Filter out entire raw files, especially if they are of a different run-time,
   # or if the LC for that experiment was problematic. The "expr" field is a regular
   # expression that will be checked against all raw files in the input.
-  - name: exclude_filename 
-    expr: PS06[1-3][AB]|PS064F
+  #- name: exclude_filename 
+  #  expr: PS06[1-3][AB]|PS064F
 
   # Same as above, but as a whitelist instead of a blacklist
-  - name: include_filename
-    expr: 2018A
+  #- name: include_filename
+  #  expr: 2018A
 
   # Provide an exclusion list of UniProt IDs. Any PSM matching this
   # list will be filtered out
   # Either a file, with UniProt IDs separated by line breaks, can be
   # specified with the "file" field, or
   # a list of UniProt IDs can be provided in the "list" field
-  - name: uniprot_exclusion
-    file: /path/to/list_of_uniprot_ids.txt
-    list:
-      - or_you_could
-      - list_uniprot_ids_here
-      - P36578
-      - Q99797
+  #- name: uniprot_exclusion
+  #  file: /path/to/list_of_uniprot_ids.txt
+  #  list:
+  #    - or_you_could
+  #    - list_uniprot_ids_here
+  #    - P36578
+  #    - Q99797
 
   # Filter out contaminants as marked by the search engine
   # The "tag" option is the pattern used to filter out PSMs

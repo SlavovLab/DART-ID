@@ -14,7 +14,7 @@ input:
 
 sep: \t
 low_memory: false
-params_folder: /path/to/output_folder_from_prev_run
+# params_folder: /path/to/output_folder_from_prev_run
 
 ## Alignment Options
 ## ==========================
@@ -71,19 +71,19 @@ pi_decoy_tag: 'REV__'
 ## Output
 ## ==========================
 
-output: /path/to/output/folder
+#output: /path/to/output/folder
 print_figures: true
 save_params: true
 add_diagnostic_cols: true
-overwrite_pep: true
-psm_fdr_threshold: 0.01
-protein_fdr_threshold: 0.01
+overwrite_pep: false
+#psm_fdr_threshold: 0.01
+#protein_fdr_threshold: 0.01
 
 save_combined_output: true
 combined_output_name: ev_updated.txt
 
-save_separate_output: true
-save_in_input_folder: true
+save_separate_output: false
+save_in_input_folder: false
 output_suffix: _updated
 output_ext: .txt
 
@@ -120,19 +120,19 @@ num_experiments: 3
 min_psms_per_experiment: 50
 
 filters:
-  - name: exclude_filename 
-    expr: PS06[1-3][AB]|PS064F
+  #- name: exclude_filename 
+  #  expr: PS06[1-3][AB]|PS064F
 
-  - name: include_filename
-    expr: 2018A
+  #- name: include_filename
+  #  expr: 2018A
 
-  - name: uniprot_exclusion
-    file: /path/to/list_of_uniprot_ids.txt
-    list:
-      - or_you_could
-      - list_uniprot_ids_here
-      - P36578
-      - Q99797
+  #- name: uniprot_exclusion
+  #  file: /path/to/list_of_uniprot_ids.txt
+  #  list:
+  #    - or_you_could
+  #    - list_uniprot_ids_here
+  #    - P36578
+  #    - Q99797
 
   - name: contaminant
     tag: CON__
