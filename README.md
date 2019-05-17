@@ -15,7 +15,7 @@ Manuscript: [https://www.biorxiv.org/content/10.1101/399121v3](https://www.biorx
 
 ### Dependencies
 
-DART-ID requires Python >= 3.4, and has been tested on Windows 8 / OSX Mojave 10.14 / Centos 7 / Ubuntu 14.04.
+DART-ID requires Python >= 3.4 (64-bit), and has been tested on Windows 8 / OSX Mojave 10.14 / Centos 7 / Ubuntu 14.04.
 
 ### Installation
 
