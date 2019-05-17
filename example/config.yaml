@@ -60,7 +60,6 @@ col_names:
 
 # prior_iters: 10
 # stan_iters: 20000
-# stan_attempts: 3
 
 # mu_min: 1
 # rt_distortion: 0

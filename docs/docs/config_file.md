@@ -120,10 +120,6 @@ col_names:
 # then increase this number
 # stan_iters: 20000
 
-# Sometimes STAN will error out due to bad RNG. This is the number of attempts
-# that will be made to run STAN with the same set of data and priors generated.
-# stan_attempts: 3
-
 ## Advanced Alignment Options
 
 # Minimum value for mu, a canonical retention time (RT) for a peptide
