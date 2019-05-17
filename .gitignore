@@ -110,3 +110,12 @@ build/**
 
 # old config files
 config_files/old_config_files/*
+
+# dev scripts
+build_dist.sh
+build_dist_test.sh
+figures_testing.py
+gen_figures.sh
+install_test_package.sh
+upload_pypi.sh
+upload_test_pypi.sh
