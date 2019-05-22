@@ -15,7 +15,6 @@ print_figures: true
 ## ==========================
 
 col_names:
-
   sequence: Modified sequence
   raw_file: Raw file
   retention_time: Retention time

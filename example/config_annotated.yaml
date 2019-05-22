@@ -29,7 +29,6 @@ print_figures: true
 # change these as the input file changes,
 # e.g., when a different search engine or search engine configuration is used
 col_names:
-
   # these four columns are required. the library will not work without them
   # sequence can be the amino-acid sequence, or the modified sequence, as
   # provided by the search engine

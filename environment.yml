@@ -9,4 +9,5 @@ dependencies:
   - pandas=0.22.0
   - matplotlib=2.1.2
   - networkx=2.1
+  - jsonschema=3.0.1
   - pip=19.1

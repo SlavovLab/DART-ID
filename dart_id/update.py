@@ -237,9 +237,6 @@ def update(dfa, params, config):
               (rand_pool[counter:(counter+num_obs)] * num_obs).astype(int, copy=False)])
 
             counter = counter + num_obs
-
-      else:
-        raise ConfigFileError('Invalid bootstrap method. Please choose \"parametric\" or \"non-parametric.\"')
       
       _t_dist_building = time.time()
       # map of stan_peptide_id onto 1:num_peptides
@@ -326,28 +323,16 @@ def write_output(df, out_path, config):
 
   # filter by PSM FDR?
   if 'psm_fdr_threshold' in config and type(config['psm_fdr_threshold']) == float:
-    if config['psm_fdr_threshold'] <= 0:
-      logger.warning('PSM FDR threshold equal to or below 0. Please provide a value between 0 and 1. Ignoring...')
-    elif config['psm_fdr_threshold'] >= 1:
-      logger.warning('PSM FDR threshold equal to or greater than 1. Please provide a value between 0 and 1. Ignoring...')
-    else:
-      to_remove = (df['dart_qval'] > config['psm_fdr_threshold'])
-      logger.info('{}/{} ({:.2%}) PSMs removed at a threshold of {:.2%} FDR.'.format(np.sum(to_remove), df.shape[0], np.sum(to_remove) / df.shape[0], config['psm_fdr_threshold']))
-      df = df[~to_remove].reset_index(drop=True)
+    to_remove = (df['dart_qval'] > config['psm_fdr_threshold'])
+    logger.info('{}/{} ({:.2%}) PSMs removed at a threshold of {:.2%} FDR.'.format(np.sum(to_remove), df.shape[0], np.sum(to_remove) / df.shape[0], config['psm_fdr_threshold']))
+    df = df[~to_remove].reset_index(drop=True)
 
   # filter by protein FDR?
   if 'protein_fdr_threshold' in config and type(config['protein_fdr_threshold']) == float:
     if 'razor_protein_fdr' in df.columns:
-      if config['protein_fdr_threshold'] <= 0:
-        logger.warning('Protein FDR threshold equal to or below 0. Please provide a value between 0 and 1. Ignoring...')
-      elif config['protein_fdr_threshold'] >= 1:
-        logger.warning('Protein FDR threshold equal to or greater than 1. Please provide a value between 0 and 1. Ignoring...')
-      else:
-        to_remove = ((df['razor_protein_fdr'] > config['protein_fdr_threshold']) | pd.isnull(df['razor_protein_fdr']))
-        logger.info('{}/{} ({:.2%}) PSMs removed at a threshold of {:.2%} Protein FDR.'.format(np.sum(to_remove), df.shape[0], np.sum(to_remove) / df.shape[0], config['protein_fdr_threshold']))
-        df = df[~to_remove].reset_index(drop=True)
-    else:
-      raise ConfigFileError('Protein FDR threshold specified, but no protein inference run with this analysis. Please set \"run_pi\" to true and fill out all the respective parameters.')
+      to_remove = ((df['razor_protein_fdr'] > config['protein_fdr_threshold']) | pd.isnull(df['razor_protein_fdr']))
+      logger.info('{}/{} ({:.2%}) PSMs removed at a threshold of {:.2%} Protein FDR.'.format(np.sum(to_remove), df.shape[0], np.sum(to_remove) / df.shape[0], config['protein_fdr_threshold']))
+      df = df[~to_remove].reset_index(drop=True)
     
   df.to_csv(out_path, sep='\t', index=False)
 
@@ -464,7 +449,7 @@ def main():
   df_adjusted['participated'] = ~df_adjusted['remove']
 
   ## Run protein inference (fido)?
-  if 'run_pi' in config and config['run_pi']:
+  if 'run_pi' in config and config['run_pi'] is True:
     logger.info('Running protein inference with Fido...')
 
     # build fido options into a dict (parameter_map)
@@ -518,10 +503,6 @@ def main():
   # tell the user whether or not to expect diagnostic columns
   if config['add_diagnostic_cols']:
     logger.info('Adding diagnostic columns to output')
-
-  # if no output is specified, throw an error
-  if config['save_combined_output'] == False and config['save_separate_output'] == False:
-    raise ConfigFileError('No output format specified. Either set \"save_combined_output\" to true, or set \"save_separate_output\" to true.')
 
   # write to file
   if config['save_combined_output']:

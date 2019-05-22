@@ -1,0 +1,434 @@
+---
+$schema: http://json-schema.org/draft-07/schema#
+title: "DART-ID configuration file schema"
+description: "YAML-formatted configuration file for DART-ID"
+required: ['input', 'output', 'pep_threshold', 'num_experiments', 'min_psms_per_experiment']
+type: object
+properties:
+  input:
+    description: "List of input file paths"
+    type: array
+    items:
+      description: "Path to input file"
+      type: string
+      minLength: 1
+    uniqueItems: true
+    minItems: 1
+  output:
+    description: "Path to output folder"
+    type: string
+    minLength: 1
+  print_figures:
+    description: "Set true to print the figures.html diagnostic page"
+    type: boolean
+  col_names:
+    description: "Column mappings for the input file"
+    type: object
+    properties:
+      sequence:
+        description: "Column name for the peptide sequence (canonical or modified)"
+        type: string
+        minLength: 1
+      raw_file:
+        description: "Column name for the raw file identifier"
+        type: string
+        minLength: 1
+      retention_time:
+        description: "Column name for the retention time"
+        type: string
+        minLength: 1
+      pep:
+        description: "Column name for the error probability (PEP)"
+        type: string
+        minLength: 1
+      # optional columns
+      charge:
+        description: "Column name for the ion's charge state"
+        type: string
+      leading_protein:
+        description: "Column name for the leading razor protein ID"
+        type: string
+      proteins:
+        description: "Column name for the protein group/list of possible parent proteins for the peptide sequence"
+        type: string
+      retention_length:
+        description: "Column name for the retention length (the width of the elution peak at the base)"
+        type: string
+      intensity:
+        description: "Column name for the MS1 intensity of the ion"
+        type: string
+      leading_gene:
+        description: "Column name for the leading gene ID"
+        type: string
+      genes:
+        description: "Column name for all possible parent gene IDs"
+        type: string
+      exclude:
+        description: "Column name for flags to exclude PSMs"
+        type: string
+      exp_id:
+        description: "Column name for experiment IDs (numeric)"
+        type: string
+      peptide_id:
+        description: "Column name for peptide IDs (numeric)"
+        type: string
+    required: ['sequence', 'raw_file', 'retention_time', 'pep']
+  
+  ## ADVANCED SETTINGS
+
+  # Input
+  sep:
+    description: "Column delimiter for the input file. '\\t' for tab-separated files, ',' for comma-separated files"
+    type: string
+    minLength: 1
+  low_memory:
+    description: "Low-memory reading mode for pandas (true/false)"
+    type: boolean
+  params_folder:
+    description: "Path to a DART-ID output folder containing analogous alignment results"
+    type: string
+  
+  ## Alignment Options
+
+  model:
+    description: "Which alignment model to use"
+    type: string
+    enum: 
+      - linear
+      - two_piece_linear
+      - two_piece_linear_laplace
+  
+  add_charge_to_sequence:
+    description: "Whether or not to append the ion charge state to the peptide sequence, so that different charge states are treated as different peptides."
+    type: boolean
+  
+
+  prior_iters:
+    description: "Number of iterations for parameter initial value estimation"
+    type: integer
+    exclusiveMinimum: 0
+    maximum: 1000
+  
+  stan_iters:
+    description: "Number of iterations to for STAN gradient descent"
+    type: integer
+    minimum: 100
+
+  mu_min:
+    description: "Lower bound for reference retention times, in minutes"
+    type: number
+    minimum: 0
+  
+  rt_distortion:
+    description: "For injecting error into the dataset for parameter estimation. The variance of the error (normal distribution centered around 0), in minutes."
+    type: number
+    minimum: 0
+
+  init_alpha:
+    description: "Line search step size for first iteration"
+    type: number
+    exclusiveMinimum: 0
+  tol_obj:
+    description: "Convergence tolerance on absolute changes in objective function value"
+    type: number
+    minimum: 0
+  tol_rel_obj:
+    description: "Convergence tolerance on relative changes in objective function value"
+    type: integer
+    minimum: 0
+  tol_grad:
+    description: "Convergence tolerance on the norm of the gradient"
+    type: number
+    minimum: 0
+  tol_rel_grad:
+    description: "Convergence tolerance on the relative norm of the gradient"
+    type: integer
+    minimum: 0
+  tol_param:
+    description: "Convergence tolerance on changes in parameter value"
+    type: number
+    minimum: 0
+  history_size:
+    description: "Amount of history to keep for L-BFGS"
+    type: integer
+    exclusiveMinimum: 0
+
+  ## Update Options
+
+  bootstrap_method:
+    description: "Method of bootstrapping for estimating uncertainty in reference retention times"
+    type: string
+    enum:
+      - parametric
+      - parametric_mixture
+      - parametric-mixture
+      - non-parametric
+
+  bootstrap_iters:
+    description: "Number of bootstrap sampling iterations"
+    type: integer
+    exclusiveMinimum: 5
+
+  mu_estimation:
+    description: "Function for estimating reference retetion time from sampled reference retention times"
+    type: string
+    enum:
+      - mean
+      - median
+      - weighted_mean
+  
+  ## Protein Inference Options
+
+  run_pi:
+    description: "Whether or not to run Fido protein inference algorithm"
+    type: boolean
+
+  pi_gamma:
+    description: "Protein prior probability"
+    type: number
+    exclusiveMinimum: 0
+    exclusiveMaximum: 1
+  pi_alpha:
+    description: "Peptide emission probability"
+    type: number
+    exclusiveMinimum: 0
+    exclusiveMaximum: 1
+  pi_beta:
+    description: "Spurious peptide identification probability"
+    type: number
+    exclusiveMinimum: 0
+    exclusiveMaximum: 1
+
+  pi_connected_protein_thresh:
+    description: "Log2 maximum number of states for each subgraph"
+    type: integer
+    exclusiveMininum: 0
+  pi_clean_peptide_name:
+    description: "Sanitize peptide sequence input"
+    type: boolean
+  pi_use_all_psms:
+    description: "Use all PSMs instead of the best one"
+    type: boolean
+  pi_group_proteins:
+    description: "Inference on the protein group level instead of the protein level"
+    type: boolean
+  pi_prune_low_scores:
+    description: "Prune low scoring PSMs"
+    type: boolean
+  pi_parameter_accuracy:
+    description: "Accuracy of determining the starting parameters, if choosing to derive them from the data"
+    type: integer
+    minimum: 1
+    maximum: 3
+  pi_protein_delimiter:
+    description: "Character separating protein IDs in a PSM's protein entry"
+    type: string
+  pi_decoy_tag:
+    description: "Expression labelling a protein as a decoy protein"
+    type: string
+
+  ## Output
+
+  save_params:
+    description: "Save STAN's estimated parameters in a file in the output folder"
+    type: boolean
+  add_diagnostic_cols:
+    description: "Add extra columns to the DART-ID output, including intermediate variables used for calculating the updated PEP"
+    type: boolean
+  overwrite_pep:
+    description: "Overwrite the existing PEP entry for each PSM, and store the original PEP in another column"
+    type: boolean
+  psm_fdr_threshold:
+    description: "Filter PSMs by FDR derived from PEP. In decimals, 0.01 = 1%"
+    type: number
+    exclusiveMinimum: 0
+    maximum: 1
+  protein_fdr_threshold:
+    description: "Filter proteins by FDR derived from Fido protein inference algorithm. In decimals, 0.01 = 1%"
+    type: number
+    exclusiveMinimum: 0
+    maximum: 1
+
+  save_combined_output:
+    description: "Merge all input files and output DART-ID data as one file"
+    type: boolean
+  combined_output_name:
+    description: "Filename of the combined output file"
+    type: string
+
+  save_separate_output:
+    description: "Append DART-ID data to input files as they were passed in"
+    type: boolean
+  save_in_input_folder:
+    description: "Save DART-ID output to the same folder that input files were from, instead of in the output folder"
+    type: boolean
+  output_suffix:
+    description: "Suffix to append to separate output files"
+    type: string
+  output_ext:
+    description: "File extension for separate output files"
+    type: string
+
+  log_file:
+    description: "Generate a log file for this DART-ID run"
+    type: boolean
+
+  ## Filters
+
+  pep_threshold:
+    description: "Minimum PEP for a PSM to participate in retention time alignment"
+    type: number
+    exclusiveMinimum: 0
+    maximum: 1
+  num_experiments:
+    description: "Minimum number of experiments a peptide must be observed in, in order to participate in retention time alignment"
+    type: integer
+    minimum: 2
+  min_psms_per_experiment:
+    description: "Minimum number of valid PSMs per experiment, in order for the experiment's PSMs to participate in retention time alignment"
+    type: integer
+    minimum: 2
+
+  filters:
+    description: "List of PSM filters to apply before alignment"
+    type: array
+    items:
+      description: "PSM filter definition"
+      type: object
+      properties:
+        name:
+          description: "Name of the PSM filter"
+          type: string
+        file:
+          description: "Path to file"
+          type: string
+        expr:
+          description: "Regular expression"
+          type: string
+        tag:
+          description: "Tagging expression"
+          type: string
+      required: ['name']
+      allOf: 
+        # If this filter is include_filename or exclude_filename,
+        # then require a non-empty regular expression field
+        - if:
+            properties:
+              name: 
+                enum: ["include_filename", "exclude_filename"]
+          then:
+            properties:
+              expr:
+                description: "Regular expression matched to raw file names"
+                minLength: 1
+        # If this filter is a "retention_length" or "smears" filter,
+        # then require a "dynamic" and "value" field
+        - if:
+            properties:
+              name:
+                enum: ["retention_length", "smears"]
+          then:
+            required: ["value", "dynamic"]
+            properties:
+              dynamic:
+                description: "Absolute value (false) or adaptive to experiment run-time (true)"
+                type: boolean
+              value:
+                type: number
+        # If this "retention_length"/"smears" filter has "dynamic" set to true,
+        # then require that the value is between 0 and 1
+        - if:
+            properties:
+              name:
+                enum: ["retention_length", "smears"]
+              dynamic:
+                const: true
+          then:
+            properties:
+              value:
+                description: "Fraction of experiment run-time. Must be a number between 0 and 1, as \"dynamic\" was set to true."
+                exclusiveMinimum: 0
+                exclusiveMaximum: 1
+        # If this "retention_length"/"smears" filter has "dynamic" set to false,
+        # then require that the value is greater than 0
+        - if:
+            properties:
+              name:
+                enum: ["retention_length", "smears"]
+              dynamic:
+                const: false
+          then:
+            properties:
+              value:
+                description: "Filter value, in minutes"
+                exclusiveMinimum: 0
+        # If this filter is a "contaminant" or "decoy" filter, then require
+        # that it has a non-empty tag field
+        - if:
+            properties:
+              name:
+                enum: ["contaminant", "decoy"]
+          then:
+            required: ["tag"]
+            properties:
+              tag:
+                type: string
+                minLength: 1
+        # If this filter is a "uniprot_exclusion" filter, then require that
+        # it has a non-empty file field or a non-empty list field (populated with
+        # non-empty strings of UniProt IDs)
+        - if:
+            properties:
+              name:
+                const: uniprot_exclusion
+          then:
+            properties:
+              minProperties: 1
+              file:
+                description: "Path to file of UniProt IDs"
+                type: ['string', 'null']
+                minLength: 1
+              list:
+                description: "Array of UniProt IDs"
+                type: ['array', 'null']
+                minItems: 1
+                items:
+                  description: "UniProt ID"
+                  type: string
+                  minLength: 1
+
+
+allOf:
+  # Can't apply protein FDR filter if no protein FDRs are generated from
+  # protein inference
+  - if:
+      properties:
+        run_pi:
+          const: false
+    then:
+      properties:
+        protein_fdr_threshold:
+          description: "Protein FDR threshold cannot be applied if you are not running protein inference. To set this filter, please run protein inference by setting \"run_pi: true\"."
+          type: "null"
+  # Need at least one type of output, combined or separate
+  - if:
+      properties:
+        save_combined_output:
+          const: false
+    then:
+      properties:
+        save_separate_output:
+          description: "No output format specified. Either set \"save_combined_output\" to true, or set \"save_separate_output\" to true."
+          const: true
+  - if:
+      properties:
+        save_separate_output:
+          const: false
+    then:
+      properties:
+        save_combined_output:
+          description: "No output format specified. Either set \"save_combined_output\" to true, or set \"save_separate_output\" to true."
+          const: true
+
+
+

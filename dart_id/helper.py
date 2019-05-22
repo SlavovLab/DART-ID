@@ -16,6 +16,7 @@ except ImportError:
 
 from dart_id.exceptions import ConfigFileError
 from dart_id.version import __version__
+from jsonschema import validate, ValidationError, Draft7Validator
 from shutil import copyfile
 
 logger = logging.getLogger('root')
@@ -39,7 +40,8 @@ def init_logger(verbose, log_file_path, log_to_file=True):
   for handler in logging.root.handlers[:]:
     logging.root.removeHandler(handler) 
    
-  logFormatter = logging.Formatter('%(asctime)s [%(threadName)-5.5s] [%(levelname)-8.8s]  %(message)s')
+  #logFormatter = logging.Formatter('%(asctime)s [%(threadName)-5.5s] [%(levelname)-8.8s]  %(message)s')
+  logFormatter = logging.Formatter('%(asctime)s [%(levelname)-.8s]  %(message)s', '%Y-%m-%d %H:%M:%S')
   logger = logging.getLogger('root')
 
   if   verbose == 3: logger.setLevel(logging.DEBUG)
@@ -133,11 +135,50 @@ def read_config_file(args, create_output_folder=True):
       config['verbose'] = args.verbose
 
   # make sure that we have inputs and outputs before continuing
-  if config['input'] is None:
+  # the jsonschema validator will catch this as well but here we can print
+  # a more descriptive error message
+  if 'input' not in config or config['input'] is None:
     raise ConfigFileError('No input files specified, in either the config file or the command line. Please provide input files.')
 
   if 'output' not in config or config['output'] is None:
     raise ConfigFileError('No output folder specified, in either the config file or the command line. Please provide output folder.')
+
+  ### --------------------
+  ### VALIDATE CONFIG FILE
+  ### --------------------
+
+  schema = pkg_resources.resource_stream('dart_id', '/'.join(('config', 'schema.yaml')))
+  schema = yaml_load(schema, Loader=Loader)
+
+  v = Draft7Validator(schema)
+  errors = sorted(v.iter_errors(config), key=str)
+  
+  for error in errors:
+    logger.error("""Configuration file error:
+  In field: {}
+  Error: {}
+  Field description: {}
+""".format(
+      ' --> '.join(['\'' + str(x) + '\'' for x in error.path]),
+      error.message,
+      error.schema['description'] if 'description' in error.schema else 'No field description provided'
+    ))
+
+    #for suberror in sorted(error.context, key=lambda e: e.schema_path):
+    #  print('suberror')
+    #  print(list(suberror.schema_path), suberror.message, sep=", ")
+
+  if len(errors) > 0:
+    error_msg = '{} error(s) from configuration file. Please read the validation error messages carefully and fix the configuration file'.format(len(errors))
+    raise ConfigFileError(error_msg)
+
+  ### ====================================================
+  ### ADVANCED CONFIGURATION FILE VALIDATION
+  ### --------------------------------------
+  ### apply rules too complex for the jsonschema validator
+  ### ====================================================
+
+  # ...
 
   # expand user or any vars
   config['output'] = os.path.expanduser(config['output'])
@@ -154,10 +195,6 @@ def read_config_file(args, create_output_folder=True):
     copyfile(args.config_file.name, os.path.join(config['output'], os.path.basename(args.config_file.name)))
 
   return config
-
-# TODO: do this dumb input check every time the config file is loaded
-def check_config_inputs(config):
-  pass
 
 # pulled from: https://stackoverflow.com/a/29677616
 def weighted_quantile(values, quantiles, sample_weight=None, values_sorted=False, old_style=False):

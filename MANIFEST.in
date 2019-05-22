@@ -7,7 +7,7 @@ global-exclude .DS_Store Icon\r
 # Windows files
 global-exclude desktop.ini
 
-# default config files
+# default config file and config file schema
 include dart_id/config/*
 
 # STAN files

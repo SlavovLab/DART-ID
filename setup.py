@@ -61,7 +61,8 @@ setup(
     'scipy>=1.0.0',
     'pandas>=0.22.0',
     'matplotlib>=2.1.2',
-    'networkx>=2.1'
+    'networkx>=2.1',
+    'jsonschema>=3.0.1'
   ],
   #test_requires=[
   #  'pytest'
@@ -76,6 +77,7 @@ setup(
   #    'models/*',            # STAN models
   #    'figure_gen/*',        # figure generation scripts
   #    'figure_resources/*',  # figure generation resources
+  #    'config/*',            # config file schema and defaults
   #    'fido/*'               # fido scripts
   #  ]
   #},
