@@ -1,12 +1,46 @@
 ### DART-ID configuration - DEFAULTS
 ### =========================
 
+#input: ~
+
+#output: /path/to/output/folder
+
+print_figures: true
+
+## Input Type Options
+## ==========================
+
+col_names:
+  sequence: Modified sequence
+  raw_file: Raw file
+  retention_time: Retention time
+  pep: PEP
+
+  # optional columns
+  charge: Charge
+  leading_protein: Leading razor protein
+  proteins: Proteins
+  #leading_gene: ~
+  #genes: ~
+  retention_length: Retention length
+  intensity: Intensity
+  #exclude: ~
+  #exp_id: ~
+  #peptide_id: ~
+
+### =======================
+### !! ADVANCED SETTINGS !!
+### =======================
+
+# Only edit the following settings if you understand their effects
+# Please refer to config_annotated.yaml for detailed descriptions for
+# each configuration field
+
 verbose: 2
 
 ## Input
 ## ==========================
 
-#input:
 sep: \t
 low_memory: false
 #params_folder:
@@ -20,7 +54,6 @@ add_charge_to_sequence: false
 
 prior_iters: 10
 stan_iters: 20000
-stan_attempts: 3
 
 mu_min: 1
 rt_distortion: 0
@@ -66,8 +99,6 @@ pi_decoy_tag: 'REV__'
 ## Output
 ## ==========================
 
-#output: /path/to/output/folder
-print_figures: true
 save_params: true
 add_diagnostic_cols: false
 overwrite_pep: false
@@ -83,28 +114,6 @@ output_suffix: _updated
 output_ext: .txt
 
 log_file: true
-
-## Input Type Options
-## ==========================
-
-col_names:
-
-  sequence: Modified sequence
-  raw_file: Raw file
-  retention_time: Retention time
-  pep: PEP
-
-  # optional columns
-  charge: Charge
-  leading_protein: Leading razor protein
-  proteins: Proteins
-  #leading_gene: ~
-  #genes: ~
-  retention_length: Retention length
-  intensity: Intensity
-  #exclude: ~
-  #exp_id: ~
-  #peptide_id: ~
 
 ## Filters
 ## ==========================
