@@ -1,19 +1,51 @@
 ### RTLib configuration
 ### =========================
 
+input:
+  - /gd/MS/SCoPE/SingleCell_Data/FP18/evidence.txt
+
+#output: ~
+
+print_figures: true
+
+## Input Type Options
+## ==========================
+
+col_names:
+  sequence: Modified sequence
+  raw_file: Raw file
+  retention_time: Retention time
+  pep: PEP
+
+  charge: Charge
+  leading_protein: Leading razor protein
+  proteins: Proteins
+  #leading_gene: ~
+  #genes: ~
+  retention_length: Retention length
+  intensity: Intensity
+  #exclude: exclude
+  #remove: remove
+  #exp_id: exp_id
+  #peptide_id: peptide_id
+
+### =======================
+### !! ADVANCED SETTINGS !!
+### =======================
+
+# Only edit the following settings if you understand their effects
+# Please refer to config_annotated.yaml for detailed descriptions for
+# each configuration field
+
 verbose: 1
 
 ## Input
 ## ==========================
 
-input:
-  - /gd/MS/SCoPE/SingleCell_Data/FP18/evidence.txt
-
 sep: \t
 
 low_memory: false
-#params_folder: ~
-params_folder: /gd/bayesian_RT/Alignments/FP18_20180730_1
+#params_folder: /gd/bayesian_RT/Alignments/FP18_20180730_1
 
 ## Alignment Options
 ## ==========================
@@ -24,7 +56,7 @@ add_charge_to_sequence: false
 
 prior_iters: 10
 stan_iters: 5000
-stan_attempts: 5
+
 mu_min: 1
 rt_distortion: 0
 
@@ -49,8 +81,6 @@ mu_estimation: 'median'
 ## Output
 ## ==========================
 
-output: ~
-print_figures: true
 save_params: true
 add_diagnostic_cols: true
 overwrite_pep: false
@@ -66,28 +96,6 @@ output_ext: .txt
 
 log_file: true
 
-## Input Type Options
-## ==========================
-
-col_names:
-
-  sequence: Modified sequence
-  raw_file: Raw file
-  retention_time: Retention time
-  pep: PEP
-
-  charge: Charge
-  leading_protein: Leading razor protein
-  proteins: Proteins
-  #leading_gene: ~
-  #genes: ~
-  retention_length: Retention length
-  intensity: Intensity
-  #exclude: exclude
-  #remove: remove
-  #exp_id: exp_id
-  #peptide_id: peptide_id
-
 ## Filters
 ## ==========================
 
@@ -102,9 +110,9 @@ filters:
   #- name: exclude_filename
   #  expr: 18A
 
-  - name: uniprot_exclusion
-    file: ~/git/RTLib/pd_exclude.txt
-    list: ~
+  #- name: uniprot_exclusion
+  #  file: ~/git/RTLib/pd_exclude.txt
+  #  list: ~
 
   - name: contaminant
     tag: CON__

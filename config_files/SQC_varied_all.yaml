@@ -1,18 +1,51 @@
 ### DART-ID configuration
 ### =========================
 
+input: 
+  - /gd/MS/SCoPE/SQC/SQC_67_95_Varied/evidence.txt
+
+#output: ~
+
+print_figures: true
+
+## Input Type Options
+## ==========================
+
+col_names:
+  sequence: Modified sequence
+  raw_file: Raw file
+  retention_time: Retention time
+  pep: PEP
+
+  charge: Charge
+  leading_protein: Leading razor protein
+  proteins: Proteins
+  #leading_gene: ~
+  #genes: ~
+  retention_length: Retention length
+  intensity: Intensity
+  #exclude: exclude
+  #remove: remove
+  #exp_id: exp_id
+  #peptide_id: peptide_id
+
+### =======================
+### !! ADVANCED SETTINGS !!
+### =======================
+
+# Only edit the following settings if you understand their effects
+# Please refer to config_annotated.yaml for detailed descriptions for
+# each configuration field
+
 verbose: 1
 
 ## Input
 ## ==========================
 
-input: 
-  - /gd/MS/SCoPE/SQC/SQC_67_95_Varied/evidence.txt
-
 sep: \t
 
 low_memory: false
-params_folder: ~/git/RTLib/Alignments/SQC_varied_median_MLE_20180807_1
+#params_folder: ~/git/RTLib/Alignments/SQC_varied_median_MLE_20180807_1
 
 ## Alignment Options
 ## ==========================
@@ -24,7 +57,7 @@ add_charge_to_sequence: false
 
 prior_iters: 10
 stan_iters: 40000
-stan_attempts: 1
+
 mu_min: 1
 rt_distortion: 1
 
@@ -50,8 +83,6 @@ mu_estimation: 'median'
 ## Output
 ## ==========================
 
-output: ~
-print_figures: true
 save_params: true
 add_diagnostic_cols: true
 overwrite_pep: false
@@ -67,28 +98,6 @@ output_ext: .txt
 
 log_file: true
 
-## Input Type Options
-## ==========================
-
-col_names:
-
-  sequence: Modified sequence
-  raw_file: Raw file
-  retention_time: Retention time
-  pep: PEP
-
-  charge: Charge
-  leading_protein: Leading razor protein
-  proteins: Proteins
-  #leading_gene: ~
-  #genes: ~
-  retention_length: Retention length
-  intensity: Intensity
-  #exclude: exclude
-  #remove: remove
-  #exp_id: exp_id
-  #peptide_id: peptide_id
-
 ## Filters
 ## ==========================
 
@@ -103,9 +112,9 @@ filters:
   #- name: exclude_filename
   #  expr: SQC67[AB][16]|SQC67C1[3-9]|SQC67[CD]5|SQC68[DE]|IFN6[H-K]-Trg|SQC72D|SQC73[CD]|SQC74M|180416S_QC_SQC78A2
 
-  - name: uniprot_exclusion
-    file: ~/git/RTLib/pd_exclude.txt
-    list: ~
+  #- name: uniprot_exclusion
+  #  file: ~/git/RTLib/pd_exclude.txt
+  #  list: ~
 
   - name: contaminant
     tag: CON__
