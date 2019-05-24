@@ -1,7 +1,7 @@
 ---
 layout: default
 title: Column Descriptions
-nav_order: 5
+nav_order: 6
 permalink: docs/column-descs
 ---
 
