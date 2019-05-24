@@ -39,26 +39,109 @@ print_figures: true
 # change these as the input file changes,
 # e.g., when a different search engine or search engine configuration is used
 col_names:
+  # These four columns are required. This program will not work without them.
 
-  # these four columns are required. the library will not work without them
-  # sequence can be the amino-acid sequence, or the modified sequence, as
-  # provided by the search engine
-  #sequence: Sequence
+  # Sequence can be the canonical amino-acid sequence, 
+  # or the modified/annotated sequence, as provided by the search engine
   sequence: Modified sequence
+  # The name of the raw/spectrum file, or a unique identifier for each
+  # mass-spec run
   raw_file: Raw file
+  # The retention/elution time of the ion, in minutes
+  # This can also be in seconds, just make sure you update the priors in
+  # model to reflect this change.
   retention_time: Retention time
+  # The error probability of the peptide-spectrum-match. can be provided
+  # by the search engine or by a separate program, e.g., Percolator
   pep: PEP
 
   # optional columns, that would be used for filtering or figure generation
+
+  # Used to (optionally) append the ion charge state to the peptide sequence, 
+  # so that peptides with different charge states are treated as different
+  # peptide species.
+  charge: Charge
+
+  # Used to run the Fido protein inference algorithm
   leading_protein: Leading razor protein
   proteins: Proteins
+
+  # The base peak width, i.e., the time range between when an ion 
+  # first elutes to when it last elutes. Use this as a quality score 
+  # in order to filter out poorly retained ions.
   retention_length: Retention length
+
+  # Unused
+
   #intensity: Intensity
   #leading_gene: ~
   #genes: ~
   #exclude: ~
   #exp_id: ~
   #peptide_id: ~
+
+## PSM Filters
+## ======================
+
+# Filters are used to exclude certain observations (PSMs) from
+# the alignment process.
+# Remove/comment-out filters from this list that you do not want to have.
+filters:
+  # Filter out entire raw files, especially if they are of a different run-time,
+  # or if the LC for that experiment was problematic. The "expr" field is a regular
+  # expression that will be checked against all raw files in the input.
+  #- name: exclude_filename 
+  #  expr: PS06[1-3][AB]|PS064F
+
+  # Same as above, but as a whitelist instead of a blacklist
+  #- name: include_filename
+  #  expr: 2018A
+
+  # Provide an exclusion list of UniProt IDs. Any PSM matching this
+  # list will be filtered out
+  # Either a file, with UniProt IDs separated by line breaks, can be
+  # specified with the "file" field, or
+  # a list of UniProt IDs can be provided in the "list" field
+  #- name: uniprot_exclusion
+  #  file: /path/to/list_of_uniprot_ids.txt
+  #  list:
+  #    - or_you_could
+  #    - list_uniprot_ids_here
+  #    - P36578
+  #    - Q99797
+
+  # Filter out contaminants as marked by the search engine
+  # The "tag" option is the pattern used to filter out PSMs
+  - name: contaminant
+    tag: CON__
+
+  # Filter out decoys as marked by the search engine
+  # The "tag" option is the pattern used to filter out PSMs
+  - name: decoy
+    tag: REV__
+
+  # Filter out PSMs by the retention length, which is defined
+  # by some search engines as the time at which this spectra is first
+  # observed, to the time this spectra is last observed
+  # 
+  # If "dynamic" is set to true, then the threshold is a fraction of
+  # the maximum RT for that raw file (i.e., the run-time). A value of 0.01
+  # denotes that the threshold will be 1% of the total run-time of the experiment.
+  - name: retention_length
+    dynamic: true
+    value: 0.01667
+
+  # Filter out PSMs by their RT ranges in each experiment. This behavior is
+  # similar but not exactly the same as the "retention_length" filter.
+  # 
+  # If "dynamic" is set to true, then the threshold is a fraction of
+  # the maximum RT for that raw file (i.e., the run-time). A value of 0.01
+  # denotes that the threshold will be 1% of the total run-time of the experiment.
+  - name: smears
+    dynamic: true
+    value: 0.03333
+
+
 
 ### =======================
 ### !! ADVANCED SETTINGS !!
@@ -290,63 +373,4 @@ col_names:
 # PSMs will be excluded from the RT alignment process
 # min_psms_per_experiment: 50
 
-# Filters are used to exclude certain observations (PSMs) from
-# the alignment process.
-# Remove/comment-out filters from this list that you do not want to have.
-#filters:
-  # Filter out entire raw files, especially if they are of a different run-time,
-  # or if the LC for that experiment was problematic. The "expr" field is a regular
-  # expression that will be checked against all raw files in the input.
-  #- name: exclude_filename 
-  #  expr: PS06[1-3][AB]|PS064F
-
-  # Same as above, but as a whitelist instead of a blacklist
-  #- name: include_filename
-  #  expr: 2018A
-
-  # Provide an exclusion list of UniProt IDs. Any PSM matching this
-  # list will be filtered out
-  # Either a file, with UniProt IDs separated by line breaks, can be
-  # specified with the "file" field, or
-  # a list of UniProt IDs can be provided in the "list" field
-  #- name: uniprot_exclusion
-  #  file: /path/to/list_of_uniprot_ids.txt
-  #  list:
-  #    - or_you_could
-  #    - list_uniprot_ids_here
-  #    - P36578
-  #    - Q99797
-
-  # Filter out contaminants as marked by the search engine
-  # The "tag" option is the pattern used to filter out PSMs
-  #- name: contaminant
-  #  tag: CON__
-
-  # Filter out decoys as marked by the search engine
-  # The "tag" option is the pattern used to filter out PSMs
-  #- name: decoy
-  #  tag: REV__
-
-  # Filter out PSMs by the retention length, which is defined
-  # by some search engines as the time at which this spectra is first
-  # observed, to the time this spectra is last observed
-  # 
-  # If "dynamic" is set to true, then the threshold is a fraction of
-  # the maximum RT for that raw file (i.e., the run-time). A value of 0.01
-  # denotes that the threshold will be 1% of the total run-time of the experiment.
-  #- name: retention_length
-  #  dynamic: true
-  #  value: 0.01667
-
-
-
-  # Filter out PSMs by their RT ranges in each experiment. This behavior is
-  # similar but not exactly the same as the "retention_length" filter.
-  # 
-  # If "dynamic" is set to true, then the threshold is a fraction of
-  # the maximum RT for that raw file (i.e., the run-time). A value of 0.01
-  # denotes that the threshold will be 1% of the total run-time of the experiment.
-  #- name: smears
-  #  dynamic: true
-  #  value: 0.03333
 ```

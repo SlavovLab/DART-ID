@@ -29,19 +29,40 @@ print_figures: true
 # change these as the input file changes,
 # e.g., when a different search engine or search engine configuration is used
 col_names:
-  # these four columns are required. the library will not work without them
-  # sequence can be the amino-acid sequence, or the modified sequence, as
-  # provided by the search engine
-  #sequence: Sequence
+  # These four columns are required. This program will not work without them.
+
+  # Sequence can be the canonical amino-acid sequence, 
+  # or the modified/annotated sequence, as provided by the search engine
   sequence: Modified sequence
+  # The name of the raw/spectrum file, or a unique identifier for each
+  # mass-spec run
   raw_file: Raw file
+  # The retention/elution time of the ion, in minutes
+  # This can also be in seconds, just make sure you update the priors in
+  # model to reflect this change.
   retention_time: Retention time
+  # The error probability of the peptide-spectrum-match. can be provided
+  # by the search engine or by a separate program, e.g., Percolator
   pep: PEP
 
   # optional columns, that would be used for filtering or figure generation
+
+  # Used to (optionally) append the ion charge state to the peptide sequence, 
+  # so that peptides with different charge states are treated as different
+  # peptide species.
+  charge: Charge
+
+  # Used to run the Fido protein inference algorithm
   leading_protein: Leading razor protein
   proteins: Proteins
+
+  # The base peak width, i.e., the time range between when an ion 
+  # first elutes to when it last elutes. Use this as a quality score 
+  # in order to filter out poorly retained ions.
   retention_length: Retention length
+
+  # Unused
+
   #intensity: Intensity
   #leading_gene: ~
   #genes: ~
