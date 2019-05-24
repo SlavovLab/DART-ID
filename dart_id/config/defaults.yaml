@@ -137,17 +137,17 @@ filters:
   #    - P36578
   #    - Q99797
 
-  - name: contaminant
-    tag: CON__
+  #- name: contaminant
+  #  tag: CON__
 
-  - name: decoy
-    tag: REV__
+  #- name: decoy
+  #  tag: REV__
 
-  - name: retention_length
-    dynamic: true
-    value: 0.01667
+  #- name: retention_length
+  #  dynamic: true
+  #  value: 0.01667
 
-  - name: smears
-    dynamic: true
-    value: 0.03333
+  #- name: smears
+  #  dynamic: true
+  #  value: 0.03333
 
