@@ -30,6 +30,38 @@ col_names:
   #exp_id: exp_id
   #peptide_id: peptide_id
 
+## PSM Filters
+## =====================
+
+filters:
+  - name: exclude_filename 
+    expr: 78A2
+
+  #- name: include_filename
+  #  expr: 2018A
+
+  #- name: uniprot_exclusion
+  #  file: /path/to/list_of_uniprot_ids.txt
+  #  list:
+  #    - or_you_could
+  #    - list_uniprot_ids_here
+  #    - P36578
+  #    - Q99797
+
+  - name: contaminant
+    tag: CON__
+
+  - name: decoy
+    tag: REV__
+
+  - name: retention_length
+    dynamic: true
+    value: 0.01667
+
+  - name: smears
+    dynamic: true
+    value: 0.01667
+
 ### =======================
 ### !! ADVANCED SETTINGS !!
 ### =======================
@@ -124,28 +156,3 @@ log_file: true
 pep_threshold: 0.5
 num_experiments: 3
 min_psms_per_experiment: 50
-
-filters:
-  #- name: include_filename
-  #  expr:
-
-  - name: exclude_filename
-    expr: 78A2
-
-  #- name: uniprot_exclusion
-  #  file: ~/git/RTLib/pd_exclude.txt
-  #  list: ~
-
-  - name: contaminant
-    tag: CON__
-
-  - name: decoy
-    tag: REV__
-
-  - name: retention_length
-    dynamic: true
-    value: 0.01667
-
-  - name: smears
-    dynamic: true
-    value: 0.01667

@@ -63,6 +63,34 @@ col_names:
   #exp_id: exp_id
   #peptide_id: peptide_id
 
+## PSM Filters
+## =====================
+
+filters:
+  #- name: include_filename
+  #  expr:
+
+  - name: exclude_filename
+    expr: SQC67[AB][16]|SQC67C1[3-9]|SQC67[CD]5|SQC68[DE]|IFN6[H-K]-Trg|SQC72D|SQC73[CD]|SQC74M|180416S_QC_SQC78A2
+
+  #- name: uniprot_exclusion
+  #  file: ~/git/RTLib/pd_exclude.txt
+  #  list: ~
+
+  - name: contaminant
+    tag: CON__
+
+  - name: decoy
+    tag: REV__
+
+  - name: retention_length
+    dynamic: true
+    value: 0.01667
+
+  - name: smears
+    dynamic: true
+    value: 0.01667
+
 ### =======================
 ### !! ADVANCED SETTINGS !!
 ### =======================
@@ -160,28 +188,3 @@ log_file: true
 pep_threshold: 0.5
 num_experiments: 3
 min_psms_per_experiment: 50
-
-filters:
-  #- name: include_filename
-  #  expr:
-
-  - name: exclude_filename
-    expr: SQC67[AB][16]|SQC67C1[3-9]|SQC67[CD]5|SQC68[DE]|IFN6[H-K]-Trg|SQC72D|SQC73[CD]|SQC74M|180416S_QC_SQC78A2
-
-  #- name: uniprot_exclusion
-  #  file: ~/git/RTLib/pd_exclude.txt
-  #  list: ~
-
-  - name: contaminant
-    tag: CON__
-
-  - name: decoy
-    tag: REV__
-
-  - name: retention_length
-    dynamic: true
-    value: 0.01667
-
-  - name: smears
-    dynamic: true
-    value: 0.01667
