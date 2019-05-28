@@ -27,9 +27,11 @@ This method is particularly useful for methods relying on MS2-based quantificati
 
 ### Dependencies
 
-DART-ID requires Python >= 3.4 (64-bit), and has been tested on Windows 8 / OSX Mojave 10.14 / Centos 7 / Ubuntu 14.04.
+DART-ID requires Python >= 3.4 (64-bit - [miniconda distribution recommended](https://docs.conda.io/en/latest/miniconda.html)), and has been tested on Windows 8 / OSX Mojave 10.14 / Centos 7 / Ubuntu 14.04.
 
 ### Installation
+
+DART-ID is available on [PyPI](https://pypi.org/project/dart-id/) and can be installed with [pip](https://pip.pypa.io/en/stable/installing/).
 
 ```bash
 pip install dart-id

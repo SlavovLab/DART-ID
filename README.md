@@ -19,6 +19,8 @@ DART-ID requires Python >= 3.4 (64-bit - [miniconda distribution recommended](ht
 
 ### Installation
 
+DART-ID is available on [PyPI](https://pypi.org/project/dart-id/) and can be installed with [pip](https://pip.pypa.io/en/stable/installing/).
+
 ```bash
 pip install dart-id
 ```
