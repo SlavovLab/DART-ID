@@ -2,6 +2,7 @@
 layout: default
 title: Input File Format
 nav_order: 3
+has_children: true
 permalink: docs/input-file-format
 ---
 
