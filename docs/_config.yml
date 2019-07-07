@@ -28,6 +28,8 @@ search_enabled: true
 aux_links:
   "bioRxiv Preprint":
     - "https://www.biorxiv.org/content/10.1101/399121v3"
+  "PLoS Computational Biology Artcile":
+    - "https://journals.plos.org/ploscompbiol/article?id=10.1371/journal.pcbi.1007082"
   "GitHub Repository":
     - "https://github.com/SlavovLab/DART-ID"
 
