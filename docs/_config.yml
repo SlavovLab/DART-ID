@@ -32,6 +32,8 @@ aux_links:
     - "https://journals.plos.org/ploscompbiol/article?id=10.1371/journal.pcbi.1007082"
   "GitHub Repository":
     - "https://github.com/SlavovLab/DART-ID"
+  "Slavov Lab":
+    - "http://SlavovLab.net"
 
 # Color scheme currently only supports "dark" or nil (default)
 color_scheme: dark
