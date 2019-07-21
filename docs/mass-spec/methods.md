@@ -12,7 +12,7 @@ permalink: mass-spec/methods
 &nbsp;
 
 
-DART-ID supports related methods and technologies developed in the [Slavov Laboratory](http://slavovlab.net). These methods include:
+DART-ID supports and is supported by related methods and technologies developed in the [Slavov Laboratory](http://slavovlab.net). These methods include:
 
 * [Single-Cell ProtEomics by Mass Spectrometry (SCoPE-MS)](http://slavovlab.net/2016_SCoPE-MS/index.html)
 * [Single-Cell ProtEomics by Mass Spectrometry (SCoPE2)](http://scope2.slavovlab.net)
