@@ -14,7 +14,7 @@ DART-ID is a computational tool that leverages reproducible retention times to i
 
 This method is particularly useful for methods relying on MS2-based quantification, i.e., isobaric tags such as TMT.
 
-[Get started now](#getting-started){: .btn .btn-primary .fs-5 .mb-4 .mb-md-0 .mr-2 } [View it on GitHub](https://github.com/SlavovLab/DART-ID){: .btn .fs-5 .mb-4 .mb-md-0 .mr-2} [Manuscript on bioRxiv](https://www.biorxiv.org/content/10.1101/399121v3){: .btn .fs-5 .mb-4 .mb-md-0 }
+[Get started now](#getting-started){: .btn .btn-primary .fs-5 .mb-4 .mb-md-0 .mr-2 } [View it on GitHub](https://github.com/SlavovLab/DART-ID){: .btn .fs-5 .mb-4 .mb-md-0 .mr-2} [PLOS Comp Biol Article](https://doi.org/10.1371/journal.pcbi.1007082){: .btn .fs-5 .mb-4 .mb-md-0 } [bioRxiv Preprint](https://www.biorxiv.org/content/10.1101/399121v3){: .btn .fs-5 .mb-4 .mb-md-0 }
 
 ![GitHub release](https://img.shields.io/github/release/SlavovLab/DART-ID.svg)
 ![PyPI](https://img.shields.io/pypi/v/dart-id.svg)
@@ -94,7 +94,9 @@ An example analysis of the data and configuration file specified above is availa
 
 DART-ID is a project developed in the [Slavov Laboratory](https://web.northeastern.edu/slavovlab/) at [Northeastern University](https://www.northeastern.edu/) [Bioengineering](http://www.bioe.neu.edu/), and was authored by [Albert Tian Chen](https://atchen.me), [Alexander Franks](http://afranks.com/) (of [UCSB Statistics and Applied Probability](https://www.pstat.ucsb.edu/)), and [Nikolai Slavov](https://web.northeastern.edu/slavovlab/).
 
-The manuscript for this tool is available on bioRxiv: [https://www.biorxiv.org/content/10.1101/399121v3](https://www.biorxiv.org/content/10.1101/399121v3).
+The article for DART-ID is freely available on PLOS Computational Biology: [https://doi.org/10.1371/journal.pcbi.1007082](https://doi.org/10.1371/journal.pcbi.1007082).
+
+The preprint is also available on bioRxiv: [https://www.biorxiv.org/content/10.1101/399121v3](https://www.biorxiv.org/content/10.1101/399121v3).
 
 Contact the authors by email: [nslavov\{at\}northeastern.edu](mailto:nslavov@northeastern.edu).
 
