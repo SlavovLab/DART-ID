@@ -61,7 +61,7 @@ setup(
     'scipy>=1.0.0',
     'pandas>=0.22.0',
     'matplotlib>=2.1.2',
-    'networkx>=2.1',
+    'networkx>=2.1,<2.3',
     'jsonschema>=3.0.1'
   ],
   #test_requires=[
