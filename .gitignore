@@ -119,3 +119,6 @@ gen_figures.sh
 install_test_package.sh
 upload_pypi.sh
 upload_test_pypi.sh
+
+# Website files
+docs/package-lock.json
