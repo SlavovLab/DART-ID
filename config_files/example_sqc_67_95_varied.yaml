@@ -78,7 +78,7 @@ verbose: 1
 sep: \t
 
 low_memory: false
-params_folder: ~
+# params_folder: ''
 
 ## Alignment Options
 ## ==========================

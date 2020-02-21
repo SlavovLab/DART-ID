@@ -108,7 +108,6 @@ sep: \t
 
 low_memory: false
 #params_folder: /gd/bayesian_RT/Alignments/SQC_20180802_5exp_point
-params_folder: ~
 
 ## Alignment Options
 ## ==========================
