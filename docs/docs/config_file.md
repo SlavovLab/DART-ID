@@ -117,8 +117,8 @@ filters:
 
   # Filter out decoys as marked by the search engine
   # The "tag" option is the pattern used to filter out PSMs
-  - name: decoy
-    tag: REV__
+  # - name: decoy
+  #   tag: REV__
 
   # Filter out PSMs by the retention length, which is defined
   # by some search engines as the time at which this spectra is first

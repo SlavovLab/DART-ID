@@ -51,8 +51,8 @@ filters:
   - name: contaminant
     tag: CON__
 
-  - name: decoy
-    tag: REV__
+  # - name: decoy
+  #   tag: REV__
 
   - name: retention_length
     dynamic: true
