@@ -317,24 +317,56 @@ def update(dfa, params, config):
 def write_output(df, out_path, config):
   # remove diagnostic columns, unless they are specified to be kept
   if 'add_diagnostic_cols' not in config or config['add_diagnostic_cols'] == False:
-    df = df.drop(['pep_new', 'participated', 'exclude', 'mu', 'muij', 
+    df_out = df.drop(['pep_new', 'participated', 'exclude', 'mu', 'muij', 
       'rt_minus', 'rt_plus', 'sigmaij', 'residual',
       'input_id', 'exp_id', 'peptide_id', 'stan_peptide_id'], axis=1)
 
   # filter by PSM FDR?
   if 'psm_fdr_threshold' in config and type(config['psm_fdr_threshold']) == float:
-    to_remove = (df['dart_qval'] > config['psm_fdr_threshold'])
-    logger.info('{}/{} ({:.2%}) PSMs removed at a threshold of {:.2%} FDR.'.format(np.sum(to_remove), df.shape[0], np.sum(to_remove) / df.shape[0], config['psm_fdr_threshold']))
-    df = df[~to_remove].reset_index(drop=True)
+    to_remove = (df_out['dart_qval'] > config['psm_fdr_threshold'])
+    logger.info('{}/{} ({:.2%}) PSMs removed at a threshold of {:.2%} FDR.'.format(np.sum(to_remove), df_out.shape[0], np.sum(to_remove) / df_out.shape[0], config['psm_fdr_threshold']))
+    df_out = df_out[~to_remove].reset_index(drop=True)
 
   # filter by protein FDR?
   if 'protein_fdr_threshold' in config and type(config['protein_fdr_threshold']) == float:
-    if 'razor_protein_fdr' in df.columns:
-      to_remove = ((df['razor_protein_fdr'] > config['protein_fdr_threshold']) | pd.isnull(df['razor_protein_fdr']))
-      logger.info('{}/{} ({:.2%}) PSMs removed at a threshold of {:.2%} Protein FDR.'.format(np.sum(to_remove), df.shape[0], np.sum(to_remove) / df.shape[0], config['protein_fdr_threshold']))
-      df = df[~to_remove].reset_index(drop=True)
+    if 'razor_protein_fdr' in df_out.columns:
+      to_remove = ((df_out['razor_protein_fdr'] > config['protein_fdr_threshold']) | pd.isnull(df_out['razor_protein_fdr']))
+      logger.info('{}/{} ({:.2%}) PSMs removed at a threshold of {:.2%} Protein FDR.'.format(np.sum(to_remove), df_out.shape[0], np.sum(to_remove) / df_out.shape[0], config['protein_fdr_threshold']))
+      df_out = df_out[~to_remove].reset_index(drop=True)
     
   df.to_csv(out_path, sep='\t', index=False)
+
+def write_parameters_df(df, out_path, config):
+  '''Write a stripped down version of the input file, with diagnostic columns
+  that the user might've chosen to not output in the main output file
+
+  This parameters.txt file is mainly used to generate the HTML report
+
+  Parameters
+  ----------
+  df: pandas.DataFrame
+  out_path: str
+  config: dict
+
+  Returns
+  -------
+  None
+  '''
+
+  logger.info('Saving parameters.csv file')
+
+  input_cols = list(config['col_names'].values())
+
+  diagnostic_cols = [
+    'pep_new', 'participated', 'exclude', 
+    'mu', 'muij', 'rt_minus', 'rt_plus', 'sigmaij', 'residual', 
+    'input_id', 'exp_id', 'peptide_id', 'stan_peptide_id'
+  ]
+
+  df_out = df.loc[:, input_cols + diagnostic_cols]
+
+  df_out.to_csv(out_path, sep='\t', index=False)
+
 
 def main():
   start = time.time()
@@ -485,6 +517,8 @@ def main():
 
     logger.info('Fido finished')
     logger.info('FDR for PSM\'s razor protein, from protein inference, placed in \"razor_protein_fdr\" column')
+
+  write_parameters_df(df_adjusted, os.path.join(config['output'], 'parameters.txt'), config)
 
   # print figures?
   if config['print_figures']:
