@@ -358,7 +358,7 @@ def write_parameters_df(df, out_path, config):
   input_cols = list(config['col_names'].values())
 
   diagnostic_cols = [
-    'pep_new', 'participated', 'exclude', 
+    'dart_PEP', 'pep_new', 'participated', 'exclude', 
     'mu', 'muij', 'rt_minus', 'rt_plus', 'sigmaij', 'residual', 
     'input_id', 'exp_id', 'peptide_id', 'stan_peptide_id'
   ]
