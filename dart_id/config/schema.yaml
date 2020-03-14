@@ -186,6 +186,7 @@ properties:
     description: "Method of bootstrapping for estimating uncertainty in reference retention times"
     type: string
     enum:
+      - none
       - parametric
       - parametric_mixture
       - parametric-mixture

@@ -2,7 +2,8 @@
 ### =========================
 
 input: 
-  - /gd/MS/SCoPE/SQC/SQC_67_95_Varied/evidence.txt
+  - /Volumes/GoogleDrive/My Drive/SCoPE/SQC/SQC_67_95_Varied/evidence.txt
+  # - /gd/MS/SCoPE/SQC/SQC_67_95_Varied/evidence.txt
 
 #output: ~
 
@@ -78,7 +79,7 @@ verbose: 1
 sep: \t
 
 low_memory: false
-# params_folder: ''
+params_folder: /Users/chena/dart_id/sqc_varied_test
 
 ## Alignment Options
 ## ==========================
@@ -104,7 +105,7 @@ history_size: 5
 ## Update Options
 ## ==========================
 
-# parametric, non-parametric
+# parametric-mixture, parametric, non-parametric, none
 bootstrap_method: 'parametric'
 bootstrap_iters: 300
 
@@ -114,7 +115,7 @@ mu_estimation: 'median'
 ## Protein Inference Options
 ## ==========================
 
-run_pi: false
+run_pi: true
 
 # optional
 pi_gamma: 0.5

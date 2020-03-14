@@ -76,12 +76,11 @@ def update(dfa, params, config):
     # output table
     df_new = pd.DataFrame()
 
-    bootstrap_method = 'none'
-    if 'bootstrap_method' in config:
-        bootstrap_method = config['bootstrap_method']
-        logger.info('Using \"{}\" bootstrap method'.format(bootstrap_method))
-    else:
+    bootstrap_method = config['bootstrap_method'] if 'bootstrap_method' in config else 'none'
+    if bootstrap_method == 'none':
         logger.info('Bootstrap method not defined, using point estimates to update confidence instead.')
+    else:
+        logger.info('Using \"{}\" bootstrap method'.format(bootstrap_method))
 
     k = 20 # default
     if 'bootstrap_iters' in config:
@@ -230,7 +229,7 @@ def update(dfa, params, config):
                             # or take the weighted mean
                             weights = ((1 - peps[i]) - (1 - config['pep_threshold'])) / config['pep_threshold']
                             mu_k[i] = (np.sum(samples * weights, axis=1) / np.sum(weights))
-                        else
+                        else:
                             error_msg = 'mu_estimation method {} not defined'.format(config['mu_estimation'])
                             raise Exception(error_msg)
 

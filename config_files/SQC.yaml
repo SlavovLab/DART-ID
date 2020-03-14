@@ -134,7 +134,7 @@ history_size: 5
 ## Update Options
 ## ==========================
 
-# parametric, non-parametric, parametrix_mixture
+# parametric-mixture, parametric, non-parametric, none
 bootstrap_method: 'parametric_mixture'
 bootstrap_iters: 300
 

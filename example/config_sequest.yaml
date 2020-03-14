@@ -106,7 +106,7 @@ filters:
 ## Update Options
 ## ==========================
 
-# parametric, parametric_mixture, non-parametric
+# parametric-mixture, parametric, non-parametric, none
 # bootstrap_method: 'parametric_mixture'
 # bootstrap_iters: 50
 
