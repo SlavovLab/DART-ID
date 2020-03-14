@@ -56,13 +56,17 @@ setup(
   #libraries=[],
   #setup_requires=[],
   install_requires=[
-    'pyyaml>=3.12',
-    'numpy>=1.14.3',
-    'scipy>=1.0.0',
-    'pandas>=0.22.0',
-    'matplotlib>=2.1.2',
+    'jsonschema==3.0.1',
+    'jupyter==1.0.0',
+    'matplotlib==2.1.2',
+    'nbconvert==5.6.1',
     'networkx>=2.1,<2.3',
-    'jsonschema>=3.0.1'
+    'numpy==1.18.1',
+    'pandas==1.0.1',
+    'papermill==1.2.1',
+    'pyyaml==3.12',
+    'scipy==1.4.1',
+    'seaborn==0.9.0'
   ],
   #test_requires=[
   #  'pytest'

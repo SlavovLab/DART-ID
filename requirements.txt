@@ -1,12 +1,12 @@
 # largely the same as install_requires in setup.py and 
 # conda's environment.yml
 
-python>=3.6.4
-pyyaml>=3.12
-numpy>=1.14.3
-scipy>=1.0.0
-pandas>=0.22.0
+python==3.7.6
+pyyaml==3.12
+numpy==1.18.1
+scipy==1.0.0
+pandas==1.0.1
 matplotlib>=2.1.2
-networkx>=2.1
-jsonschema>=3.0.1
-pip>=19.0.3
+networkx==2.1
+jsonschema==3.0.1
+pip==19.0.3
