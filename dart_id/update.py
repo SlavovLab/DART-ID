@@ -2,6 +2,7 @@
 # coding: utf-8
 
 import argparse
+import json
 import logging
 import numpy as np
 import os
@@ -548,7 +549,7 @@ def main():
             'output': config['output']
         }
         logger.debug('parameter_map for fido:')
-        logger.debug(str(parameter_map))
+        logger.debug(json.dumps(parameter_map, indent=4))
 
         # run fido subroutine
         df_adjusted = run_internal(df_adjusted, parameter_map)
