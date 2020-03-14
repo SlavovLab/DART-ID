@@ -243,7 +243,8 @@ def align(dfa, config):
           continue
 
   if len(stan_results) == 0:
-      raise STANError('STAN did not return any parameters, or the returned parameters could not be read. Please check your output folder for the file \"stan_output.csv\" and verify that it exists and holds the parameter data.')
+      error_msg = 'STAN did not return any parameters, or the returned parameters could not be read. Please check your output folder for the file \"stan_output.csv\" and verify that it exists and holds the parameter data.'
+      raise STANError(error_msg)
 
   # convert strings to ints or floats
   for param in stan_results:

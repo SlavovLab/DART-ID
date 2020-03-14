@@ -43,7 +43,8 @@ def update(dfa, params, config):
             params['exp'].shape[0] != num_experiments or 
             params['peptide'].shape[0] != (dfa['stan_peptide_id'].max() + 1)
         ):
-        raise ConfigFileError('Parameters files have different data than the input data provided. Ensure that both the input list and filters used to generate the alignment parameters and those provided to the current update are the __exact__ same.')
+        error_msg = 'Parameters files have different data than the input data provided. Ensure that both the input list and filters used to generate the alignment parameters and those provided to the current update are the __exact__ same.'
+        raise ConfigFileError(error_msg)
     
     model = get_model_from_config(config)
 
@@ -235,7 +236,7 @@ def update(dfa, params, config):
                         mu_k[i] = (np.sum(samples * weights, axis=1) / np.sum(weights))
                     else:
                         error_msg = 'mu_estimation method {} not defined'.format(config['mu_estimation'])
-                        raise Exception(error_msg)
+                        raise ConfigFileError(error_msg)
 
                     t_medians += (time.time() - _time)
 

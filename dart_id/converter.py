@@ -72,14 +72,16 @@ def filter_uniprot_exclusion_list(df, config, _filter):
                 exclusion_list = [line.rstrip('\n') for line in f]
                 logger.info('Loaded {} proteins from exclusion list.'.format(len(exclusion_list)))
         except EnvironmentError:
-            raise ConfigFileError('Exclusion list file {} not found. Please provide a path to a file with UniProt IDs separated by line'.format(_filter['file']))
+            error_msg = 'Exclusion list file {} not found. Please provide a path to a file with UniProt IDs separated by line'.format(_filter['file'])
+            raise ConfigFileError(error_msg)
 
     elif 'list' in _filter and len(_filter['list']) > 0:
         # load UniProt IDs from the configuration file
         exclusion_list = _filter['list']
         logger.info('Loading {} UniProt IDs from exclusion list as defined in config file'.format(len(exclusion_list)))
     else:
-        raise ConfigFileError('No exclusion list file or list of UniProt IDs provided. Please provide a path to a file with UniProt IDs separated by line with the \"file\" key, or provide a python list of UniProt IDs with the \"list\" key. If not using a UniProt ID exclusion list, then comment out the \"uniprot_exclusion\" key from the filter list.')
+        error_msg = 'No exclusion list file or list of UniProt IDs provided. Please provide a path to a file with UniProt IDs separated by line with the \"file\" key, or provide a python list of UniProt IDs with the \"list\" key. If not using a UniProt ID exclusion list, then comment out the \"uniprot_exclusion\" key from the filter list.'
+        raise ConfigFileError(error_msg)
 
     # filter exclusion list
     if len(exclusion_list) > 0:
@@ -95,7 +97,8 @@ def filter_uniprot_exclusion_list(df, config, _filter):
         logger.info('Filtering out {} PSMs from the exclusion list'.format(np.sum(blacklist_filter)))
         return blacklist_filter
     else:
-        raise ConfigFileError('Exclusion list found and loaded, but no UniProt IDs found. Check the format of the file, or the list in the config file.')
+        error_msg = 'Exclusion list found and loaded, but no UniProt IDs found. Check the format of the file, or the list in the config file.'
+        raise ConfigFileError(error_msg)
 
 def filter_contaminant(df, config, _filter):
     """
@@ -157,7 +160,8 @@ def filter_retention_length(df, config, _filter):
 
         # only allow values between 0 and max(RT)
         if _filter['value'] <= 0 or _filter['value'] > np.max(df['retention_time']):
-          raise ConfigFileError('\"retention_length filter\" {} is not defined or incorrectly defined. Please provide a decimal number between 0.0 and max(RT).'.format(_filter['value']))
+            error_msg = '\"retention_length filter\" {} is not defined or incorrectly defined. Please provide a decimal number between 0.0 and max(RT).'.format(_filter['value'])
+            raise ConfigFileError(error_msg)
         
         filter_rtl = (df['retention_length'] > _filter['value'])
 
@@ -203,7 +207,8 @@ def filter_smears(df, config, _filter):
         logger.info('Using constant smear length (in RT) of {:.4f} for all raw files.'.format(_filter['value']))
 
         if _filter['value'] <= 0:
-            raise ConfigFileError('Smear filter {:.4f} is not defined or incorrectly defined. Please provide a decimal number between 0.0 and max(RT).'.format(_filter['value']))
+            error_msg = 'Smear filter {:.4f} is not defined or incorrectly defined. Please provide a decimal number between 0.0 and max(RT).'.format(_filter['value'])
+            raise ConfigFileError(error_msg)
 
         # get the (exp_id, peptide_id) tuples for PSMs with a range above the threshold
         smears = smears[smears > _filter['value']].index.values
@@ -255,7 +260,8 @@ def convert(df, config):
         # check if the column specified in the config file exists in the df or not
         if config['col_names'][col] not in df.columns:
             # this is probably grounds to kill the program
-            raise ConfigFileError('Column {} of value {} not found in the input file. Please check that this column exists. Or, comment out the field or leave the field for {} empty in the config file.'.format(col, config['col_names'][col], col))
+            error_msg = 'Column {} of value {} not found in the input file. Please check that this column exists. Or, comment out the field or leave the field for {} empty in the config file.'.format(col, config['col_names'][col], col)
+            raise ConfigFileError(error_msg)
 
         # keep track of the column and the column name
         cols.append(config['col_names'][col])
@@ -282,7 +288,8 @@ def filter_psms(df, config):
         # for each required column in the filter, check if it exists
         for j in required_cols[f['name']]:
             if j not in df.columns:
-                raise ConfigFileError('Filter {} required a data column {}, but this was not found in the input dataframe.'.format(f['name'], j))
+                error_msg = 'Filter {} required a data column {}, but this was not found in the input dataframe.'.format(f['name'], j)
+                raise ConfigFileError(error_msg)
 
     # by default, filter out nothing. we'll use binary ORs (|) to
     # gradually add more and more observations to this filter out blacklist
@@ -385,8 +392,15 @@ def process_files(config):
         logger.info('Removing {} PSMs with no PEP entry.'.format(np.sum(null_pep)))
 
     num_exps = len(df['raw_file'].unique())
+
+    # Special error when only one experiment is loaded
+    if num_exps == 1:
+        error_msg = 'Only 1 raw file/experiment loaded. DART-ID derives statistical power from peptides observed over multiple experiments. Please provide an input file with more raw files, or provide a list of input files, to get the most out of your data.'
+        raise ConfigFileError(error_msg)
+
     if config['num_experiments'] > num_exps:
-        raise ConfigFileError('Number of experiments filter threshold {} is greater than the number of experiments in the input list. Please provide an integer greater than or equal to 1 and less than the number of experiments with the \"num_experiments\" key.'.format(config['num_experiments']))
+        error_msg = 'Number of experiments filter threshold {} is greater than the number of experiments in the input list. Please provide an integer greater than or equal to 1 and less than the number of experiments with the \"num_experiments\" key.'.format(config['num_experiments'])
+        raise ConfigFileError(error_msg)
     
     # count the number of experiments a peptide is observed in, but filter out
     # 1) PSMs removed from previous filters

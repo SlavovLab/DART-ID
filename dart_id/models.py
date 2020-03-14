@@ -292,8 +292,9 @@ def get_model_from_config(config):
         if config['model'] in models:
             model = config['model']
         else:
-            raise ConfigFileError('Model \"{}\" not found. Available choices are: {}'.format(
-            model, models.keys()))
+            error_msg = 'Model \"{}\" not found. Available choices are: {}'.format(
+            model, models.keys())
+            raise ConfigFileError(error_msg)
     else:
         logger.info('Alignment model not defined. Defaulting to \"two_piece_linear\" model')
 

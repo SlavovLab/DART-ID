@@ -92,7 +92,8 @@ def load_params_from_file(params_folder):
             except:
                 logger.error('Error loading param file')
         else:
-            raise ConfigFileError('Params file {} does not exist'.format(pfp))
+            error_msg = 'Params file {} does not exist'.format(pfp)
+            raise ConfigFileError(error_msg)
 
         logger.info('Loaded \"{}\" params file.'.format(pf.split('_')[0]))
 
@@ -143,10 +144,12 @@ def read_config_file(args, create_output_folder=True):
     # the jsonschema validator will catch this as well but here we can print
     # a more descriptive error message
     if 'input' not in config or config['input'] is None:
-        raise ConfigFileError('No input files specified, in either the config file or the command line. Please provide input files.')
+        error_msg = 'No input files specified, in either the config file or the command line. Please provide input files.'
+        raise ConfigFileError(error_msg)
 
     if 'output' not in config or config['output'] is None:
-        raise ConfigFileError('No output folder specified, in either the config file or the command line. Please provide output folder.')
+        error_msg = 'No output folder specified, in either the config file or the command line. Please provide output folder.'
+        raise ConfigFileError(error_msg)
 
     ### --------------------
     ### VALIDATE CONFIG FILE
