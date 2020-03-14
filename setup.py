@@ -64,7 +64,7 @@ setup(
     'numpy==1.18.1',
     'pandas==1.0.1',
     'papermill==1.2.1',
-    'pyyaml==3.12',
+    'pyyaml==5.1',
     'scipy==1.4.1',
     'seaborn==0.9.0'
   ],

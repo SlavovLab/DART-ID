@@ -2,7 +2,7 @@
 # conda's environment.yml
 
 python==3.7.6
-pyyaml==3.12
+pyyaml==5.1
 numpy==1.18.1
 scipy==1.0.0
 pandas==1.0.1
