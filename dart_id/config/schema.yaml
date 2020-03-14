@@ -8,7 +8,7 @@ properties:
   
   input:
     description: "List of input file paths"
-    type: array
+    type: ["array", "null"]
     items:
       description: "Path to input file"
       type: string
@@ -18,7 +18,7 @@ properties:
 
   output:
     description: "Path to output folder"
-    type: string
+    type: ["string", "null"]
     minLength: 1
 
   print_figures:
@@ -107,7 +107,7 @@ properties:
 
   params_folder:
     description: "Path to a DART-ID output folder containing analogous alignment results"
-    type: string
+    type: ["string", "null"]
   
   ## Alignment Options
 
@@ -184,8 +184,9 @@ properties:
 
   bootstrap_method:
     description: "Method of bootstrapping for estimating uncertainty in reference retention times"
-    type: string
+    type: ["string", "null"]
     enum:
+      - null
       - none
       - parametric
       - parametric_mixture

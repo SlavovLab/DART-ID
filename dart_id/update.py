@@ -77,8 +77,8 @@ def update(dfa, params, config):
     # output table
     df_new = pd.DataFrame()
 
-    bootstrap_method = config['bootstrap_method'] if 'bootstrap_method' in config else 'none'
-    if bootstrap_method == 'none':
+    bootstrap_method = config['bootstrap_method'] if 'bootstrap_method' in config else None
+    if bootstrap_method is None:
         logger.info('Bootstrap method not defined, using point estimates to update confidence instead.')
     else:
         logger.info('Using \"{}\" bootstrap method'.format(bootstrap_method))
@@ -86,7 +86,7 @@ def update(dfa, params, config):
     k = 20 # default
     if 'bootstrap_iters' in config:
         k = config['bootstrap_iters']
-        if bootstrap_method != 'none':
+        if bootstrap_method is not None:
             logger.info('Using {} bootstrap iterations'.format(k))
 
     logger.info('Updating PEPs...')
@@ -104,7 +104,7 @@ def update(dfa, params, config):
         # vector of P(RT|delta=1) for this experiment.
         rt_plus = pd.Series(np.zeros(exp.shape[0]))
 
-        if bootstrap_method != 'none':
+        if bootstrap_method is not None:
 
             # to avoid using this experiment's own data to update the confidence
             # of its own observations, recalculate the reference RTs (mu) without the
