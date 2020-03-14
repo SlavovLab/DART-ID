@@ -47,8 +47,8 @@ def filter_include_filename(df, config, _filter):
     df = df[include_exps]
     logger.info('Keeping {} observations out of {} matching inclusion expression \"{}\"'.format(np.sum(include_exps), df.shape[0], _filter['expr']))
 
-  # filter out the opposite of the included experiments
-  return ~include_exps
+    # filter out the opposite of the included experiments
+    return ~include_exps
 
 def filter_uniprot_exclusion_list(df, config, _filter):
     """
@@ -71,8 +71,8 @@ def filter_uniprot_exclusion_list(df, config, _filter):
                 logger.info('Loading UniProt IDs from exclusion list file {} ...'.format(_filter['file']))
                 exclusion_list = [line.rstrip('\n') for line in f]
                 logger.info('Loaded {} proteins from exclusion list.'.format(len(exclusion_list)))
-          except EnvironmentError:
-              raise ConfigFileError('Exclusion list file {} not found. Please provide a path to a file with UniProt IDs separated by line'.format(_filter['file']))
+        except EnvironmentError:
+            raise ConfigFileError('Exclusion list file {} not found. Please provide a path to a file with UniProt IDs separated by line'.format(_filter['file']))
 
     elif 'list' in _filter and len(_filter['list']) > 0:
         # load UniProt IDs from the configuration file
@@ -338,11 +338,11 @@ def process_files(config):
         if np.any(df_original.columns.isin(dart_cols)):
             logger.warning('Columns {} are recognized as DART-ID output columns. Removing these columns before proceeding. In the future, please input original input data files, not output files from DART-ID.'.format(np.array_str(df_original.columns[df_original.columns.isin(dart_cols)])))
 
-          # drop existing dart cols
-          for col in dart_cols:
-              if col in df_original.columns:
-                  logger.debug('Removing column {}'.format(col))
-                  df_original = df_original.drop(col, axis=1)
+            # drop existing dart cols
+            for col in dart_cols:
+                if col in df_original.columns:
+                    logger.debug('Removing column {}'.format(col))
+                    df_original = df_original.drop(col, axis=1)
 
         logger.info('Converting {} ({} PSMs)...'.format(f, dfa.shape[0]))
 

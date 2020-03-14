@@ -160,80 +160,83 @@ def update(dfa, params, config):
                     ):
                     coin_flip_pool = uniform.rvs(size=(np.sum(obs_per_seq) * k))
 
-                    t_coin_flips += (time.time() - _time)
-                    coin_counter = 0
+                t_coin_flips += (time.time() - _time)
+                coin_counter = 0
 
-                    # create a pool of laplace samples, to pull from for each peptide
+                # create a pool of laplace samples, to pull from for each peptide
+                _time = time.time()
+                sample_pool = laplace.rvs(size=(np.sum(obs_per_seq) * k))
+                t_laplace_samples += (time.time() - _time)
+                # keep track of where we are in the pool with a counter
+                sample_counter = 0
+
+                # parametric bootstrap
+                for i in range(0, num_peptides):
+                    num_obs = obs_per_seq[i]
+                    
                     _time = time.time()
-                    sample_pool = laplace.rvs(size=(np.sum(obs_per_seq) * k))
+                    # sample num_obs synthetic RTs for k bootstrap iterations
+                    # do the sampling in a big pool, then shape to matrix where
+                    # rows correspond to bootstrap iters and columns correspond to sample observations
+                    #samples = laplace.rvs(size=(k * num_obs)).reshape(k, num_obs)
+                    
+                    # draw samples from sample pool, reshape into matrix
+                    _time = time.time()
+                    samples = sample_pool[sample_counter:(sample_counter+(k*num_obs))]
+                    samples = samples.reshape(k, num_obs)
+
+                    # increment sample counter
+                    sample_counter += (k*num_obs)
+
+                    #mu_med = np.median()
+                    # shift and scale sampled RTs by mu and sigma_pred, respectively
+                    samples = (samples * sigma_preds[i]) + mu_preds[i]
+                    #samples = (samples * sigma_preds[i]) + mu_med
                     t_laplace_samples += (time.time() - _time)
-                    # keep track of where we are in the pool with a counter
-                    sample_counter = 0
 
-                    # parametric bootstrap
-                    for i in range(0, num_peptides):
-                        num_obs = obs_per_seq[i]
-                        
+                    if (
+                            bootstrap_method == 'parametric_mixture' or 
+                            bootstrap_method == 'parametric-mixture'
+                        ):
+                        # sample from mixture distribution
                         _time = time.time()
-                        # sample num_obs synthetic RTs for k bootstrap iterations
-                        # do the sampling in a big pool, then shape to matrix where
-                        # rows correspond to bootstrap iters and columns correspond to sample observations
-                        #samples = laplace.rvs(size=(k * num_obs)).reshape(k, num_obs)
-                        
-                        # draw samples from sample pool, reshape into matrix
-                        _time = time.time()
-                        samples = sample_pool[sample_counter:(sample_counter+(k*num_obs))]
-                        samples = samples.reshape(k, num_obs)
-
-                        # increment sample counter
-                        sample_counter += (k*num_obs)
-
-                        #mu_med = np.median()
-                        # shift and scale sampled RTs by mu and sigma_pred, respectively
-                        samples = (samples * sigma_preds[i]) + mu_preds[i]
-                        #samples = (samples * sigma_preds[i]) + mu_med
-                        t_laplace_samples += (time.time() - _time)
-
-                        if bootstrap_method == 'parametric_mixture':
-                            # sample from mixture distribution
-                            _time = time.time()
-                            # actually faster to just replicate the sample matrix and then
-                            # take subindices from that instead of sampling from null every
-                            # iteration of the loop below. this seems inefficient, especially
-                            # if given very small PEPs, but still better than sampling every iteration.
-                            # could probably optimize the size of the null sample matrix by
-                            # looking at predicted false positive rates, but for now we're
-                            # just going with worst case scenario and assuming for all false positives.
-                            null_samples = norm.rvs(size=(k * num_obs)).reshape(k, num_obs)
-                            # shift and scale sampled RTs by mean and std of null dists
-                            null_samples = (null_samples * null_dists[exp_ids[i],1]) + null_dists[exp_ids[i],0]
-                            t_null_samples += (time.time() - _time)
-
-                            _time = time.time()
-                            for j in range(0, num_obs): # for each observation in the matrix
-                                # take a chunk of the coin flip pool
-                                fp = (coin_flip_pool[coin_counter:(coin_counter + k)] < peps[i][j]).astype(bool)
-                                coin_counter += k
-                                # overwrite original samples with samples from null distribution
-                                samples[fp, j] = null_samples[fp, j]
-                            t_loop_indexing += (time.time() - _time)
+                        # actually faster to just replicate the sample matrix and then
+                        # take subindices from that instead of sampling from null every
+                        # iteration of the loop below. this seems inefficient, especially
+                        # if given very small PEPs, but still better than sampling every iteration.
+                        # could probably optimize the size of the null sample matrix by
+                        # looking at predicted false positive rates, but for now we're
+                        # just going with worst case scenario and assuming for all false positives.
+                        null_samples = norm.rvs(size=(k * num_obs)).reshape(k, num_obs)
+                        # shift and scale sampled RTs by mean and std of null dists
+                        null_samples = (null_samples * null_dists[exp_ids[i],1]) + null_dists[exp_ids[i],0]
+                        t_null_samples += (time.time() - _time)
 
                         _time = time.time()
+                        for j in range(0, num_obs): # for each observation in the matrix
+                            # take a chunk of the coin flip pool
+                            fp = (coin_flip_pool[coin_counter:(coin_counter + k)] < peps[i][j]).astype(bool)
+                            coin_counter += k
+                            # overwrite original samples with samples from null distribution
+                            samples[fp, j] = null_samples[fp, j]
+                        t_loop_indexing += (time.time() - _time)
 
-                        # Aggregate all sampled mus and store it in mu_k
-                        if config['mu_estimation'] == 'median':
-                            mu_k[i] = np.median(samples, axis=1)
-                        elif config['mu_estimation'] == 'mean':
-                            mu_k[i] = np.mean(samples, axis=1)
-                        elif config['mu_estimation'] == 'weighted_mean':
-                            # or take the weighted mean
-                            weights = ((1 - peps[i]) - (1 - config['pep_threshold'])) / config['pep_threshold']
-                            mu_k[i] = (np.sum(samples * weights, axis=1) / np.sum(weights))
-                        else:
-                            error_msg = 'mu_estimation method {} not defined'.format(config['mu_estimation'])
-                            raise Exception(error_msg)
+                    _time = time.time()
 
-                        t_medians += (time.time() - _time)
+                    # Aggregate all sampled mus and store it in mu_k
+                    if config['mu_estimation'] == 'median':
+                        mu_k[i] = np.median(samples, axis=1)
+                    elif config['mu_estimation'] == 'mean':
+                        mu_k[i] = np.mean(samples, axis=1)
+                    elif config['mu_estimation'] == 'weighted_mean':
+                        # or take the weighted mean
+                        weights = ((1 - peps[i]) - (1 - config['pep_threshold'])) / config['pep_threshold']
+                        mu_k[i] = (np.sum(samples * weights, axis=1) / np.sum(weights))
+                    else:
+                        error_msg = 'mu_estimation method {} not defined'.format(config['mu_estimation'])
+                        raise Exception(error_msg)
+
+                    t_medians += (time.time() - _time)
 
                 logger.debug('laplace sampling: {:.1f} ms'.format(t_laplace_samples*1000))
                 logger.debug('coin flips: {:.1f} ms'.format(t_coin_flips*1000))

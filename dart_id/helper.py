@@ -237,18 +237,17 @@ def weighted_quantile(values, quantiles, sample_weight=None, values_sorted=False
     return np.interp(quantiles, weighted_quantiles, values)
 
 def weighted_median(values, weights):
-  order = np.argsort(values)
-  values = values[order]
-  weights = weights[order]
+    order = np.argsort(values)
+    values = values[order]
+    weights = weights[order]
 
-  #weighted_quantiles = (np.cumsum(weights) - (0.5 * weights)) / np.sum(weights)
-  
-  return (
-      np.interp(
-          [0.5], 
-          (np.cumsum(weights) - (0.5 * weights)) / np.sum(weights),
-          values
-      )
+    #weighted_quantiles = (np.cumsum(weights) - (0.5 * weights)) / np.sum(weights)
+    
+    return np.interp(
+        [0.5], 
+        (np.cumsum(weights) - (0.5 * weights)) / np.sum(weights),
+        values
+    )
     
 def convert_numpy_scalar(x):
     if type(x) == float or type(x) == int:
