@@ -245,7 +245,10 @@ def update(dfa, params, config):
                 logger.debug('loop indexing: {:.1f} ms'.format(t_loop_indexing*1000))
                 logger.debug('taking medians: {:.1f} ms'.format(t_medians*1000))
 
-            elif bootstrap_method == 'non-parametric':
+            elif (
+                    bootstrap_method == 'non-parametric' or
+                    bootstrap_method == 'non_parametric'
+                ):
                 # non-parametric bootstrap
                 # instead of generating random indices for the sampling for each
                 # iteration, and for each peptide, we'll generate a batch of random numbers

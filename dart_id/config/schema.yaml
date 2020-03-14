@@ -191,6 +191,7 @@ properties:
       - parametric_mixture
       - parametric-mixture
       - non-parametric
+      - non_parametric
 
   bootstrap_iters:
     description: "Number of bootstrap sampling iterations"
