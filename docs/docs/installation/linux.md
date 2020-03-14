@@ -7,11 +7,11 @@ nav_order: 2
 
 # Linux Installation
 
-## Getting Python >= 3.4
+## Getting Python >= 3.7
 
 DART-ID is tested on Ubuntu 14.04 (Trusty64) and CentOS 7, but should run on most distros. 
 
-The most important step is getting Python >= 3.4, as DART-ID and some of its dependencies will fail to build on earlier versions.
+The most important step is getting Python >= 3.7, as DART-ID and some of its dependencies will fail to build on earlier versions.
 
 With Ubuntu 14.04, Python3 is not installed by default, and to install you can follow instructions 
 [here](https://askubuntu.com/questions/865554/how-do-i-install-python-3-6-using-apt-get). 

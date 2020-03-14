@@ -12,7 +12,7 @@ DART-ID has been tested on Windows 7/8/10. However, we recommend running this so
 ## Requirements
 
 * Git source control management -- [download here](https://git-scm.com/downloads)
-* Python >= 3.4
+* Python >= 3.7
     * We strongly recommend using the Miniconda distribution: [download here](https://conda.io/miniconda.html)
     * The Anaconda distribution works as well but its 700+ packages are not strictly necessary -- [download here](https://www.anaconda.com/download/#windows)
     * Vanilla distribution of Python, if you want to start from scratch. [Download here](https://www.python.org/download/releases/3.0/)

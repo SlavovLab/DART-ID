@@ -27,7 +27,7 @@ This method is particularly useful for methods relying on MS2-based quantificati
 
 ### Dependencies
 
-DART-ID requires Python >= 3.4 (64-bit - [miniconda distribution recommended](https://docs.conda.io/en/latest/miniconda.html)), and has been tested on Windows 8 / OSX Mojave 10.14 / Centos 7 / Ubuntu 14.04.
+DART-ID requires Python >= 3.7 (64-bit - [miniconda distribution recommended](https://docs.conda.io/en/latest/miniconda.html)), and has been tested on Windows 8 / OSX Mojave 10.14 / Centos 7 / Ubuntu 14.04.
 
 ### Installation
 
