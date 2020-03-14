@@ -220,11 +220,20 @@ def update(dfa, params, config):
                             t_loop_indexing += (time.time() - _time)
 
                         _time = time.time()
-                        # now take the median of each row and store it in mu_k
-                        mu_k[i] = np.median(samples, axis=1)
-                        # or take the weighted mean
-                        #weights = ((1 - peps[i]) - (1 - config['pep_threshold'])) / config['pep_threshold']
-                        #mu_k[i] = (np.sum(samples * weights, axis=1) / np.sum(weights))
+
+                        # Aggregate all sampled mus and store it in mu_k
+                        if config['mu_estimation'] == 'median':
+                            mu_k[i] = np.median(samples, axis=1)
+                        elif config['mu_estimation'] == 'mean':
+                            mu_k[i] = np.mean(samples, axis=1)
+                        elif config['mu_estimation'] == 'weighted_mean':
+                            # or take the weighted mean
+                            weights = ((1 - peps[i]) - (1 - config['pep_threshold'])) / config['pep_threshold']
+                            mu_k[i] = (np.sum(samples * weights, axis=1) / np.sum(weights))
+                        else
+                            error_msg = 'mu_estimation method {} not defined'.format(config['mu_estimation'])
+                            raise Exception(error_msg)
+
                         t_medians += (time.time() - _time)
 
                 logger.debug('laplace sampling: {:.1f} ms'.format(t_laplace_samples*1000))

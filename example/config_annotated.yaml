@@ -232,11 +232,18 @@ filters:
 ## Update Options
 ## ==========================
 
-# parametric, parametric_mixture, non-parametric
+# DART-ID bootstraps the reference RT (mu), to account for uncertainty
+# in the estimation and to penalize mu estimates derived from only a few data points (experiments)
+# Ideally we would use the MCMC sampler (STAN) to sample the full posterior, but due to 
+# technical/performance constraints we are doing this in python instead
+
+# options -- parametric-mixture, parametric, non-parametric, none
 # bootstrap_method: 'parametric_mixture'
 # bootstrap_iters: 50
 
-# mean, median, weighted_mean
+# How to aggregate bootstrapped samples
+# The weighted mean uses the PEP of each PSM as the weights
+# options -- mean, median, weighted_mean
 # mu_estimation: 'median'
 
 ## Protein Inference Options
