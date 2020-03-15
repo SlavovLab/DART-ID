@@ -52,12 +52,11 @@ def update(dfa, params, config):
     # mu from the STAN alignment
     dfa['mu'] = params['peptide']['mu'].values[dfa['stan_peptide_id']] 
     
-    # concatenate transformation parameters
-    exp_params = pd.DataFrame({ 
-        key: params['exp'][key][dfa['exp_id']] 
-        for key in model['exp_keys']
-    }).reset_index(drop=True)
-    dfa = pd.concat([dfa, exp_params], axis=1)
+    # Join transformation parameters (betas, sigmas)
+    dfa = (dfa
+        .join(params['exp'], on='exp_id', how='left', lsuffix='', rsuffix='_right')
+        .drop(columns='exp_id_right')
+    )
 
     # predict mus with RTs, and RTs with aligned mus
     dfa['mu_pred'] = model['rt_to_ref'](dfa, dfa['mu'], params)
@@ -80,19 +79,61 @@ def update(dfa, params, config):
     df_new = pd.DataFrame()
 
     bootstrap_method = config['bootstrap_method'] if 'bootstrap_method' in config else None
+
+    if bootstrap_method == 'none':
+        bootstrap_method = None
+
     if bootstrap_method is None:
         logger.info('Bootstrap method not defined, using point estimates to update confidence instead.')
     else:
         logger.info('Using \"{}\" bootstrap method'.format(bootstrap_method))
 
-    k = 20 # default
+    bootstrap_iters = 20 # default
     if 'bootstrap_iters' in config:
-        k = config['bootstrap_iters']
+        bootstrap_iters = config['bootstrap_iters']
         if bootstrap_method is not None:
-            logger.info('Using {} bootstrap iterations'.format(k))
+            logger.info('Using {} bootstrap iterations'.format(bootstrap_iters))
+
+    # Calculate the number of observations per peptide
+    # Used to determine how many draws we need from our distributions
+    obs_per_peptide = (dfa
+        .groupby('stan_peptide_id')
+        .size()
+    )
+    max_obs_per_peptide = obs_per_peptide.max()
+
+    laplace_pool = laplace.rvs(size=(max_obs_per_peptide * bootstrap_iters))
+    uniform_pool = uniform.rvs(size=(max_obs_per_peptide * bootstrap_iters))
+    null_sample_pool = norm.rvs(size=(max_obs_per_peptide * bootstrap_iters))
+
+    # Group all data by peptide
+    dfe = dfa.loc[:, ['stan_peptide_id', 'pep', 'mu_pred', 'mu', 'sigma_pred', 'exp_id']]
+    dfe_group = dfe.groupby('stan_peptide_id')
+
+    # Extract relevant values for each peptide
+    all_mu_preds = dfe_group['mu_pred'].apply(np.array)
+    all_mus = dfe_group['mu'].apply(np.array)
+    all_sigma_preds = dfe_group['sigma_pred'].apply(np.array)
+    all_peps = dfe_group['pep'].apply(np.array)
+    all_exp_ids = dfe_group['exp_id'].apply(np.array)
 
     logger.info('Updating PEPs...')
     for i, e in enumerate(np.sort(dfa['exp_id'].unique())):
+
+        # Timing debugging
+        time_init = 0
+        time_loo = 0
+        time_draw_laplace = 0
+        time_scale_laplace = 0
+        time_draw_norm_and_uniform = 0
+        time_scale_norm_and_uniform = 0
+        time_sampling_with_replacement = 0
+        time_medians = 0
+        time_dist_building = 0
+        time_bayes = 0
+        time_append = 0
+
+        _time = time.time()
 
         exp_name = exp_names[i]
 
@@ -101,12 +142,16 @@ def update(dfa, params, config):
 
         exp_peptides = exp['stan_peptide_id'].unique()
 
-        logger.info('Exp ({} / {}) - {} - ({} Peptides, {} PSMs)'.format(i+1, num_experiments, exp_name, len(exp_peptides), exp.shape[0]))
+        logger.info('Exp ({} / {}) - {} - ({} Peptides, {} PSMs)'.format(i + 1, num_experiments, exp_name, len(exp_peptides), exp.shape[0]))
+
+        time_init += (time.time() - _time)
 
         # vector of P(RT|delta=1) for this experiment.
         rt_plus = pd.Series(np.zeros(exp.shape[0]))
 
         if bootstrap_method is not None:
+
+            _time = time.time()
 
             # to avoid using this experiment's own data to update the confidence
             # of its own observations, recalculate the reference RTs (mu) without the
@@ -114,169 +159,128 @@ def update(dfa, params, config):
             # 1) non-parametric bootstrapping over the median of the predicted mus.
             # OR
             # 2) parametric bootstrapping, using the RT distribution parameters
-            
-            # get predicted mus of peptides in this experiment, excluding predicted mus
-            # transformed from RTs observed in this experiment
-            dfe = dfa.loc[
-                ((dfa['stan_peptide_id'].isin(exp_peptides)) & (dfa['exp_id'] != e)), 
-                ['stan_peptide_id', 'pep', 'mu_pred', 'mu', 'sigma_pred', 'exp_id']
-            ]
+                
+            # Extract relevant values for each peptide
+            mu_preds = all_mu_preds[exp_peptides]
+            mus = all_mus[exp_peptides]
+            sigma_preds = all_sigma_preds[exp_peptides]
+            peps = all_peps[exp_peptides]
+            exp_ids = all_exp_ids[exp_peptides]
 
-            # extract relevant values for each peptide
-            mu_preds = dfe.groupby('stan_peptide_id')['mu_pred'].apply(lambda x: x.values).values.tolist()
-            mus = dfe.groupby('stan_peptide_id')['mu'].apply(lambda x: x.values).values.tolist()
-            sigma_preds = dfe.groupby('stan_peptide_id')['sigma_pred'].apply(lambda x: x.values).values.tolist()
-            peps = dfe.groupby('stan_peptide_id')['pep'].apply(lambda x: x.values).values.tolist()
-            exp_ids = dfe.groupby('stan_peptide_id')['exp_id'].apply(lambda x: x.values).values.tolist()
+            num_peptides = exp_ids.shape[0]
             
-            # number of observations per peptide sequence
-            obs_per_seq = [len(peptide) for peptide in mu_preds]
-            num_peptides = len(mu_preds)
+            # Leave out this experiment's observations
+            leave_out = exp_ids.apply(lambda x: np.array(x == e))
+            obs_per_pep = exp_ids.apply(len) - leave_out.apply(sum)
 
-            # the number of observations per peptide -- used in loop
-            num_obs = 0
+            def loo(x, y):
+                return x[~y]
+
+            mu_preds = mu_preds.combine(leave_out, loo)
+            mus = mus.combine(leave_out, loo)
+            sigma_preds = sigma_preds.combine(leave_out, loo)
+            peps = peps.combine(leave_out, loo)
+            exp_ids = exp_ids.combine(leave_out, loo)       
+
             # matrix of n by k estimated mus from the bootstrapping
             # will iterate over in the loop after the immediate one
-            mu_k = np.zeros((num_peptides, k))
+            mu_k = np.zeros((num_peptides, bootstrap_iters))
 
-            if (
-                    bootstrap_method == 'parametric' or 
-                    bootstrap_method == 'parametric_mixture' or 
-                    bootstrap_method == 'parametric-mixture'
-                ):
+            time_loo += (time.time() - _time)
 
-                t_laplace_samples = 0
-                t_coin_flips = 0
-                t_null_samples = 0
-                t_loop_indexing = 0
-                t_medians = 0
+            for j, stan_peptide_id in enumerate(exp_peptides):
+                num_obs = obs_per_pep[stan_peptide_id]
 
-                # create pool of coin flips, instead of sampling for every peptide
-                # the pool is uniformly distributed from 0 to 1, and "successful" coin flip
-                # is determined by whether or not the sample from the pool is less than the
-                # measured PEP
-                _time = time.time()
-                coin_flip_pool = 0
+                # Parametric bootstrap
                 if (
+                        bootstrap_method == 'parametric' or 
                         bootstrap_method == 'parametric_mixture' or 
                         bootstrap_method == 'parametric-mixture'
                     ):
-                    coin_flip_pool = uniform.rvs(size=(np.sum(obs_per_seq) * k))
-
-                t_coin_flips += (time.time() - _time)
-                coin_counter = 0
-
-                # create a pool of laplace samples, to pull from for each peptide
-                _time = time.time()
-                sample_pool = laplace.rvs(size=(np.sum(obs_per_seq) * k))
-                t_laplace_samples += (time.time() - _time)
-                # keep track of where we are in the pool with a counter
-                sample_counter = 0
-
-                # parametric bootstrap
-                for i in range(0, num_peptides):
-                    num_obs = obs_per_seq[i]
                     
+                    # Draw num_obs * bootstrap_iters samples
                     _time = time.time()
-                    # sample num_obs synthetic RTs for k bootstrap iterations
-                    # do the sampling in a big pool, then shape to matrix where
-                    # rows correspond to bootstrap iters and columns correspond to sample observations
-                    #samples = laplace.rvs(size=(k * num_obs)).reshape(k, num_obs)
+                    pos_samples = laplace_pool[0:(num_obs * bootstrap_iters)].reshape(bootstrap_iters, num_obs)
                     
-                    # draw samples from sample pool, reshape into matrix
+                    time_draw_laplace += (time.time() - _time)
+
                     _time = time.time()
-                    samples = sample_pool[sample_counter:(sample_counter+(k*num_obs))]
-                    samples = samples.reshape(k, num_obs)
-
-                    # increment sample counter
-                    sample_counter += (k*num_obs)
-
-                    #mu_med = np.median()
-                    # shift and scale sampled RTs by mu and sigma_pred, respectively
-                    samples = (samples * sigma_preds[i]) + mu_preds[i]
-                    #samples = (samples * sigma_preds[i]) + mu_med
-                    t_laplace_samples += (time.time() - _time)
+        
+                    # Shift and scale sampled RTs by mu and sigma_pred, respectively
+                    pos_samples = (pos_samples * sigma_preds[stan_peptide_id]) + mu_preds[stan_peptide_id]
+                    
+                    time_scale_laplace += (time.time() - _time)
 
                     if (
                             bootstrap_method == 'parametric_mixture' or 
                             bootstrap_method == 'parametric-mixture'
                         ):
-                        # sample from mixture distribution
-                        _time = time.time()
-                        # actually faster to just replicate the sample matrix and then
-                        # take subindices from that instead of sampling from null every
-                        # iteration of the loop below. this seems inefficient, especially
-                        # if given very small PEPs, but still better than sampling every iteration.
-                        # could probably optimize the size of the null sample matrix by
-                        # looking at predicted false positive rates, but for now we're
-                        # just going with worst case scenario and assuming for all false positives.
-                        null_samples = norm.rvs(size=(k * num_obs)).reshape(k, num_obs)
-                        # shift and scale sampled RTs by mean and std of null dists
-                        null_samples = (null_samples * null_dists[exp_ids[i],1]) + null_dists[exp_ids[i],0]
-                        t_null_samples += (time.time() - _time)
 
                         _time = time.time()
-                        for j in range(0, num_obs): # for each observation in the matrix
-                            # take a chunk of the coin flip pool
-                            fp = (coin_flip_pool[coin_counter:(coin_counter + k)] < peps[i][j]).astype(bool)
-                            coin_counter += k
-                            # overwrite original samples with samples from null distribution
-                            samples[fp, j] = null_samples[fp, j]
-                        t_loop_indexing += (time.time() - _time)
+
+                        null_samples = null_sample_pool[0:(num_obs * bootstrap_iters)].reshape(bootstrap_iters, num_obs)
+
+                        coin_flips = uniform_pool[0:(num_obs * bootstrap_iters)].reshape(bootstrap_iters, num_obs)
+
+                        time_draw_norm_and_uniform += (time.time() - _time)
+
+                        _time = time.time()
+
+                        # Shift and scale sampled RTs by mean and std of null dists
+                        null_samples = (null_samples * null_dists[exp_ids[stan_peptide_id], 1]) + null_dists[exp_ids[stan_peptide_id], 0]
+
+                        fp = coin_flips < np.repeat([peps[stan_peptide_id],], bootstrap_iters, axis=0)
+
+                        # Overwrite original samples with samples from null distribution
+                        pos_samples[fp] = null_samples[fp]
+
+                        time_scale_norm_and_uniform += (time.time() - _time)
+                
+
+                # Non-parametric bootstrap
+                elif (
+                        bootstrap_method == 'non-parametric' or
+                        bootstrap_method == 'non_parametric'
+                    ):
+                
+                    # Pull random indices from the list of existing predicted mus
+                    # To get random indices, just take N random variates from uniform_pool,
+                    # (Otherwise used for coin flips in parametric bootstrap)
+                    # and multiply by len, then floor, to get a list index
+                    # This is just a cheap way to sample with replacement from the mu_preds
 
                     _time = time.time()
 
-                    # Aggregate all sampled mus and store it in mu_k
-                    if config['mu_estimation'] == 'median':
-                        mu_k[i] = np.median(samples, axis=1)
-                    elif config['mu_estimation'] == 'mean':
-                        mu_k[i] = np.mean(samples, axis=1)
-                    elif config['mu_estimation'] == 'weighted_mean':
-                        # or take the weighted mean
-                        weights = ((1 - peps[i]) - (1 - config['pep_threshold'])) / config['pep_threshold']
-                        mu_k[i] = (np.sum(samples * weights, axis=1) / np.sum(weights))
-                    else:
-                        error_msg = 'mu_estimation method {} not defined'.format(config['mu_estimation'])
-                        raise ConfigFileError(error_msg)
+                    # Convert to a numpy array so we can do integer indexing
+                    pos_samples = np.array(mu_preds[stan_peptide_id])[
+                        np.floor(uniform_pool[0:(num_obs * bootstrap_iters)] * num_obs).astype(int)
+                    ]
+                    # Reshape into matrix
+                    pos_samples = pos_samples.reshape(bootstrap_iters, num_obs)
+                    
+                    time_sampling_with_replacement += (time.time() - _time)
 
-                    t_medians += (time.time() - _time)
+                _time = time.time()
 
-                logger.debug('laplace sampling: {:.1f} ms'.format(t_laplace_samples*1000))
-                logger.debug('coin flips: {:.1f} ms'.format(t_coin_flips*1000))
-                logger.debug('null sampling: {:.1f} ms'.format(t_null_samples*1000))
-                logger.debug('loop indexing: {:.1f} ms'.format(t_loop_indexing*1000))
-                logger.debug('taking medians: {:.1f} ms'.format(t_medians*1000))
+                # Aggregate all sampled mus and store it in mu_k
+                if config['mu_estimation'] == 'median':
+                    mu_k[j] = np.median(pos_samples, axis=1)
+                elif config['mu_estimation'] == 'mean':
+                    mu_k[j] = np.mean(pos_samples, axis=1)
+                elif config['mu_estimation'] == 'weighted_mean':
+                    # or take the weighted mean
+                    weights = ((1 - np.array(peps[stan_peptide_id])) - (1 - config['pep_threshold'])) / config['pep_threshold']
+                    mu_k[j] = (np.sum(pos_samples * weights, axis=1) / np.sum(weights))
 
-            elif (
-                    bootstrap_method == 'non-parametric' or
-                    bootstrap_method == 'non_parametric'
-                ):
-                # non-parametric bootstrap
-                # instead of generating random indices for the sampling for each
-                # iteration, and for each peptide, we'll generate a batch of random numbers
-                # now and pull from them later.
-                # the counter will keep track of which portion of the pool we're using
-                counter = 0
-                rand_pool = np.random.rand(np.sum(obs_per_seq) * k)
+                time_medians += (time.time() - _time)
 
-                for i in range(0, num_peptides): # for each peptide sequence
-                    num_obs = obs_per_seq[i]
-                    for j in range(0, k): # for each iteration:
-                        # re-estimate mu from the resampled mu_preds
-                        # TODO: choice also of mean, weighted mean
-                        mu_k[i][j] = np.median(mu_preds[i][
-                            (rand_pool[counter:(counter+num_obs)] * num_obs).astype(int, copy=False)
-                        ])
-
-                        counter = counter + num_obs
-            
-            _t_dist_building = time.time()
+            _time = time.time()
             # map of stan_peptide_id onto 1:num_peptides
             pep_inds = {ind: var for var, ind in enumerate(exp_peptides)}
             pep_inds = exp['stan_peptide_id'].map(pep_inds)
 
             # for each bootstrap iteration:
-            for j in range(0, k):
+            for k in range(0, bootstrap_iters):
                 # evaluate the transformed RTs (predicted mus) on distributions
                 # with the bootstrapped, estimated mus as the means.
                 #rt_plus = rt_plus + laplace.pdf(exp['retention_time'], \
@@ -284,19 +288,23 @@ def update(dfa, params, config):
                 #  scale=exp['sigmaij'])
 
                 rt_plus = rt_plus + laplace.pdf(exp['mu_pred'], 
-                    loc=mu_k[:,j][pep_inds],
+                    loc=mu_k[:, k][pep_inds],
                     scale=exp['sigma_pred']
                 )
 
             # divide total likelihood by # of iterations to normalize to area of 1
-            rt_plus = rt_plus / k
+            rt_plus = rt_plus / bootstrap_iters
 
-            logger.debug('distribution building: {:.1f} ms'.format((time.time() - _t_dist_building)*1000))
+            time_dist_building += (time.time() - _time)
 
         else:
+            _time = time.time()
             # not using bootstrap, but using adjusted mu as a point estimate
             # for updating the confidence
             rt_plus = model['rt_plus_func'](exp)
+            time_dist_building += (time.time() - _time)
+
+        _time = time.time()
 
         #                                         P(RT|delta=0)*P(delta=0)
         # PEP.new = P(delta=0|RT) =   ---------------------------------------------------
@@ -324,6 +332,10 @@ def update(dfa, params, config):
             ((rt_minus * exp['pep']) + (rt_plus * (1.0 - exp['pep'])))
         )
 
+        time_bayes += (time.time() - _time)
+
+        _time = time.time()
+
         # for PSMs for which we have alignment/update data
         exp_new = pd.DataFrame({
             'rt_minus': rt_minus.tolist(),
@@ -343,11 +355,27 @@ def update(dfa, params, config):
         # append to master DataFrame and continue
         df_new = df_new.append(exp_new)
 
+        time_append += (time.time() - _time)
+
+        logger.debug('time_init: {:.1f} ms'.format(time_init*1000))
+        logger.debug('time_loo (bootstrap only): {:.1f} ms'.format(time_loo*1000))
+        logger.debug('time_draw_laplace (parametric/mixture only): {:.1f} ms'.format(time_draw_laplace*1000))
+        logger.debug('time_scale_laplace (parametric/mixture only): {:.1f} ms'.format(time_scale_laplace*1000))
+        logger.debug('time_draw_norm_and_uniform (parametric/mixture only): {:.1f} ms'.format(time_draw_norm_and_uniform*1000))
+        logger.debug('time_scale_norm_and_uniform (parametric-mixture only): {:.1f} ms'.format(time_scale_norm_and_uniform*1000))
+        logger.debug('time_sampling_with_replacement (non-parametric only): {:.1f} ms'.format(time_sampling_with_replacement*1000))
+        logger.debug('time_medians (bootstrap only): {:.1f} ms'.format(time_medians*1000))
+        logger.debug('time_dist_building: {:.1f} ms'.format(time_dist_building*1000))
+        logger.debug('time_bayes: {:.1f} ms'.format(time_bayes*1000))
+        logger.debug('time_append: {:.1f} ms'.format(time_append*1000))
+        
+
     # reorder by ID and reset the index
     df_new = df_new.sort_values('id')
     df_new = df_new.reset_index(drop=True)
 
     return df_new
+
 
 def write_output(df, out_path, config):
     # remove diagnostic columns, unless they are specified to be kept
