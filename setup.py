@@ -58,7 +58,7 @@ setup(
   install_requires=[
     'jsonschema==3.0.1',
     'jupyter==1.0.0',
-    'matplotlib==2.1.2',
+    'matplotlib==3.1.2',
     'nbconvert==5.6.1',
     'nbformat==5.0.4',
     'networkx>=2.1,<2.3',
