@@ -20,11 +20,8 @@ include dart_id/models/fit_RT3e/linux_generic/*
 include dart_id/models/fit_RT3e/rhel/*
 include dart_id/models/fit_RT3e/debian/*
 
-# figure generation scripts
-include dart_id/figure_gen/*
-
-# figure generation resources
-include dart_id/figure_resources/*
+# Include notebooks
+include dart_id/notebooks/dart_id_report.ipynb
 
 # fido scripts
 include dart_id/fido/*
