@@ -402,16 +402,25 @@ def process_files(config):
         error_msg = 'Number of experiments filter threshold {} is greater than the number of experiments in the input list. Please provide an integer greater than or equal to 1 and less than the number of experiments with the \"num_experiments\" key.'.format(config['num_experiments'])
         raise ConfigFileError(error_msg)
     
-    # count the number of experiments a peptide is observed in, but filter out
+    # Count the number of experiments a peptide is observed in, but filter out
     # 1) PSMs removed from previous filters
     # 2) PSMs with PEP > pep_threshold
-    exps_per_pep = (df[
-            -((df['remove']) | 
-            (df['pep'] >= config['pep_threshold']))
+    exps_per_pep = (
+        df.loc[
+            # Get peptides that are:
+            (
+                # Not previously removed, for any reason
+                (~df['remove']) &
+                # Are below the set confidence threshold
+                (df['pep'] < config['pep_threshold'])
+            ),
+            ['sequence', 'raw_file']
         ]
+        # Group by sequence, get all unique raw files the peptide sequence 
+        # appears in, then count the number of raw files
         .groupby('sequence')['raw_file']
         .unique()
-        .apply((lambda x: len(x)))
+        .apply(len)
     )
     # map values to DataFrame. peptides without any value will get NaN,
     # which will then be assigned to 0.
@@ -437,12 +446,30 @@ def process_files(config):
     # number will change based on the set of experiments we consider
     logger.info('Recalculating number of confident peptides across experiments...')
 
-    exps_per_pep = df[-((df['remove']) | (df['pep'] >= config['pep_threshold']))].groupby('sequence')['raw_file'].unique().apply((lambda x: len(x)))
+    exps_per_pep = (
+        df.loc[
+            # Get peptides that are:
+            (
+                # Not previously removed, for any reason
+                (~df['remove']) &
+                # Are below the set confidence threshold
+                (df['pep'] < config['pep_threshold'])
+            ),
+            ['sequence', 'raw_file']
+        ]
+        # Group by sequence, get all unique raw files the peptide sequence 
+        # appears in, then count the number of raw files
+        .groupby('sequence')['raw_file']
+        .unique()
+        .apply(len)
+    )
     exps_per_pep = df['sequence'].map(exps_per_pep)
-    exps_per_pep[pd.isnull(exps_per_pep)] = 0
-    logger.info('Additional {} PSMs from peptide sequences not observed confidently in more than {} experiments flagged for removal.'.format(np.sum(exps_per_pep < config['num_experiments']) - np.sum(df['remove']), config['num_experiments']))
-    df['remove'] = (df['remove'] | (exps_per_pep < config['num_experiments']))
 
+    logger.info('Additional {} PSMs from peptide sequences not observed confidently in more than {} experiments flagged for removal.'.format(np.sum(exps_per_pep < config['num_experiments']), config['num_experiments']))
+
+    exps_per_pep[pd.isnull(exps_per_pep)] = 0
+    df['remove'] = (df['remove'] | (exps_per_pep < config['num_experiments']))
+    
     ## --------------
     ## DONE FILTERING
     ## --------------
