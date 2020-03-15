@@ -59,6 +59,8 @@ papers/*
 # python
 # ignore notebooks
 *.ipynb
+# Except for ones we want
+!dart_id/notebooks/dart_id_report.ipynb
 .ipynb_checkpoints/**/*
 dart_id/models/*.pkl
 __pycache__/

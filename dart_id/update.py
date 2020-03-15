@@ -13,8 +13,9 @@ from dart_id.align import align
 from dart_id.converter import process_files
 from dart_id.exceptions import ConfigFileError
 from dart_id.fido.BayesianNetwork import run_internal
-from dart_id.models import models, get_model_from_config
 from dart_id.helper import add_global_args, read_config_file, init_logger, load_params_from_file
+from dart_id.models import models, get_model_from_config
+from dart_id.report import generate_report
 from scipy.stats import norm, lognorm, laplace, bernoulli, uniform
 
 logger = logging.getLogger('root')
@@ -372,6 +373,7 @@ def write_output(df, out_path, config):
         
     df.to_csv(out_path, sep='\t', index=False)
 
+
 def write_parameters_df(df, out_path, config):
     '''Write a stripped down version of the input file, with diagnostic columns
     that the user might've chosen to not output in the main output file
@@ -561,11 +563,20 @@ def main():
         logger.info('Fido finished')
         logger.info('FDR for PSM\'s razor protein, from protein inference, placed in \"razor_protein_fdr\" column')
 
-    write_parameters_df(df_adjusted, os.path.join(config['output'], 'parameters.txt'), config)
+    parameters_path = os.path.join(config['output'], 'parameters.txt')
+    write_parameters_df(df_adjusted, parameters_path, config)
 
     # print figures?
     if config['print_figures']:
-        pass
+        logger.info('Generating IPython/HTML report')
+        generate_report(config['output'], {
+            'parameters': parameters_path,
+            'config': config,
+            # Parameters passed to papermill --> IPython must be serializable
+            'exp_params': params['exp'].to_json(),
+            'peptide_params': params['peptide'].to_json(),
+            'pair_params': params['pair'].to_json()
+        })
 
     # overwrite PEP?
     # if true, then store old PEP in "Spectra PEP" column,
