@@ -239,7 +239,7 @@ filters:
 
 # options -- parametric-mixture, parametric, non-parametric, none
 # bootstrap_method: 'parametric_mixture'
-# bootstrap_iters: 50
+# bootstrap_iters: 100
 
 # How to aggregate bootstrapped samples
 # The weighted mean uses the PEP of each PSM as the weights
