@@ -477,7 +477,7 @@ def process_files(config):
     # flag the observations in df_original that were removed
     df_original['remove'] = df['remove']
     # remove the flagged observations from the dataframe, and reset index
-    df = df[df['remove']==False].reset_index(drop=True)
+    df = df[df['remove'] == False].reset_index(drop=True)
 
     # map peptide and experiment IDs
     # sort experiment IDs alphabetically - or else the order is by 

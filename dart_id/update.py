@@ -359,9 +359,9 @@ def update(dfa, params, config):
 
         logger.debug('time_init: {:.1f} ms'.format(time_init*1000))
         logger.debug('time_loo (bootstrap only): {:.1f} ms'.format(time_loo*1000))
-        logger.debug('time_draw_laplace (parametric/mixture only): {:.1f} ms'.format(time_draw_laplace*1000))
-        logger.debug('time_scale_laplace (parametric/mixture only): {:.1f} ms'.format(time_scale_laplace*1000))
-        logger.debug('time_draw_norm_and_uniform (parametric/mixture only): {:.1f} ms'.format(time_draw_norm_and_uniform*1000))
+        logger.debug('time_draw_laplace (parametric only): {:.1f} ms'.format(time_draw_laplace*1000))
+        logger.debug('time_scale_laplace (parametric only): {:.1f} ms'.format(time_scale_laplace*1000))
+        logger.debug('time_draw_norm_and_uniform (parametric-mixture only): {:.1f} ms'.format(time_draw_norm_and_uniform*1000))
         logger.debug('time_scale_norm_and_uniform (parametric-mixture only): {:.1f} ms'.format(time_scale_norm_and_uniform*1000))
         logger.debug('time_sampling_with_replacement (non-parametric only): {:.1f} ms'.format(time_sampling_with_replacement*1000))
         logger.debug('time_medians (bootstrap only): {:.1f} ms'.format(time_medians*1000))
@@ -525,26 +525,26 @@ def main():
     #  )[np.argsort(np.argsort(df_adjusted['dart_PEP']))]
     
     # q-value, by fixing # of false positives to a discrete number
-    # for now, set all null PEPs to 1. we'll remember the index and set them back to nan later
+    # For now, set all null PEPs to 1. We'll remember the index and set them back to nan later
     null_peps = pd.isnull(df_adjusted['dart_PEP'])
     if null_peps.sum() > 0:
         df_adjusted['dart_PEP'][null_peps] = 1
 
-    # get the index order of sorted PEPs
+    # Get the index order of sorted PEPs
     pep_order = np.argsort(df_adjusted['dart_PEP'])
     # Take the ceiling of the cumulative sum of the sorted PEPs to get the pessimistic
     # estimate of the number of false positives when selecting at that level.
-    # because using ceiling, PSMs with different PEPs but within the same relative interval
+    # Because using ceiling, PSMs with different PEPs but within the same relative interval
     # will get the same "num_fp" value.
     num_fp = np.ceil(np.cumsum(df_adjusted['dart_PEP'][pep_order])).astype(int)
-    # count the number of occurrences of num_fp and sum them up to get the sample size for each
+    # Count the number of occurrences of num_fp and sum them up to get the sample size for each
     # discrete false positive # threshold
     fp_counts = np.cumsum(num_fp.value_counts().sort_index()).values
-    # divide # of false positivies by sample size to get q-value. sorting the index order brings
+    # Divide # of false positivies by sample size to get q-value. Sorting the index order brings
     # the order of values back to their original form
     df_adjusted['dart_qval'] = (num_fp / fp_counts[num_fp-1]).values[np.argsort(pep_order.values)]
 
-    # set null PEPs and q-values back to nan
+    # Set null PEPs and q-values back to nan
     if null_peps.sum() > 0:
         df_adjusted['dart_PEP'][null_peps] = np.nan
         df_adjusted['dart_qval'][null_peps] = np.nan
