@@ -32,11 +32,19 @@ def generate_report(output_folder_path, nbargs):
 
     # Execute the notebook and write to disk
     notebook_output_path = os.path.join(output_folder_path, 'dart_id_report.ipynb')
-    pm.execute_notebook(
-        report_template_path,
-        notebook_output_path,
-        parameters=nbargs
-    )
+
+    try:
+        pm.execute_notebook(
+            report_template_path,
+            notebook_output_path,
+            parameters=nbargs
+        )
+    except pm.PapermillExecutionError:
+        # Error encountered in notebook
+        pass
+    except pm.PapermillException:
+        # Error encountered elsewhere
+        pass
 
     # Convert notebook to HTML
     html_output_path = os.path.join(output_folder_path, 'dart_id_report.html')
