@@ -66,6 +66,7 @@ setup(
     'pandas==1.0.1',
     'papermill==1.2.1',
     'PyYAML==5.1',
+    'scikit-learn==0.22.2.post1',
     'scipy==1.4.1',
     'seaborn==0.9.0'
   ],
