@@ -92,6 +92,11 @@ properties:
         type: string
 
     required: ['sequence', 'raw_file', 'retention_time', 'pep']
+
+  protein_decoy_tag:
+    description: "Pattern to match to decoy proteins, in the 'leading_protein' column. If provided, along with the 'leading_protein' column, DART-ID will re-compute the empirical false discovery rate (FDR) using the proportion of decoy hits versus target hits"
+    type: string
+    minLength: 1
   
   ## ADVANCED SETTINGS
 
@@ -337,6 +342,10 @@ properties:
     description: "Minimum number of valid PSMs per experiment, in order for the experiment's PSMs to participate in retention time alignment"
     type: integer
     minimum: 2
+
+  pep_cv_filter:
+    description: "Exclude low-confidence PEPs from alignment (PEP > 0.01) if the coefficient of variantion (CV) of their PEPs is CV > 0.01. We found that this is a good predictor of whether or not the PSM is a decoy hit versus a target hit."
+    type: boolean
 
   filters:
     description: "List of PSM filters to apply before alignment"

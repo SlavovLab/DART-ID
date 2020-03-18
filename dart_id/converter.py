@@ -11,6 +11,11 @@ import os
 import pandas as pd
 import re
 
+from sklearn import svm
+from sklearn.preprocessing import label_binarize, StandardScaler
+from sklearn.metrics import roc_curve, auc
+from sklearn.model_selection import train_test_split
+
 from functools import reduce
 from dart_id.exceptions import ConfigFileError, FilteringError
 from dart_id.helper import add_global_args, read_config_file, init_logger
@@ -469,7 +474,118 @@ def process_files(config):
 
     exps_per_pep[pd.isnull(exps_per_pep)] = 0
     df['remove'] = (df['remove'] | (exps_per_pep < config['num_experiments']))
+
+
+    # Exclude low-confidence PEPs from alignment (PEP > 0.01) if the 
+    # coefficient of variantion (CV) of their PEPs is CV > 0.01. 
+    # We found that this is a good predictor of whether or not 
+    # the PSM is a decoy hit versus a target hit.
+
+    def cv(x):
+        return np.nanstd(x) / np.nanmean(x)
+
+
+
+    peptide_aggs = {
+        'pep_mean': ('pep', np.nanmean),
+        'pep_cv': ('pep', cv),
+        'pep_min': ('pep', np.min),
+        'num_obs': ('pep', 'count')
+    }
+
     
+
+    # If we have the protein_decoy_tag and the leading_proteins column,
+    # Look for the protein_decoy_tag to determine whether or not the peptide is a decoy peptide
+    if 'leading_protein' in config['col_names'] and 'protein_decoy_tag' in config:
+        def is_decoy(x):
+            return x.str.contains(config['protein_decoy_tag']).any()
+
+        peptide_aggs['is_decoy'] = ('leading_protein', is_decoy)
+
+    peptides_df = (df
+        .groupby('sequence')
+        .aggregate(**peptide_aggs)
+        # Only take peptides with more than N observations
+        .query('num_obs > 3')
+        # Remove any extremely low CVs
+        .query('pep_cv > 1e-5')
+        # Remove extremely low PEP means
+        .query('pep_mean > 1e-10')
+    )
+
+    # If we have decoy data, then perform a logistic regression with
+    # the pep_mean and pep_cv as features
+    if 'is_decoy' in peptides_df.columns:
+        logger.info('Decoy peptide information present. Running logistic regression to avoid aligning decoy peptides')
+
+        # X = feature matrix
+        X = np.log10(peptides_df.loc[:, ['pep_mean', 'pep_cv']].values)
+        X = StandardScaler().fit_transform(X)
+
+        # True = Decoy, False = Target
+        y = peptides_df['is_decoy'].values
+
+        random_state = np.random.RandomState(0)
+
+        # shuffle and split training and test sets
+        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=.5, random_state=0)
+
+        # Learn to predict each class against the other
+        classifier = svm.SVC(kernel='linear', probability=True, random_state=random_state)
+        classifier.fit(X_train, y_train)
+        y_score = classifier.decision_function(X_test)
+
+        # Compute ROC curve and ROC area
+        fpr, tpr, thresholds = roc_curve(y_test, y_score, pos_label=True)
+        roc_auc = auc(fpr, tpr)
+
+        # If the curve is inverted, run with the opposite pos_label
+        inverted = False
+        if roc_auc < 0.5:
+            logger.info('Correcting inverted ROC curve')
+            inverted = True
+            fpr, tpr, thresholds = roc_curve(y_test, y_score, pos_label=False)
+            roc_auc = auc(fpr, tpr)
+
+        logger.info('AUC: {:.3f}'.format(roc_auc))
+        
+        # Maximize the Youden-Index (sensitivity (TP / P = TPR) + specificity (TN / N = 1 - FPR))
+        # But set a MINIMUM TPR of 0.8. We don't want to cut out too many of our targets
+        cutoff_start_ind = np.argmax(tpr >= 0.8) # argmax gets the first ind of the max value
+        cutoff_ind = cutoff_start_ind + np.argmax(tpr[cutoff_start_ind:] - fpr[cutoff_start_ind:])
+        cutoff_thresh = thresholds[cutoff_ind]
+
+        logger.info('ROC Cutoff: FPR = {:.2f}, TPR = {:.2f}'.format(fpr[cutoff_ind], tpr[cutoff_ind]))
+
+        # Generate scores for all points
+        all_y_score = classifier.decision_function(X)
+        # Points above the cutoff threshold are decoys
+        remove_inds = all_y_score >= cutoff_thresh
+        if inverted:
+            remove_inds = ~remove_inds
+
+        logger.info('Logistic regression is removing {} peptides'.format(np.sum(remove_inds)))
+
+    # If we don't have decoy information, then run with some preset cutoffs
+    if 'is_decoy' not in peptides_df.columns:
+        min_pep_thresh = 0.01
+        max_pep_cv_thresh = 0.1
+
+        remove_inds = (
+            (peptides_df['pep_min'] > min_pep_thresh) & 
+            (peptides_df['pep_cv'] < max_pep_cv_thresh)
+        )
+
+        logger.info('Removing {} peptides for min(PEP) > {:.3f} and CV(PEP) < {:.3f}'.format(np.sum(remove_inds), min_pep_thresh, max_pep_cv_thresh))
+
+    remove_seqs = peptides_df.index[remove_inds].values
+    df['remove'] = (df['remove'] | df['sequence'].isin(remove_seqs))
+
+    # filtered_out = remove_seqs['is_decoy'] & (remove_seqs['pep_cv'] < 0.3) & (remove_seqs['pep_min'] > 0.01)
+    # print('Removed', np.sum(remove_seqs.loc[filtered_out, 'num_obs']), 'out of', np.sum(remove_seqs.loc[remove_seqs['is_decoy'], 'num_obs']), 'decoy PSMs')
+
+
     ## --------------
     ## DONE FILTERING
     ## --------------

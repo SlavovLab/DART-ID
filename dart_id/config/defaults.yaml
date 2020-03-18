@@ -28,6 +28,8 @@ col_names:
   #exp_id: ~
   #peptide_id: ~
 
+protein_decoy_tag: REV__
+
 ### =======================
 ### !! ADVANCED SETTINGS !!
 ### =======================
@@ -121,6 +123,7 @@ log_file: true
 pep_threshold: 0.5
 num_experiments: 3
 min_psms_per_experiment: 50
+pep_cv_filter: true
 
 filters:
   #- name: exclude_filename 
