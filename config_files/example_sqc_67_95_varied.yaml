@@ -2,8 +2,7 @@
 ### =========================
 
 input: 
-  - /Volumes/GoogleDrive/My Drive/SCoPE/SQC/SQC_67_95_Varied/evidence.txt
-  # - /gd/MS/SCoPE/SQC/SQC_67_95_Varied/evidence.txt
+  - /gd/MS/SCoPE/SQC/SQC_67_95_Varied/evidence.txt
 
 #output: ~
 
@@ -79,7 +78,7 @@ verbose: 1
 sep: \t
 
 low_memory: false
-params_folder: /Users/chena/dart_id/sqc_varied_test
+# params_folder: ~
 
 ## Alignment Options
 ## ==========================
@@ -106,7 +105,7 @@ history_size: 5
 ## ==========================
 
 # parametric-mixture, parametric, non-parametric, none
-bootstrap_method: 'parametric'
+bootstrap_method: 'parametric-mixture'
 bootstrap_iters: 300
 
 # mean, median, weighted_mean
