@@ -330,7 +330,7 @@ def process_files(config):
         # have a variable low memory option depending on the input type.
         # MaxQuant, for example, has a structure that forces pandas out of its
         # optimal low memory mode, and we have to specify it here.
-        dfa = pd.read_csv(f, sep='\t', low_memory=config['low_memory'])
+        dfa = pd.read_csv(f, sep=config['sep'], low_memory=config['low_memory'])
 
         # keep track of where observations came from. this is _not_ the raw file ID
         # but instead the ID from which input file it originated from, so that if
