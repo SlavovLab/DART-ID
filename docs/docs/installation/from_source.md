@@ -12,7 +12,7 @@ Please skip this section if you have already installed with ```pip```. This is i
 We recommend using a [conda environment](https://conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html) to run DART-ID from source, so as to avoid any package versioning issues. You can create the same environment as us by using either the provided ```environment.yml``` spec or ```spec-file.txt``` (Mac OSX only). 
 
 ```bash
-conda env create -f environment.yml -n dart && source activate dart
+conda create --file environment.yml -n dart python=3.7 && conda activate dart
 ```
 
 Then download the source code and run the provided shell script:
