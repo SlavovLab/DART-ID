@@ -18,7 +18,7 @@ from sklearn.model_selection import train_test_split
 
 from functools import reduce
 from dart_id.exceptions import ConfigFileError, FilteringError
-from dart_id.helper import add_global_args, read_config_file, init_logger
+from dart_id.helper import add_global_args, read_config_file, init_logger, pep_to_fdr
 
 logger = logging.getLogger('root')
 
@@ -406,6 +406,9 @@ def process_files(config):
     if config['num_experiments'] > num_exps:
         error_msg = 'Number of experiments filter threshold {} is greater than the number of experiments in the input list. Please provide an integer greater than or equal to 1 and less than the number of experiments with the \"num_experiments\" key.'.format(config['num_experiments'])
         raise ConfigFileError(error_msg)
+
+    # Calculate FDR
+    df['qval'] = pep_to_fdr(df['pep'])
     
     # Count the number of experiments a peptide is observed in, but filter out
     # 1) PSMs removed from previous filters
@@ -418,6 +421,7 @@ def process_files(config):
                 (~df['remove']) &
                 # Are below the set confidence threshold
                 (df['pep'] < config['pep_threshold'])
+                # (df['qval'] < config['pep_threshold']) # peptide FDR
             ),
             ['sequence', 'raw_file']
         ]
