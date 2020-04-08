@@ -486,9 +486,10 @@ def process_files(config):
     # the PSM is a decoy hit versus a target hit.
 
     def cv(x):
+        if len(x) < 3:
+            return np.nan
+        
         return np.nanstd(x) / np.nanmean(x)
-
-
 
     peptide_aggs = {
         'pep_mean': ('pep', np.nanmean),
@@ -496,8 +497,6 @@ def process_files(config):
         'pep_min': ('pep', np.min),
         'num_obs': ('pep', 'count')
     }
-
-    
 
     # If we have the protein_decoy_tag and the leading_proteins column,
     # Look for the protein_decoy_tag to determine whether or not the peptide is a decoy peptide
