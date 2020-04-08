@@ -257,3 +257,42 @@ def convert_numpy_scalar(x):
         return x
     else: 
         return x.tolist()
+
+
+def pep_to_fdr(_pep):
+    '''Recalculate FDR, based on Spectra PEP and DART PEP
+    '''
+
+    pep = _pep.copy()
+    
+    # Make sure no PEPs exceed 1
+    pep.loc[pep > 1] = 1
+    
+    # q-value, by fixing # of false positives to a discrete number
+    # For now, set all null PEPs to 1. We'll remember the index and set them back to nan later
+    null_peps = pd.isnull(pep)
+    if null_peps.sum() > 0:
+        pep.loc[null_peps] = 1
+    
+    # Get the index order of sorted PEPs
+    pep_order = np.argsort(pep)
+    
+    # Take the ceiling of the cumulative sum of the sorted PEPs to get the pessimistic
+    # estimate of the number of false positives when selecting at that level.
+    # Because using ceiling, PSMs with different PEPs but within the same relative interval
+    # will get the same "num_fp" value.
+    num_fp = np.ceil(np.cumsum(pep[pep_order])).astype(int)
+    
+    # Count the number of occurrences of num_fp and sum them up to get the sample size for each
+    # discrete false positive # threshold
+    fp_counts = np.cumsum(num_fp.value_counts().sort_index()).values
+    
+    # Divide # of false positivies by sample size to get q-value. Sorting the index order brings
+    # the order of values back to their original form
+    qval = (num_fp / fp_counts[num_fp - 1]).values[np.argsort(pep_order.values)]
+    
+    # Set null PEPs and q-values back to nan
+    if null_peps.sum() > 0:
+        qval[null_peps] = np.nan
+        
+    return qval
