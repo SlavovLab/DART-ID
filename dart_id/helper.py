@@ -203,6 +203,15 @@ def read_config_file(args, create_output_folder=True):
         logger.info('Copying config file to output folder')
         copyfile(args.config_file.name, os.path.join(config['output'], os.path.basename(args.config_file.name)))
 
+    ### ------------------
+    ### Modify config file
+    ### ------------------
+    # Apply modifications/transformations
+
+    # Decode ASCII escape characters in the sep string
+    # Assumes config file is in utf-8
+    config['sep'] = config['sep'].encode('utf-8').decode('unicode-escape')
+
     return config
 
 # pulled from: https://stackoverflow.com/a/29677616
