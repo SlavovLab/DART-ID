@@ -62,7 +62,7 @@ setup(
     'nbconvert==5.6.1',
     'nbformat==5.0.4',
     'networkx>=2.1,<2.3',
-    'numpy==1.18.1',
+    'numpy==1.22.0',
     'pandas==1.0.1',
     'papermill==1.2.1',
     'PyYAML==5.1',
