@@ -11,13 +11,13 @@ PLOS Computational Biology Article: [https://doi.org/10.1371/journal.pcbi.100708
 
 bioRxiv Preprint: [https://www.biorxiv.org/content/10.1101/399121v3](https://www.biorxiv.org/content/10.1101/399121v3)
 
-----------
+---
 
 ## Getting started
 
 ### Dependencies
 
-DART-ID requires Python >= 3.7 (64-bit - [miniconda distribution recommended](https://docs.conda.io/en/latest/miniconda.html)), and has been tested on Windows 8 / OSX Mojave 10.14 / Centos 7 / Ubuntu 14.04.
+DART-ID requires Python = 3.7 (64-bit - [miniconda distribution recommended](https://docs.conda.io/en/latest/miniconda.html)), and has been tested on Windows 8 / OSX Mojave 10.14 / Centos 7 / Ubuntu 14.04.
 
 ### Installation
 
@@ -31,7 +31,7 @@ pip install dart-id
 
 DART-ID requires a YAML-formatted configuration file to run. An example annotated config file can be found in [example/config_annotated.yaml](https://github.com/SlavovLab/DART-ID/blob/master/example/config_annotated.yaml). You can specify input files and the output folder on the command line, if that's what you prefer.
 
-View the command-line arguments anytime by running: ```dart_id -h```.
+View the command-line arguments anytime by running: `dart_id -h`.
 
 ```
 usage: dart_id [-h] [-i INPUT [INPUT ...]] [-o OUTPUT] [-v] [--version] -c
@@ -62,11 +62,11 @@ The first few lines of the above configuration file specify the path to the inpu
 ## Input
 ## ==========================
 
-input: 
+input:
   - /path/to/SQC_67_95_Varied/evidence.txt
 ```
 
-You can download the ```evidence.txt``` file from MassIVE: [ftp://massive.ucsd.edu/MSV000083149/other/MaxQuant/SQC_67_95_Varied/evidence.txt](ftp://massive.ucsd.edu/MSV000083149/other/MaxQuant/SQC_67_95_Varied/evidence.txt). 
+You can download the `evidence.txt` file from MassIVE: [ftp://massive.ucsd.edu/MSV000083149/other/MaxQuant/SQC_67_95_Varied/evidence.txt](ftp://massive.ucsd.edu/MSV000083149/other/MaxQuant/SQC_67_95_Varied/evidence.txt).
 
 Then edit the path to the file downloaded, and run the following command:
 
@@ -74,9 +74,9 @@ Then edit the path to the file downloaded, and run the following command:
 dart_id -c config_files/example_sqc_67_95_varied.yaml -o ~/DART_ID/SQC_67_95_varied_20181206
 ```
 
-The ```-o``` parameter points to the output folder for DART-ID. You can also specify this path in the config file.
+The `-o` parameter points to the output folder for DART-ID. You can also specify this path in the config file.
 
-An example analysis of the data and configuration file specified above is available publicly at [ftp://massive.ucsd.edu/MSV000083149/other/Alignments/SQC_varied_20180711_4/](ftp://massive.ucsd.edu/MSV000083149/other/Alignments/SQC_varied_20180711_4/). 
+An example analysis of the data and configuration file specified above is available publicly at [ftp://massive.ucsd.edu/MSV000083149/other/Alignments/SQC_varied_20180711_4/](ftp://massive.ucsd.edu/MSV000083149/other/Alignments/SQC_varied_20180711_4/).
 
 ---
 
@@ -104,4 +104,4 @@ All data used for the manuscript is available on [UCSD's MassIVE Repository](htt
 
 ### Figures/Analysis
 
-Scripts for the figures in the DART-ID manuscript are available in a separate GitHub repository, [https://github.com/SlavovLab/DART-ID_2018](https://github.com/SlavovLab/DART-ID_2018) 
+Scripts for the figures in the DART-ID manuscript are available in a separate GitHub repository, [https://github.com/SlavovLab/DART-ID_2018](https://github.com/SlavovLab/DART-ID_2018)
