@@ -34,15 +34,8 @@ setup(
     'Environment :: Console',
     'Intended Audience :: Developers',
     'Intended Audience :: Science/Research',
-    
     'License :: OSI Approved :: MIT License',
-
-    'Programming Language :: Python :: 3 :: Only',
-    'Programming Language :: Python :: 3.4',
-    'Programming Language :: Python :: 3.5',
-    'Programming Language :: Python :: 3.6',
-    'Programming Language :: Python :: 3.7',
-
+    'Programming Language :: Python :: 3.7 :: Only',
     'Topic :: Scientific/Engineering :: Bio-Informatics'
   ],
   keywords='bayesian retention time psm peptide spectra update',
