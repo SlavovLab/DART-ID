@@ -52,7 +52,7 @@ setup(
     'jsonschema==3.0.1',
     'jupyter==1.0.0',
     'matplotlib==3.1.2',
-    'nbconvert==5.6.1',
+    'nbconvert==6.5.1',
     'nbformat==5.0.4',
     'networkx>=2.1,<2.3',
     'numpy==1.18.1',
